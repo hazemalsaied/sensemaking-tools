@@ -37,6 +37,7 @@ type CoreCommentCsvRow = {
   moderated: number;
   comment_text: string;
   passes: number;
+  topics: string; // can contain both topics and subtopics
   topic: string;
   subtopic: string;
 };
@@ -54,6 +55,12 @@ export interface VoteTallyCsvRow {
 //This is a type that combines VoteTallyCsvRow and CoreCommentCsvRow
 export type CommentCsvRow = VoteTallyCsvRow & CoreCommentCsvRow;
 
+/**
+ * Identify topics and subtopics when input data has not already been categorized.
+ * @param project The Vertex GCloud project name
+ * @param comments The comments from which topics need to be identified
+ * @returns Promise resolving to a Topic collection containing the newly discovered topics and subtopics for the given comments
+ */
 export async function getTopicsAndSubtopics(
   project: string,
   comments: Comment[]
@@ -64,6 +71,14 @@ export async function getTopicsAndSubtopics(
   return await sensemaker.learnTopics(comments, true);
 }
 
+/**
+ * Runs the summarization routines for the data set.
+ * @param project The Vertex GCloud project name
+ * @param comments The comments to summarize
+ * @param topics The input topics to categorize against
+ * @param additionalContext Additional context about the conversation to pass through
+ * @returns Promise resolving to a Summary object containing the summary of the comments
+ */
 export async function getSummary(
   project: string,
   comments: Comment[],
@@ -79,6 +94,41 @@ export async function getSummary(
     topics,
     additionalContext
   );
+}
+
+/**
+ * Parse a topics string from the categorization_runner.ts into a (possibly) nested topics and subtopics
+ * array, omitting subtopics if not present in the labels.
+ * @param topicsString A string in the format Topic1:Subtopic1:A;Topic2:Subtopic2.A
+ * @returns Nested Topic structure
+ */
+export function parseTopicsString(topicsString: string): Topic[] {
+  // use the new multiple topic output notation to parse multiple topics/subtopics
+  const subtopicMappings = topicsString
+    .split(";")
+    .reduce(
+      (
+        topicMapping: { [key: string]: Topic[] },
+        topicString: string
+      ): { [key: string]: Topic[] } => {
+        const [topicName, subtopicName] = topicString.split(":");
+        // if we already have a mapping for this topic, add, otherwise create a new one
+        topicMapping[topicName] = topicMapping[topicName] || [];
+        if (subtopicName) {
+          topicMapping[topicName].push({ name: subtopicName });
+        }
+        return topicMapping;
+      },
+      {}
+    );
+  // map key/value pairs from subtopicMappings to Topic objects
+  return Object.entries(subtopicMappings).map(([topicName, subtopics]) => {
+    if (subtopics.length === 0) {
+      return { name: topicName };
+    } else {
+      return { name: topicName, subtopics: subtopics };
+    }
+  });
 }
 
 /**
@@ -128,13 +178,15 @@ export async function getCommentsFromCsv(inputFilePath: string): Promise<Comment
           );
         }
         newComment.voteTalliesByGroup = voteTalliesByGroup;
-
-        // Add topics and subtopics if available
-        if (row.topic && row.subtopic) {
+        if (row.topics) {
+          // In this case, use the topics output format from the categorization_runner.ts routines
+          newComment.topics = parseTopicsString(row.topics);
+        } else if (row.topic) {
+          // Add topic and subtopic from single value columns if available
           newComment.topics = [];
           newComment.topics.push({
             name: row.topic.toString(),
-            subtopics: [{ name: row.subtopic.toString() }],
+            subtopics: row.subtopic ? [{ name: row.subtopic.toString() }] : [],
           });
         }
 
