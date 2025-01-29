@@ -20,7 +20,7 @@
 
 import { VertexModel } from "../src/models/vertex_model";
 import { Sensemaker } from "../src/sensemaker";
-import { type Comment } from "../src/types";
+import { type Comment, type Topic } from "../src/types";
 import { Command } from "commander";
 import { parse } from "csv-parse";
 import { createObjectCsvWriter } from "csv-writer";
@@ -39,6 +39,7 @@ async function main(): Promise<void> {
   program
     .option("-o, --outputFile <file>", "The output file name.")
     .option("-i, --inputFile <file>", "The input file name.")
+    .option("-t, --topics <comma separated list>", "Optional list of top-level topics.")
     .option(
       "-a, --additionalContext <instructions>",
       "A short description of the conversation to add context."
@@ -54,7 +55,8 @@ async function main(): Promise<void> {
   const sensemaker = new Sensemaker({
     defaultModel: new VertexModel(options.vertexProject, "us-central1"),
   });
-  const topics = await sensemaker.learnTopics(comments, true);
+  const topLevelTopics = options.topics ? getTopics(options.topics) : undefined;
+  const topics = await sensemaker.learnTopics(comments, true, topLevelTopics);
   const categorizedComments = await sensemaker.categorizeComments(
     comments,
     true,
@@ -150,6 +152,14 @@ async function writeCsv(csvRows: CommentCsvRow[], outputFile: string) {
     header: header,
   });
   csvWriter.writeRecords(csvRows).then(() => console.log("CSV file written successfully."));
+}
+
+function getTopics(commaSeparatedTopics: string): Topic[] {
+  const topics: Topic[] = [];
+  for (const topic of commaSeparatedTopics.split(",")) {
+    topics.push({ name: topic });
+  }
+  return topics;
 }
 
 main();
