@@ -22,7 +22,6 @@ import { MAX_RETRIES } from "../models/vertex_model";
 import { IntroSummary } from "./summarization_subtasks/intro";
 import { GroupsSummary } from "./summarization_subtasks/groups";
 import { TopicsSummary } from "./summarization_subtasks/topics";
-import { ConclusionSummary } from "./summarization_subtasks/conclusion";
 
 /**
  * Create an intro paragraph formatted in markdown with statistics.
@@ -182,15 +181,8 @@ export class MultiStepSummary {
       this.model,
       this.additionalContext
     ).getSummary();
-    const conclusionSummary = await new ConclusionSummary(
-      this.summaryStats,
-      this.model,
-      this.additionalContext
-    ).getSummary();
     // return a concatenation of the separate sections, with two newlines separating each section
-    return (
-      introSummary + "\n\n" + groupsSummary + "\n\n" + topicsSummary + "\n\n" + conclusionSummary
-    );
+    return introSummary + "\n\n" + groupsSummary + "\n\n" + topicsSummary;
   }
 }
 
