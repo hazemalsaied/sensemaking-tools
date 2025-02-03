@@ -213,23 +213,6 @@ export function formatCitations(comments: Comment[], summary: string): string {
   return summaryWithLinks;
 }
 
-/**
- * Build a markdown table of comment data for inspection and debugging
- * @param comments
- */
-export function commentTable(comments: Comment[]): string {
-  // Format the comments as a markdown table, with rows keyed by comment id, displaying comment text and vote tally breakdown.
-  return (
-    "\n| comment-id | text | vote data |\n| --- | --- | --- |\n" +
-    comments.reduce(
-      (ct: string, comment: Comment): string =>
-        ct +
-        `| ${comment.id} | ${comment.text} | ${JSON.stringify(comment.voteTalliesByGroup)} |\n`,
-      ""
-    )
-  );
-}
-
 // Requiring these here since they are only useful for this debugging code, which may get removed eventually
 // eslint-disable-next-line
 const Diff = require("diff");

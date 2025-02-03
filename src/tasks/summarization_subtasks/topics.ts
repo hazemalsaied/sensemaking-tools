@@ -16,7 +16,7 @@
 
 import { RecursiveSummary, resolvePromisesInParallel } from "./recursive_summarization";
 import { TopicStats, GroupedSummaryStats, GroupStats } from "../../stats_util";
-import { getPrompt, decimalToPercent } from "../../sensemaker_utils";
+import { getPrompt, decimalToPercent, commentTableMarkdown } from "../../sensemaker_utils";
 import { Comment } from "../../types";
 import { getCommentCitations } from "../utils/citation_utils";
 import { Model } from "../../models/model";
@@ -137,17 +137,42 @@ ${subtopicsSummaryText}
       return stat.name;
     });
 
+    // Generate the primary common ground and differences of opinion summaries
     const commonGroundSummary = await this.getCommonGroundSummary();
     const differencesSummary = await this.getDifferencesOfOpinionSummary(groupNames);
 
-    return Promise.resolve(
-      `${this.getSectionTitle()}
+    let result = `${this.getSectionTitle()}
 
 Common ground between groups: ${commonGroundSummary}
 
 Differences of opinion: ${differencesSummary}
-`
-    );
+`;
+
+    if (process.env.DEBUG_MODE === "true") {
+      // Based on the common ground and differences of opinion comments,
+      const commonGroundComments = this.input.getCommonGroundComments();
+      const differencesComments = this.input.getDifferencesBetweenGroupsComments(groupNames);
+
+      // Figure out what comments aren't currently being summarized
+      const allSummarizedCommentIds = new Set([
+        ...commonGroundComments.map((c) => c.id),
+        ...differencesComments.map((c) => c.id),
+      ]);
+      const otherComments = this.topicStat.comments.filter(
+        (comment) => !allSummarizedCommentIds.has(comment.id)
+      );
+
+      const otherCommentsTable = commentTableMarkdown(otherComments);
+
+      const otherCommentsSummary = `
+**Other comments** (${otherComments.length} comments)
+
+${otherCommentsTable}
+`;
+      result += otherCommentsSummary;
+    }
+
+    return Promise.resolve(result);
   }
 
   /**

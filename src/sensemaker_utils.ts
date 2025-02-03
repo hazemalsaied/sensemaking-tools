@@ -16,6 +16,7 @@
 
 import { CommentRecord, Comment } from "./types";
 import { RETRY_DELAY_MS } from "./models/vertex_model";
+import { voteTallySummary } from "./tasks/utils/citation_utils";
 
 /**
  * Rerun a function multiple times.
@@ -173,4 +174,23 @@ export function decimalToPercent(decimal: number, precision: number = 0): string
   const percentage = decimal * 100;
   const roundedPercentage = Math.round(percentage * 10 ** precision) / 10 ** precision;
   return `${roundedPercentage}%`;
+}
+
+/**
+ * Build a markdown table of comment data for inspection and debugging
+ * @param comments An array of Comment objects to include in the table.
+ * @returns A string containing the markdown table.
+ */
+export function commentTableMarkdown(comments: Comment[]): string {
+  // Format the comments as a markdown table, with rows keyed by comment id,
+  // displaying comment text and vote tally breakdown.
+  return (
+    "\n| id | text | votes |\n| --- | --- | --- |\n" +
+    comments.reduce(
+      (ct: string, comment: Comment): string =>
+        ct +
+        `| ${comment.id}&nbsp; | ${comment.text} | <small>${voteTallySummary(comment)}</small> |\n`,
+      ""
+    )
+  );
 }
