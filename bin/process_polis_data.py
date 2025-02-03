@@ -91,10 +91,16 @@ for group_id in group_ids:
   comments["agrees"] += comments["group-" + str(group_id) + "-agree-count"]
   comments["passes"] += comments["group-" + str(group_id) + "-pass-count"]
 
-# Leave only those comments that passed moderation.
-comments = comments[comments["moderated"]==1]
+comments["votes"] = comments["agrees"] + comments["disagrees"] + comments["passes"]
+
+# Leave only those comments explicitly moderated into the conversation, or that were
+# left unmoderated, and accumulated votes (implying the conversation was likely set
+# to non-strict moderation)
+print("N comments total:", len(comments))
+moderated_comments = comments[(comments["moderated"] == 1) | ((comments["moderated"] == 0) & (comments["votes"] > 1))]
+print("N comments included after moderation:", len(moderated_comments))
 
 # prompt: write out to a CSV file
-comments = comments.rename(columns={'comment-body': 'comment_text'})
-comments.to_csv(args.output_file, index=False)
+moderated_comments = moderated_comments.rename(columns={'comment-body': 'comment_text'})
+moderated_comments.to_csv(args.output_file, index=False)
 

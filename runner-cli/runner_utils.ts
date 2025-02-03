@@ -160,9 +160,6 @@ export async function getCommentsFromCsv(inputFilePath: string): Promise<Comment
       .pipe(parser)
       .on("error", reject)
       .on("data", (row: CommentCsvRow) => {
-        if (row.moderated == -1) {
-          return;
-        }
         const newComment: Comment = {
           text: row.comment_text,
           id: row["comment-id"].toString(),
