@@ -15,8 +15,13 @@
 // Functions for different ways to summarize Comment and Vote data.
 
 import { RecursiveSummary, resolvePromisesInParallel } from "./recursive_summarization";
-import { TopicStats, GroupedSummaryStats, GroupStats } from "../../stats_util";
-import { getPrompt, decimalToPercent, commentTableMarkdown } from "../../sensemaker_utils";
+import { TopicStats, GroupedSummaryStats, GroupStats, getMinAgreeProb } from "../../stats_util";
+import {
+  getPrompt,
+  decimalToPercent,
+  commentTableMarkdown,
+  ColumnDefinition,
+} from "../../sensemaker_utils";
 import { Comment } from "../../types";
 import { getCommentCitations } from "../utils/citation_utils";
 import { Model } from "../../models/model";
@@ -162,7 +167,9 @@ Differences of opinion: ${differencesSummary}
         (comment) => !allSummarizedCommentIds.has(comment.id)
       );
 
-      const otherCommentsTable = commentTableMarkdown(otherComments);
+      const otherCommentsTable = commentTableMarkdown(otherComments, [
+        { columnName: "minAgreeProb", getValue: getMinAgreeProb } as ColumnDefinition,
+      ]);
 
       const otherCommentsSummary = `
 **Other comments** (${otherComments.length} comments)

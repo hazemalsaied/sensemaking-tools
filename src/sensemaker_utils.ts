@@ -177,19 +177,78 @@ export function decimalToPercent(decimal: number, precision: number = 0): string
 }
 
 /**
- * Build a markdown table of comment data for inspection and debugging
+ * Interface for specifying an extra column for a markdown table, as a columnName and
+ * getValue function.
+ */
+export interface ColumnDefinition {
+  columnName: string;
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  getValue: (comment: Comment) => any;
+}
+
+/**
+ * Return the markdown corresponding to the extraColumns specification for the given Comment row,
+ * without either the leading or tailing | bars.
+ * @param extraColumns Either a Comment object key (string) or ColumnDefinition object
+ * @param row Comment object
+ * @returns A string representing the additional column values
+ */
+function extraColumnDataMd(
+  extraColumns: (keyof Comment | ColumnDefinition)[],
+  row: Comment
+): string {
+  return extraColumns.length > 0
+    ? " <small>" +
+        extraColumns
+          .map((extraColumn) => columnValue(extraColumn, row))
+          .join("</small> | <small>") +
+        "</small> |"
+    : "";
+}
+
+/**
+ * Returns the table cell entry for the given ColumnDefinition (or Comment key) and Comment
+ * object.
+ * @param extraColumn Either a Comment key, or a ColumnDefinition object
+ * @param comment A comment object
+ * @returns The corresponding table cell value
+ */
+function columnValue(extraColumn: keyof Comment | ColumnDefinition, comment: Comment) {
+  return typeof extraColumn === "string" ? comment[extraColumn] : extraColumn.getValue(comment);
+}
+
+/**
+ * Return header name for extraColumn specification, either the returning the string back
+ * or getting the columnName specification for a ColumnDefinition object.
+ */
+function columnHeader(extraColumn: string | ColumnDefinition) {
+  return typeof extraColumn === "string" ? extraColumn : extraColumn.columnName;
+}
+
+/**
+ * Returns a markdown table of comment data for inspection and debugging.
  * @param comments An array of Comment objects to include in the table.
+ * @param extraColumns An array of keys of the comment objects to add as table cells.
  * @returns A string containing the markdown table.
  */
-export function commentTableMarkdown(comments: Comment[]): string {
+export function commentTableMarkdown(
+  comments: Comment[],
+  extraColumns: (keyof Comment | ColumnDefinition)[] = []
+): string {
   // Format the comments as a markdown table, with rows keyed by comment id,
   // displaying comment text and vote tally breakdown.
+  const hasExtraCols = extraColumns.length > 0;
+  const extraHeaders = extraColumns.map(columnHeader);
+  const extraHeadersMd = hasExtraCols ? " " + extraHeaders.join(" | ") + " |" : "";
+  const extraHeadersUnderlineMd = hasExtraCols
+    ? " " + extraHeaders.map((h) => "-".repeat(h.length)).join(" | ") + " |"
+    : "";
   return (
-    "\n| id | text | votes |\n| --- | --- | --- |\n" +
+    `\n| id | text | votes |${extraHeadersMd}\n| -- | ---- | ---- |${extraHeadersUnderlineMd}\n` +
     comments.reduce(
       (ct: string, comment: Comment): string =>
         ct +
-        `| ${comment.id}&nbsp; | ${comment.text} | <small>${voteTallySummary(comment)}</small> |\n`,
+        `| ${comment.id}&nbsp; | ${comment.text} | <small>${voteTallySummary(comment)}</small> |${extraColumnDataMd(extraColumns, comment)}\n`,
       ""
     )
   );

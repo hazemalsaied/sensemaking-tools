@@ -72,6 +72,18 @@ async function main(): Promise<void> {
             padding: 20px;
         }
     </style>
+    ${
+      // When in DEBUG_MODE, we need to add the DataTables and jQuery libraries, and hook
+      // into our table elements to add support for features like sorting and search.
+      process.env.DEBUG_MODE === "true"
+        ? `
+    <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+    <script src="https://cdn.datatables.net/2.2.1/js/dataTables.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.2.1/css/dataTables.dataTables.css" />
+    <script>$(document).ready( function () {$('table').DataTable();} )</script>
+    `
+        : ""
+    }
 </head>
 <body>
     ${marked(markdownContent)}
