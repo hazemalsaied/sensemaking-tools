@@ -6,7 +6,7 @@
   "scripts": {
     "test": "./node_modules/.bin/jest",
     "test-silent": "./node_modules/.bin/jest --silent",
-    "test-watch": "nodemon --watch src --ext 'ts,json' -x 'npm run test-silent --onlyChanged'",
+    "test-watch": "nodemon --watch src --watch runner-cli --ext 'ts,json' -x 'npm run test-silent --onlyChanged'",
     "prepare": "husky && husky install",
     "lint": "eslint . --fix --max-warnings=0",
     "format": "prettier . --write"
