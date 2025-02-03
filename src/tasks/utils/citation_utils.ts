@@ -72,7 +72,7 @@ export function voteTallySummary(comment: Comment): string {
     return Object.entries(comment.voteTalliesByGroup as object).reduce((acc, [key, value]) => {
       return (
         acc +
-        ` group-${key}(Agree=${value.agreeCount}, Disagree=${value.disagreeCount}, Pass=${value.passCount || 0})`
+        ` ${key}(Agree=${value.agreeCount}, Disagree=${value.disagreeCount}, Pass=${value.passCount || 0})`
       );
     }, "Votes:");
   } else {

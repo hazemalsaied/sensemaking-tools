@@ -34,7 +34,7 @@ describe("Citation Utils Test", () => {
         },
       };
       expect(voteTallySummary(comment)).toBe(
-        "Votes: group-group1(Agree=10, Disagree=5, Pass=0) group-group2(Agree=15, Disagree=2, Pass=3)"
+        "Votes: group1(Agree=10, Disagree=5, Pass=0) group2(Agree=15, Disagree=2, Pass=3)"
       );
     });
   });
@@ -69,7 +69,7 @@ describe("commentCitation", () => {
       },
     };
     expect(commentCitation(comment)).toBe(
-      `[123](## "This is a test comment.\nVotes: group-group1(Agree=10, Disagree=5, Pass=1) group-group2(Agree=15, Disagree=2, Pass=3)")`
+      `[123](## "This is a test comment.\nVotes: group1(Agree=10, Disagree=5, Pass=1) group2(Agree=15, Disagree=2, Pass=3)")`
     );
   });
 

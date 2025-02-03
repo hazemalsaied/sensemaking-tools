@@ -49,14 +49,14 @@ describe("grounding test", () => {
           id: "1",
           text: "I like cats",
           voteTalliesByGroup: {
-            "0": { agreeCount: 10, disagreeCount: 5, passCount: 0, totalCount: 16 },
+            "group-0": { agreeCount: 10, disagreeCount: 5, passCount: 0, totalCount: 16 },
           },
         },
         {
           id: "2",
           text: "I don't like cats",
           voteTalliesByGroup: {
-            "0": { agreeCount: 5, disagreeCount: 10, passCount: 6, totalCount: 20 },
+            "group-0": { agreeCount: 5, disagreeCount: 10, passCount: 6, totalCount: 20 },
           },
         },
       ];
