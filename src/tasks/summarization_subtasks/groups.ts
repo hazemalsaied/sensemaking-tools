@@ -152,57 +152,6 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
     });
   }
 
-  /**
-   * Generates a table describing what makes groups similar and different.
-   * @param groupNames the groups to include
-   * @returns a table with two columns, one for group agreement and one for group disagreement.
-   */
-  private async getGroupTableBreakdown(groupNames: string[]): Promise<string> {
-    // TODO: To make sure the summaries aren't almost identical the comments should all come from
-    // different subtopics or topics.
-    const topAgreeCommentsAcrossGroups = this.input.getCommonGroundComments(3);
-    const topDisagreeCommentsAcrossGroups = this.input.getDifferencesBetweenGroupsComments(
-      groupNames,
-      3
-    );
-
-    return (
-      `<table>
-  <thead>
-    <tr>
-      <th style="border-right: 1px solid black; padding: 10px;"> Common Ground Between All Groups </th>
-      <th style="padding: 10px;"> Points of Contention Between All Groups </th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td style="border-right: 1px solid black;">
-        <ul>` +
-      (await this.getBulletPointSummary(topAgreeCommentsAcrossGroups)) +
-      `</ul>
-      </td>
-      <td>
-        <ul>` +
-      (await this.getBulletPointSummary(topDisagreeCommentsAcrossGroups)) +
-      `</ul>
-      </td>
-    </tr>
-  </tbody>
-</table>
-
-<style>
-  table {
-    border-collapse: collapse; 
-    border: 1px solid black; 
-  }
-  th, td {
-    border: none; /* Remove cell borders */
-    border-bottom: 1px solid black; /* Add a line below header and above rows */ 
-  }
-</style>`
-    );
-  }
-
   async getSummary() {
     const groupStats = this.input.getStatsByGroup();
     const groupCount = groupStats.length;
@@ -222,7 +171,6 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
     const groupDescriptions = this.getGroupDescriptions(groupNames);
 
     const descriptionResult = await groupDescriptions;
-    const groupTable = await this.getGroupTableBreakdown(groupNames);
-    return groupSectionIntro + descriptionResult + "\n" + groupTable;
+    return groupSectionIntro + descriptionResult;
   }
 }
