@@ -15,13 +15,18 @@
 // Functions for different ways to summarize Comment and Vote data.
 
 import { RecursiveSummary, resolvePromisesInParallel } from "./recursive_summarization";
-import { TopicStats, GroupedSummaryStats, GroupStats, getMinAgreeProb } from "../../stats_util";
 import {
   getPrompt,
   decimalToPercent,
   commentTableMarkdown,
   ColumnDefinition,
 } from "../../sensemaker_utils";
+import {
+  TopicStats,
+  GroupedSummaryStats,
+  getMaxGroupAgreeProbDifference,
+  getMinAgreeProb,
+} from "../../stats_util";
 import { Comment } from "../../types";
 import { getCommentCitations } from "../utils/citation_utils";
 import { Model } from "../../models/model";
@@ -137,14 +142,9 @@ ${subtopicsSummaryText}
    * @returns a promise of the summary string
    */
   async getCommentSummary(): Promise<string> {
-    const groupStats = this.input.getStatsByGroup();
-    const groupNames = groupStats.map((stat: GroupStats) => {
-      return stat.name;
-    });
-
     // Generate the primary common ground and differences of opinion summaries
     const commonGroundSummary = await this.getCommonGroundSummary();
-    const differencesSummary = await this.getDifferencesOfOpinionSummary(groupNames);
+    const differencesSummary = await this.getDifferencesOfOpinionSummary();
 
     let result = `${this.getSectionTitle()}
 
@@ -156,7 +156,7 @@ Differences of opinion: ${differencesSummary}
     if (process.env.DEBUG_MODE === "true") {
       // Based on the common ground and differences of opinion comments,
       const commonGroundComments = this.input.getCommonGroundComments();
-      const differencesComments = this.input.getDifferencesBetweenGroupsComments(groupNames);
+      const differencesComments = this.input.getDifferencesBetweenGroupsComments();
 
       // Figure out what comments aren't currently being summarized
       const allSummarizedCommentIds = new Set([
@@ -169,6 +169,10 @@ Differences of opinion: ${differencesSummary}
 
       const otherCommentsTable = commentTableMarkdown(otherComments, [
         { columnName: "minAgreeProb", getValue: getMinAgreeProb } as ColumnDefinition,
+        {
+          columnName: "maxAgreeDiff",
+          getValue: getMaxGroupAgreeProbDifference,
+        } as ColumnDefinition,
       ]);
 
       const otherCommentsSummary = `
@@ -207,9 +211,8 @@ ${otherCommentsTable}
    * Summarizes the comments on which there was the strongest disagreement between groups.
    * @returns a short paragraph describing the differences between groups, including comment citations.
    */
-  async getDifferencesOfOpinionSummary(groupNames: string[]): Promise<string> {
-    const topDisagreeCommentsAcrossGroups =
-      this.input.getDifferencesBetweenGroupsComments(groupNames);
+  async getDifferencesOfOpinionSummary(): Promise<string> {
+    const topDisagreeCommentsAcrossGroups = this.input.getDifferencesBetweenGroupsComments();
     const nComments = topDisagreeCommentsAcrossGroups.length;
     if (nComments === 0) {
       return `No comments met the thresholds necessary to be considered as a significant difference of opinion (at least ${this.input.minVoteCount} votes, and more than ${decimalToPercent(this.input.minAgreeProbDifference)} difference in agreement rate between groups).`;

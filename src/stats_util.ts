@@ -47,8 +47,10 @@ export function getMinAgreeProb(comment: CommentWithVoteTallies): number {
 }
 
 /**
- * Computes the difference between the MAP agree probabilities for a given group, as computed by the getAgreeProbability function, as compared
- * with the rest of the conversation
+ * Computes the difference between the MAP probability estimate of agreeing within
+ * a given group as compared with the rest of the conversation.
+ * @param comment A comment with vote tally data, broken down by opinion group
+ * @returns the numeric difference in estimated agree probabilities
  */
 export function getGroupAgreeProbDifference(
   comment: CommentWithVoteTallies,
@@ -75,6 +77,28 @@ export function getGroupAgreeProbDifference(
   return groupAgreeProb - otherGroupsAgreeProb;
 }
 
+/**
+ * Computes the maximal absolute value of `getGroupAgreeProbDifference` across
+ * opinion groups present in comment.groupVoteTallies.
+ * @param comment A Comment with vote tally data, broken down by opinion group
+ * @returns the maximal difference in estimated agree probabilities
+ */
+export function getMaxGroupAgreeProbDifference(comment: CommentWithVoteTallies) {
+  const groupNames = Object.keys(comment.voteTalliesByGroup);
+  return Math.max(
+    ...groupNames.map((name: string) => {
+      return Math.abs(getGroupAgreeProbDifference(comment, name));
+    })
+  );
+}
+
+/**
+ * Computes the total vote count across opinion groups. Note that this
+ * consequently doesn't include any votes for participants not represented
+ * in the opinion groups.
+ * @param comment A Comment with vote tally data, broken down by opinion group
+ * @returns the total number of votes
+ */
 export function getCommentVoteCount(comment: Comment): number {
   let count = 0;
   for (const groupName in comment.voteTalliesByGroup) {
@@ -86,7 +110,11 @@ export function getCommentVoteCount(comment: Comment): number {
   return count;
 }
 
-// Statistics to include in the summary.
+/**
+ * This class is the input interface for the RecursiveSummary abstraction, and
+ * therefore the vessel through which all data is ultimately communicated to
+ * the individual summarization routines.
+ */
 export class SummaryStats {
   comments: Comment[];
   minAgreeProbCommonGround = 0.6;
@@ -193,6 +221,12 @@ export class SummaryStats {
   }
 }
 
+/**
+ * This subclass of the SummaryStats class provides the same abstract purpose
+ * (that is, serving as the interface to the RecursiveSummary abstraction),
+ * but is specifically tailored to data input in terms of votes and opinion
+ * groups data.
+ */
 export class GroupedSummaryStats extends SummaryStats {
   filteredComments: CommentWithVoteTallies[];
   public minVoteCount = 20;
@@ -260,32 +294,21 @@ export class GroupedSummaryStats extends SummaryStats {
    * as compared with the rest of the participant body, as computed by the getGroupAgreeDifference method,
    * and subject to this.minVoteCount, this.minAgreeProbCommonGround and this.minAgreeProbDifference.
    *
-   * @param groups The name of a single group
    * @param k defaults to this.maxSampleSize
    * @returns the top disagreed on comments
    */
-  getDifferencesBetweenGroupsComments(groupNames: string[], k: number = this.maxSampleSize) {
+  getDifferencesBetweenGroupsComments(k: number = this.maxSampleSize) {
     return this.topK(
       // Get the maximum absolute group agree difference for any group.
-      (comment) =>
-        Math.max(
-          ...groupNames.map((name: string) => {
-            return Math.abs(getGroupAgreeProbDifference(comment, name));
-          })
-        ),
+      getMaxGroupAgreeProbDifference,
       k,
-      (comment: CommentWithVoteTallies) => {
-        // Each the groups must disagree with the rest of the groups above an absolute
-        // threshold before we consider taking the topK.
-        for (const groupName of groupNames) {
-          if (
-            Math.abs(getGroupAgreeProbDifference(comment, groupName)) < this.minAgreeProbDifference
-          ) {
-            return false;
-          }
-        }
-        return true;
-      }
+      (comment: CommentWithVoteTallies) =>
+        // Some group must agree with the comment less than the minAgreeProbCommonGround
+        // threshold, so that this comment doesn't also qualify as a common ground comment.
+        getMinAgreeProb(comment) < this.minAgreeProbCommonGround &&
+        // Some group must disagree with the rest by a margin larger than the
+        // getGroupAgreeProbDifference.
+        getMaxGroupAgreeProbDifference(comment) < this.minAgreeProbDifference
     );
   }
 
