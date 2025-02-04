@@ -23,7 +23,7 @@ describe("splitSummaryAndLinkComments", () => {
 
   beforeEach(() => {
     // Create dummy input files before each test
-    const summaryContent = `* _High consensus:_ Statement 1 [1, 2]\n* _Low consensus:_ Statement 2 [3]`;
+    const summaryContent = `Common ground between groups: Statement 1 [1, 2]\nDifferences of opinion: Statement 2 [3]`;
     fs.writeFileSync(testSummaryFile, summaryContent);
 
     const commentsContent = `"comment-id","comment_text"\n1,"Comment for statement 1"\n2,"Another comment for statement 1"\n3,"Comment for statement 2"`;
@@ -59,7 +59,7 @@ describe("splitSummaryAndLinkComments", () => {
   it("should handle missing comment IDs gracefully", () => {
     const consoleWarnSpy = jest.spyOn(console, "warn");
 
-    const summaryContentWithMissingId = `* _High consensus:_ Statement 3 [1, 4]`; // Comment ID 4 doesn't exist
+    const summaryContentWithMissingId = `Common ground between groups: Statement 3 [1, 4]`; // Comment ID 4 doesn't exist
     fs.writeFileSync(testSummaryFile, summaryContentWithMissingId);
 
     splitSummaryAndLinkComments(testSummaryFile, testCommentsFile, testOutputFile);

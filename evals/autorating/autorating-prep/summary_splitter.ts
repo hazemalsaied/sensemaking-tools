@@ -42,9 +42,9 @@ export function splitSummaryAndLinkComments(
   const statementsWithComments: { summary: string; comments: string }[] = [];
 
   // Statement format we look for:
-  // * _High consensus:_ Participants suggest... [1, 2, 3]
-  // * _Low consensus:_ Participants diverged... [4, 5]
-  const statementRegex = /\* _(High|Low) consensus:_ (.*?) \[(.*?)]/g;
+  // Common ground between groups: Participants suggest... [1, 2, 3]
+  // Differences of opinion: Participants diverged... [4, 5]
+  const statementRegex = /(Common ground between groups|Differences of opinion): (.*) \[(.*?)]/g;
   let match;
 
   while ((match = statementRegex.exec(summaryText)) !== null) {
