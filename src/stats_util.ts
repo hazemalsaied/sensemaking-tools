@@ -18,7 +18,7 @@ import { Comment, CommentWithVoteTallies, isCommentWithVoteTalliesType, VoteTall
 import { groupCommentsBySubtopic } from "./sensemaker_utils";
 
 /**
- * A function which returns the estimated aggree probability for a given vote tally entry as a MAP estimate
+ * Compute the MAP probability estimate of an aggree vote for a given vote tally entry.
  */
 export function getAgreeProbability(voteTally: VoteTally): number {
   const totalCount = voteTally.agreeCount + voteTally.disagreeCount + (voteTally.passCount || 0);
@@ -29,8 +29,8 @@ export function getAgreeProbability(voteTally: VoteTally): number {
 }
 
 /**
- * A function which computes group informed consensus for the given set of vote tallies, given vote tally data, aggregated by some groupBy factor.
- * Computed as the product of the aggree probabilities
+ * Computes group informed (agree) consensus for a comment's vote tallies,
+ * computed as the product of the aggree probabilities across groups.
  */
 export function getGroupInformedConsensus(comment: CommentWithVoteTallies): number {
   return Object.values(comment.voteTalliesByGroup).reduce(
@@ -44,6 +44,35 @@ export function getGroupInformedConsensus(comment: CommentWithVoteTallies): numb
  */
 export function getMinAgreeProb(comment: CommentWithVoteTallies): number {
   return Math.min(...Object.values(comment.voteTalliesByGroup).map(getAgreeProbability));
+}
+
+/**
+ * Compute the MAP probability estimate of a disaggree vote for a given vote tally entry.
+ */
+export function getDisagreeProbability(voteTally: VoteTally): number {
+  const totalCount = voteTally.agreeCount + voteTally.disagreeCount + (voteTally.passCount || 0);
+  // We add +1 and +2 to the numerator and demonenator respectively as a psuedo-count prior so that probabilities tend to 1/2 in the
+  // absence of data, and to avoid division/multiplication by zero in group informed consensus and risk ratio calculations. This is technically
+  // a simple maxima a priori (MAP) probability estimate.
+  return (voteTally.disagreeCount + 1) / (totalCount + 2);
+}
+
+/**
+ * Computes group informed (disagree) consensus for a comment's vote tallies
+ * computed as the product of disaggree probabilities across groups.
+ */
+export function getGroupInformedDisagreeConsensus(comment: CommentWithVoteTallies): number {
+  return Object.values(comment.voteTalliesByGroup).reduce(
+    (product, voteTally) => product * getDisagreeProbability(voteTally),
+    1
+  );
+}
+
+/**
+ * A function which returns the minimum disagree probability across groups
+ */
+export function getMinDisagreeProb(comment: CommentWithVoteTallies): number {
+  return Math.min(...Object.values(comment.voteTalliesByGroup).map(getDisagreeProbability));
 }
 
 /**
@@ -117,7 +146,7 @@ export function getCommentVoteCount(comment: Comment): number {
  */
 export class SummaryStats {
   comments: Comment[];
-  minAgreeProbCommonGround = 0.6;
+  minCommonGroundProb = 0.6;
   minAgreeProbDifference = 0.3;
   maxSampleSize = 5;
   constructor(comments: Comment[]) {
@@ -265,7 +294,24 @@ export class GroupedSummaryStats extends SummaryStats {
       (comment) => getGroupInformedConsensus(comment),
       k,
       // Before using Group Informed Consensus a minimum bar of agreement between groups is enforced
-      (comment: CommentWithVoteTallies) => getMinAgreeProb(comment) >= this.minAgreeProbCommonGround
+      (comment: CommentWithVoteTallies) => getMinAgreeProb(comment) >= this.minCommonGroundProb
+    );
+  }
+
+  /**
+   * Gets the topK disagreed upon comments across all groups.
+   *
+   * This is measured via the getGroupInformedDisagreeConsensus metric, subject to the constraints of
+   * this.minVoteCount and this.minAgreeProbCommonGround settings.
+   * @param k dfaults to this.maxSampleSize
+   * @returns the top disagreed on comments
+   */
+  getCommonGroundDisagreeComments(k: number = this.maxSampleSize) {
+    return this.topK(
+      (comment) => getGroupInformedDisagreeConsensus(comment),
+      k,
+      // Before using Group Informed Consensus a minimum bar of agreement between groups is enforced
+      (comment: CommentWithVoteTallies) => getMinDisagreeProb(comment) >= this.minCommonGroundProb
     );
   }
 
@@ -282,7 +328,7 @@ export class GroupedSummaryStats extends SummaryStats {
       (comment: CommentWithVoteTallies) => getGroupAgreeProbDifference(comment, group),
       k,
       (comment: CommentWithVoteTallies) =>
-        getMinAgreeProb(comment) < this.minAgreeProbCommonGround &&
+        getMinAgreeProb(comment) < this.minCommonGroundProb &&
         getGroupAgreeProbDifference(comment, group) > this.minAgreeProbDifference
     );
   }
@@ -305,7 +351,7 @@ export class GroupedSummaryStats extends SummaryStats {
       (comment: CommentWithVoteTallies) =>
         // Some group must agree with the comment less than the minAgreeProbCommonGround
         // threshold, so that this comment doesn't also qualify as a common ground comment.
-        getMinAgreeProb(comment) < this.minAgreeProbCommonGround &&
+        getMinAgreeProb(comment) < this.minCommonGroundProb &&
         // Some group must disagree with the rest by a margin larger than the
         // getGroupAgreeProbDifference.
         getMaxGroupAgreeProbDifference(comment) < this.minAgreeProbDifference

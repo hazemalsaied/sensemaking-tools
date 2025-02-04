@@ -194,7 +194,7 @@ ${otherCommentsTable}
     const commonGroundComments = this.input.getCommonGroundComments();
     const nComments = commonGroundComments.length;
     if (nComments === 0) {
-      return `No comments met the thresholds necessary to be considered as a point of common ground (at least ${this.input.minVoteCount} votes, and at least ${decimalToPercent(this.input.minAgreeProbCommonGround)} agreement across groups).`;
+      return `No comments met the thresholds necessary to be considered as a point of common ground (at least ${this.input.minVoteCount} votes, and at least ${decimalToPercent(this.input.minCommonGroundProb)} agreement across groups).`;
     } else {
       const summary = this.model.generateText(
         getPrompt(

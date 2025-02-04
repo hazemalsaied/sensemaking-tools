@@ -18,6 +18,9 @@ import {
   getAgreeProbability,
   getGroupInformedConsensus,
   getGroupAgreeProbDifference,
+  getDisagreeProbability,
+  getGroupInformedDisagreeConsensus,
+  getMinDisagreeProb,
   getMinAgreeProb,
 } from "./stats_util";
 import { Comment } from "./types";
@@ -118,6 +121,70 @@ describe("stats utility functions", () => {
           "1": {
             agreeCount: 5,
             disagreeCount: 10,
+            passCount: 5,
+            totalCount: 20,
+          },
+        },
+      })
+    ).toBeCloseTo(3 / 11);
+  });
+
+  it("should get the disagree probability for a given vote tally", () => {
+    expect(
+      getDisagreeProbability({ agreeCount: 10, disagreeCount: 5, passCount: 5, totalCount: 20 })
+    ).toBeCloseTo((5 + 1) / (20 + 2));
+  });
+
+  it("should handle vote tallies with zero counts", () => {
+    expect(getDisagreeProbability({ agreeCount: 0, disagreeCount: 0, totalCount: 0 })).toBeCloseTo(
+      0.5
+    );
+    expect(getDisagreeProbability({ agreeCount: 0, disagreeCount: 5, totalCount: 5 })).toBeCloseTo(
+      6 / 7
+    );
+    expect(getDisagreeProbability({ agreeCount: 5, disagreeCount: 0, totalCount: 5 })).toBeCloseTo(
+      1 / 7
+    );
+  });
+
+  it("should get the group informed consensus for a given comment", () => {
+    expect(
+      getGroupInformedDisagreeConsensus({
+        id: "1",
+        text: "comment1",
+        voteTalliesByGroup: {
+          "0": {
+            agreeCount: 5,
+            disagreeCount: 10,
+            passCount: 0,
+            totalCount: 15,
+          },
+          "1": {
+            agreeCount: 10,
+            disagreeCount: 5,
+            passCount: 5,
+            totalCount: 20,
+          },
+        },
+      })
+    ).toBeCloseTo(((11 / 17) * 6) / 22);
+  });
+
+  it("should get the minimum agree probability across groups for a given comment", () => {
+    expect(
+      getMinDisagreeProb({
+        id: "1",
+        text: "comment1",
+        voteTalliesByGroup: {
+          "0": {
+            agreeCount: 5,
+            disagreeCount: 10,
+            passCount: 0,
+            totalCount: 15,
+          },
+          "1": {
+            agreeCount: 10,
+            disagreeCount: 5,
             passCount: 5,
             totalCount: 20,
           },
