@@ -14,7 +14,8 @@
 
 // This code processes data from the `bin/` directory ingest scripts. In general, the shape
 // takes the form of the `CoreCommentCsvRow` structure below, together with the vote tally
-// columns as specified by `VoteTallyGroupKey`
+// columns of the form <Group Name>-agree-count, <Group Name>-disagree-count, and
+// <Group Name>-pass-count.
 
 import { Sensemaker } from "../src/sensemaker";
 import { VertexModel } from "../src/models/vertex_model";
@@ -44,9 +45,9 @@ type CoreCommentCsvRow = {
 
 // Make this interface require that key names look like `group-N-VOTE-count`
 type VoteTallyGroupKey =
-  | `group-${number}-agree-count`
-  | `group-${number}-disagree-count`
-  | `group-${number}-pass-count`;
+  | `${string}-agree-count`
+  | `${string}-disagree-count`
+  | `${string}-pass-count`;
 
 export interface VoteTallyCsvRow {
   [key: VoteTallyGroupKey]: number;
@@ -88,6 +89,8 @@ export async function getSummary(
   const sensemaker = new Sensemaker({
     defaultModel: new VertexModel(project, "us-central1"),
   });
+  // TODO: Make the summariation type an argument and add it as a flag in runner.ts. The data
+  // requirements (like requiring votes) would also need updated.
   return await sensemaker.summarize(
     comments,
     SummarizationType.MULTI_STEP,
@@ -139,9 +142,20 @@ export function parseTopicsString(topicsString: string): Topic[] {
  * @returns
  */
 export async function getCommentsFromCsv(inputFilePath: string): Promise<Comment[]> {
-  // Determine the number of groups from the header row
+  // Determine the groups names from the header row
   const header = fs.readFileSync(inputFilePath, { encoding: "utf-8" }).split("\n")[0];
-  const numGroups = new Set(header.match(/group-\d/g) || []).size;
+  const groupNames = header
+    .split(",")
+    .filter((name: string) => name.includes("-agree-count"))
+    .map((name: string) => name.replace("-agree-count", ""))
+    .sort();
+
+  if (groupNames.length === 0) {
+    throw new TypeError(
+      "CSV is expected to contain headers of the style <Group Name>-agree-count, " +
+        "<Group Name>-disagree-count, and optionally <Group Name>-pass-count"
+    );
+  }
 
   if (!inputFilePath) {
     throw new Error("Input file path is missing!");
@@ -166,12 +180,11 @@ export async function getCommentsFromCsv(inputFilePath: string): Promise<Comment
           voteTalliesByGroup: {},
         };
         const voteTalliesByGroup: { [key: string]: VoteTally } = {};
-        for (let i = 0; i < numGroups; i++) {
-          const groupKey: string = `group-${i}`;
-          voteTalliesByGroup[groupKey] = new VoteTally(
-            Number(row[`${groupKey}-agree-count` as VoteTallyGroupKey]),
-            Number(row[`${groupKey}-disagree-count` as VoteTallyGroupKey]),
-            Number(row[`${groupKey}-pass-count` as VoteTallyGroupKey])
+        for (const groupName of groupNames) {
+          voteTalliesByGroup[groupName] = new VoteTally(
+            Number(row[`${groupName}-agree-count`]),
+            Number(row[`${groupName}-disagree-count`]),
+            Number(row[`${groupName}-pass-count`])
           );
         }
         newComment.voteTalliesByGroup = voteTalliesByGroup;

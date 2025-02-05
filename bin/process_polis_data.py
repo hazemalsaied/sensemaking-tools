@@ -91,6 +91,11 @@ for group_id in group_ids:
   comments["agrees"] += comments["group-" + str(group_id) + "-agree-count"]
   comments["passes"] += comments["group-" + str(group_id) + "-pass-count"]
 
+# Rename columns from "group-0", "group-1", etc to "Group-1", "Group-2", etc
+for group_id in group_ids:
+   new_columns = [col.replace(f'group-{group_id}', "Group-" + (1 + group_id)) for col in comments.columns]
+   comments.columns = new_columns 
+
 comments["votes"] = comments["agrees"] + comments["disagrees"] + comments["passes"]
 
 # Leave only those comments explicitly moderated into the conversation, or that were
