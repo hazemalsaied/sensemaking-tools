@@ -93,7 +93,7 @@ for group_id in group_ids:
 
 # Rename columns from "group-0", "group-1", etc to "Group-1", "Group-2", etc
 for group_id in group_ids:
-   new_columns = [col.replace(f'group-{group_id}', "Group-" + (1 + group_id)) for col in comments.columns]
+   new_columns = [col.replace(f'group-{group_id}', "Group-" + str(1 + group_id)) for col in comments.columns]
    comments.columns = new_columns 
 
 comments["votes"] = comments["agrees"] + comments["disagrees"] + comments["passes"]
