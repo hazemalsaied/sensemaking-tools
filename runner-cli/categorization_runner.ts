@@ -41,6 +41,10 @@ async function main(): Promise<void> {
     .option("-i, --inputFile <file>", "The input file name.")
     .option("-t, --topics <comma separated list>", "Optional list of top-level topics.")
     .option(
+      "-s, --skip-subtopics",
+      "If set, will skip subtopics, and only learn and categorize top level topics."
+    )
+    .option(
       "-a, --additionalContext <instructions>",
       "A short description of the conversation to add context."
     )
@@ -56,10 +60,10 @@ async function main(): Promise<void> {
     defaultModel: new VertexModel(options.vertexProject, "us-central1"),
   });
   const topLevelTopics = options.topics ? getTopics(options.topics) : undefined;
-  const topics = await sensemaker.learnTopics(comments, true, topLevelTopics);
+  const topics = await sensemaker.learnTopics(comments, !options.skipSubtopics, topLevelTopics);
   const categorizedComments = await sensemaker.categorizeComments(
     comments,
-    true,
+    !options.skipSubtopics,
     topics,
     options.additionalContext
   );
@@ -135,7 +139,7 @@ function concatTopics(comment: Comment): string {
       }
     } else {
       // handle case where no subtopics available
-      pairsArray.push(`${topic.name}:`);
+      pairsArray.push(`${topic.name}`);
     }
   }
   return pairsArray.join(";");
