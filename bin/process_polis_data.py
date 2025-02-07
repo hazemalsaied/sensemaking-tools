@@ -2,9 +2,10 @@
 
 import pandas as pd
 import argparse as arg
+import itertools
 
 
-print("starting program")
+print("Starting process_polis_data.py program")
 
 # argparse setup with arguments for two input files
 def getargs():
@@ -19,7 +20,7 @@ def getargs():
     return args
 
 
-print("processing args")
+print("Processing args")
 args = getargs()
 
 # Read the CSV files into pandas DataFrames
@@ -36,7 +37,7 @@ except pd.errors.ParserError as e:
     print(f"Error parsing CSV file: {e}")
     exit(1)
 
-print("args processed")
+print("Args processed")
 
 # make sure to cast comment ids as ints
 comments['comment-id'] = comments['comment-id'].astype(int)
@@ -50,13 +51,16 @@ group_ids = votes['group-id'].unique()
 # prompt: find all of the column names in the votes df that match a numeric regex
 import re
 comment_ids = [col for col in votes.columns if re.match(r'^\d+$', col)]
-print(comment_ids)
 
+# Create a dictionary for mapping comment to total vote count for each column in
+# the votes table, for later verification
+comment_vote_counts = {}
+for comment_id in comment_ids:
+    comment_vote_counts[int(comment_id)] = votes[comment_id].value_counts().sum()
 
 # Melt the DataFrame
 melted_votes = votes.melt(id_vars=["group-id"], value_vars=comment_ids, var_name='comment-id', value_name='value')
 melted_votes['comment-id'] = melted_votes['comment-id'].astype(int)
-print(melted_votes)
 # Group, count, unstack, and fill missing values
 result = (
     melted_votes.groupby(['comment-id','group-id'])['value']
@@ -68,14 +72,14 @@ result = (
 # Rename columns
 result = result.rename(columns={-1: 'disagree-count', 0: 'pass-count', 1: 'agree-count'})
 
-# pivot out the group-id column so that each of the vote count columns look like "group-N-VOTE-count"
+# Pivot out the group-id column so that each of the vote count columns look like "group-N-VOTE-count"
 pivoted = result.pivot(index="comment-id", columns='group-id')
 
-# ...?
-for_merge = pd.DataFrame({'comment-id': pivoted['disagree-count'][0.0].index})
+# Use the pivoted data to prepare a dataframe for merging
+for_merge = pd.DataFrame({'comment-id': pivoted.index})
 for group_id in group_ids:
   for count_col in ["disagree-count", "pass-count", "agree-count"]:
-    for_merge["group-" + str(group_id) + "-" + count_col] = pivoted[count_col][group_id]
+    for_merge["group-" + str(group_id) + "-" + count_col] = pivoted[count_col][group_id].values
 
 # zero out total vote tallies since incorrect from filtering or database caching
 comments["agrees"] = 0
@@ -97,6 +101,19 @@ for group_id in group_ids:
    comments.columns = new_columns 
 
 comments["votes"] = comments["agrees"] + comments["disagrees"] + comments["passes"]
+
+# Go through and check that all of our output comment["votes"] counts are no
+# larger than the counts from our initial `comment_vote_counts` dictionary. We do
+# not check for equality here, because it's possible that the counts get lower as
+# a result of filters applied based on who was grouped in the conversation analysis.
+print("Validating aggregate vote counts:")
+failed_validations = 0
+for comment_id in comments['comment-id']:
+    if comment_vote_counts[comment_id] < comments[comments['comment-id'] == int(comment_id)]["votes"].iloc[0]:
+        print(f"WARNING: Vote count mismatch for comment {comment_id}. Original count: {comment_vote_counts[comment_id]}, New count: {comments[comments['comment-id'] == int(comment_id)]['votes'].iloc[0]}")
+        failed_validations += 1
+if failed_validations == 0:
+   print("All vlidations passed!")
 
 # Leave only those comments explicitly moderated into the conversation, or that were
 # left unmoderated, and accumulated votes (implying the conversation was likely set
