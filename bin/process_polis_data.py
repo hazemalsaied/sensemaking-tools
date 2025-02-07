@@ -124,3 +124,7 @@ print("N comments included after moderation:", len(moderated_comments))
 moderated_comments = moderated_comments.rename(columns={'comment-body': 'comment_text'})
 moderated_comments.to_csv(args.output_file, index=False)
 
+# Exit with non-zero error code if any validations failed
+if failed_validations > 0:
+   exit(1)
+
