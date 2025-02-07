@@ -45,8 +45,11 @@ comments['comment-id'] = comments['comment-id'].astype(int)
 
 # filter out votes rows where group-id is nan, and make ints
 votes = votes[votes['group-id'].notna()]
-votes['group-id'] = votes['group-id'].astype(int)
-group_ids = votes['group-id'].unique()
+# Increment group ids so they are 1 based instead of 0
+votes['group-id'] = votes['group-id'].astype(int) + 1
+# Sort the ids so they come out in the right order in the output file header
+group_ids = sorted(votes['group-id'].unique())
+print("Group ids:", group_ids)
 
 # prompt: find all of the column names in the votes df that match a numeric regex
 import re
@@ -79,7 +82,7 @@ pivoted = result.pivot(index="comment-id", columns='group-id')
 for_merge = pd.DataFrame({'comment-id': pivoted.index})
 for group_id in group_ids:
   for count_col in ["disagree-count", "pass-count", "agree-count"]:
-    for_merge["group-" + str(group_id) + "-" + count_col] = pivoted[count_col][group_id].values
+    for_merge["Group-" + str(group_id) + "-" + count_col] = pivoted[count_col][group_id].values
 
 # zero out total vote tallies since incorrect from filtering or database caching
 comments["agrees"] = 0
@@ -91,14 +94,9 @@ comments = comments.merge(for_merge, on='comment-id')
 
 # add up from the votes matrix for consistency
 for group_id in group_ids:
-  comments["disagrees"] += comments["group-" + str(group_id) + "-disagree-count"]
-  comments["agrees"] += comments["group-" + str(group_id) + "-agree-count"]
-  comments["passes"] += comments["group-" + str(group_id) + "-pass-count"]
-
-# Rename columns from "group-0", "group-1", etc to "Group-1", "Group-2", etc
-for group_id in group_ids:
-   new_columns = [col.replace(f'group-{group_id}', "Group-" + str(1 + group_id)) for col in comments.columns]
-   comments.columns = new_columns 
+  comments["disagrees"] += comments["Group-" + str(group_id) + "-disagree-count"]
+  comments["agrees"] += comments["Group-" + str(group_id) + "-agree-count"]
+  comments["passes"] += comments["Group-" + str(group_id) + "-pass-count"]
 
 comments["votes"] = comments["agrees"] + comments["disagrees"] + comments["passes"]
 
@@ -106,7 +104,7 @@ comments["votes"] = comments["agrees"] + comments["disagrees"] + comments["passe
 # larger than the counts from our initial `comment_vote_counts` dictionary. We do
 # not check for equality here, because it's possible that the counts get lower as
 # a result of filters applied based on who was grouped in the conversation analysis.
-print("Validating aggregate vote counts:")
+print("Validating aggregate vote counts...")
 failed_validations = 0
 for comment_id in comments['comment-id']:
     if comment_vote_counts[comment_id] < comments[comments['comment-id'] == int(comment_id)]["votes"].iloc[0]:
