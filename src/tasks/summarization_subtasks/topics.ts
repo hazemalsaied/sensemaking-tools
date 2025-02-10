@@ -153,7 +153,7 @@ Common ground between groups: ${commonGroundSummary}
 Differences of opinion: ${differencesSummary}
 `;
 
-    if (process.env.DEBUG_MODE === "true") {
+    if (process.env["DEBUG_MODE"] === "true") {
       // Based on the common ground and differences of opinion comments,
       const commonGroundComments = this.input.getCommonGroundComments();
       const differencesComments = this.input.getDifferencesBetweenGroupsComments();

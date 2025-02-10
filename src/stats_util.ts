@@ -270,7 +270,7 @@ export class GroupedSummaryStats extends SummaryStats {
   /**
    * Returns the top k comments according to the given metric. K defaults to 12.
    */
-  topK(
+  override topK(
     sortBy: (comment: CommentWithVoteTallies) => number,
     k: number = this.maxSampleSize,
     filterFn: (comment: CommentWithVoteTallies) => boolean = () => true
