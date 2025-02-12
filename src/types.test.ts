@@ -19,7 +19,7 @@ import {
   isCommentType,
   isCommentRecordType,
   Summary,
-  SummaryChunk,
+  SummaryContent,
   CitationFormat,
 } from "./types";
 
@@ -99,7 +99,7 @@ describe("Types Test", () => {
 
   describe("Summary", () => {
     describe("getText", () => {
-      const chunks: SummaryChunk[] = [
+      const chunks: SummaryContent[] = [
         { text: "Claim 1 text", representativeCommentIds: ["id1", "id2"] },
         { text: " " }, // Filler text
         { text: "Claim 2 text.", representativeCommentIds: ["id3"] },

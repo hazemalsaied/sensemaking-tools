@@ -14,7 +14,7 @@
 
 import { VertexModel } from "../models/vertex_model";
 import { formatCitations, groundSummary, parseStringIntoSummary } from "./grounding";
-import { SummaryChunk } from "../types";
+import { SummaryContent } from "../types";
 
 // Mock the model response. This mock needs to be set up to return response specific for each test.
 let mockgenerateText: jest.SpyInstance;
@@ -93,11 +93,11 @@ describe("grounding test", () => {
   });
 
   describe("string to summary parsing", () => {
-    it("should parse a string with grounded claims into an array of SummaryChunks", async () => {
+    it("should parse a string with grounded claims into an array of SummaryContents", async () => {
       const groundingResult = `This is a filler text.
 [[Grounded [[inception]] claim...]]^[id1] [[Deeply, fully grounded claim.]]^[id2,id3][[Claim with no space in front]]^[id4,id5,id6]
 Finally, this is another filler text.`;
-      const expectedChunks: SummaryChunk[] = [
+      const expectedChunks: SummaryContent[] = [
         { text: "This is a filler text.\n" },
         {
           text: "Grounded [[inception]] claim...",
@@ -116,7 +116,7 @@ Finally, this is another filler text.`;
       ];
 
       const summary = await parseStringIntoSummary(groundingResult, []);
-      expect(summary.chunks).toEqual(expectedChunks);
+      expect(summary.contents).toEqual(expectedChunks);
     });
   });
 });

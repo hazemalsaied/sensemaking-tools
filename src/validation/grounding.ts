@@ -14,7 +14,7 @@
 
 // Routines for grounding summarization results in source comments and vote data, to ensure accuracy.
 
-import { Comment, Summary, SummaryChunk } from "../types";
+import { Comment, Summary, SummaryContent } from "../types";
 import { Model } from "../models/model";
 import { commentCitation } from "../tasks/utils/citation_utils";
 import { retryGenerateSummary } from "../tasks/summarization";
@@ -294,7 +294,7 @@ export async function parseStringIntoSummary(
   //   '\nFinally, this is another filler text.'
   // ]
   const parts = groundingResult.split(groundingCitationRegex);
-  const chunks: SummaryChunk[] = [];
+  const chunks: SummaryContent[] = [];
 
   for (let i = 0; i < parts.length; i++) {
     if (parts[i] !== "") {

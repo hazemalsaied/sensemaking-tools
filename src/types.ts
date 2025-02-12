@@ -104,18 +104,29 @@ export enum SummarizationType {
 /**
  * Represents a portion of a summary, optionally linked to representative comments.
  */
-export interface SummaryChunk {
+export interface SummaryContent {
   /**
-   * The text content of this chunk of the summary.
+   * The name of the section
+   */
+  title?: string;
+
+  /**
+   * The text content for this part of the summary.
    */
   text: string;
 
   /**
-   * An optional array of comment IDs that are representative of this chunk.
+   * An optional array of comment IDs that are representative of this content.
    * These IDs can be used for grounding and providing context.
    * Could be empty for fluffy/connecting text (e.g., ", and also" between two verifiable points).
    */
   representativeCommentIds?: string[];
+
+  /**
+   * Summaries that belong underneath this summary. This is meant to capture relations like
+   * topic/subtopic.
+   */
+  subContents?: SummaryContent[];
 }
 
 /**
@@ -125,7 +136,7 @@ export interface SummaryChunk {
  *
  * EXAMPLES:
  *
- * Input chunks:
+ * Input contents:
  *  - "Members of Group A want cleaner parks." with comment IDs [123, 345]
  *  - " However, they disagree..." with comment ID [678]
  *  - " and others favoring..." with comment ID [912]
@@ -143,21 +154,22 @@ export interface SummaryChunk {
 export type CitationFormat = "XML" | "MARKDOWN";
 
 /**
- * Represents a summary composed of multiple chunks.
- * If a chunk contains a claim, it should be grounded by representative comments.
+ * Represents a summary composed of multiple SummaryContents.
+ * If a SummaryContent contains a claim, it should be grounded by representative comments.
  */
 export class Summary {
   /**
-   * An array of SummaryChunk objects, each representing a part of the summary.
+   * An array of SummaryContent objects, each representing a part of the summary.
    */
-  chunks: SummaryChunk[];
+  contents: SummaryContent[];
   comments: Comment[];
 
-  constructor(chunks: SummaryChunk[], comments: Comment[]) {
-    this.chunks = chunks;
+  constructor(contents: SummaryContent[], comments: Comment[]) {
+    this.contents = contents;
     this.comments = comments;
   }
 
+  // TODO: Move citation logic to here and make sure it works for all formats.
   /**
    * Returns the text of the summary, formatted according to the specified citation format.
    * @param format The desired format for citations. Can be "XML" or "MARKDOWN".
@@ -168,10 +180,10 @@ export class Summary {
 
     switch (format) {
       case "XML":
-        for (const chunk of this.chunks) {
-          result += `${chunk.text}`;
-          if (chunk.representativeCommentIds) {
-            for (const id of chunk.representativeCommentIds) {
+        for (const content of this.contents) {
+          result += `${content.text}`;
+          if (content.representativeCommentIds) {
+            for (const id of content.representativeCommentIds) {
               result += `<citation comment_id=${id}>`;
             }
           }
@@ -179,10 +191,10 @@ export class Summary {
         break;
 
       case "MARKDOWN":
-        for (const chunk of this.chunks) {
-          result += `${chunk.text}`;
-          if (chunk.representativeCommentIds) {
-            result += `[${chunk.representativeCommentIds.join(",")}]`;
+        for (const content of this.contents) {
+          result += `${content.text}`;
+          if (content.representativeCommentIds) {
+            result += `[${content.representativeCommentIds.join(",")}]`;
           }
         }
         // Apply citation tooltips as markdown.
