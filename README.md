@@ -86,25 +86,27 @@ const summary = mySensemaker.summarize(
   SummarizationType.VOTE_TALLY,
   topics,
   // Additional context:
-  "This is from a conversation on a $15 minimum wage in Seattle" 
+  "This is from a conversation on a $15 minimum wage in Seattle"
 );
 console.log(summary.getText("MARKDOWN"));
 ```
+
 ## CLI Usage
 
-There is also a simple CLI set up for testing. There are two tools: 
-- ./runner-cli/runner.ts: takes in a CSV representing a conversation and outputs an HTML file containing the summary. The summary is best viewed as an HTML file so that the included citations can be hovered over to see the original comment and votes.
-- ./runner-cli/rerunner.ts: takes in a CSV representing a conversation and reruns summarization a number of times and outputs each of the summaries in one CSV. This is useful for testing consistency. 
+There is also a simple CLI set up for testing. There are two tools:
 
+- ./runner-cli/runner.ts: takes in a CSV representing a conversation and outputs an HTML file containing the summary. The summary is best viewed as an HTML file so that the included citations can be hovered over to see the original comment and votes.
+- ./runner-cli/rerunner.ts: takes in a CSV representing a conversation and reruns summarization a number of times and outputs each of the summaries in one CSV. This is useful for testing consistency.
 
 ## Running the Checks
+
 In the ./evals directory there are a number of checks that can be run on an unlabeled conversation. There are three categories of checks:
+
 - Monitoring Checks: summary generation failure rate and time to run
 - Quick Checks: whether the summary has an intro and conclusion, and whether all the topics and subtopics from categorization are present
 - Qualitative Checks: measures how often each group is mentioned
 
 All three checks are run using the ./evals/run_checks.ts script.
-
 
 ## Making Changes to the tools - Development
 
