@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest",
-    "test-silent": "jest --silent",
-    "test-watch": "nodemon --watch src --watch runner-cli --ext 'ts,json' -x 'npm run test-silent --onlyChanged'",
+    "test": "TFJS_NODE_GPU=false jest",
+    "test-gpu": "TFJS_NODE_GPU=true jest",
+    "test-silent": "TFJS_NODE_GPU=false jest --silent",
+    "test-watch": "TFJS_NODE_GPU=false nodemon --watch src --watch runner-cli --ext 'ts,json' -x 'npm run test-silent --onlyChanged'",
     "prepare": "husky && husky install",
     "lint": "eslint . --fix --max-warnings=0",
     "format": "prettier . --write"
@@ -42,6 +43,8 @@
     "@babel/preset-env": "^7.25.4",
     "@google-cloud/vertexai": "^1.9.0",
     "@sinclair/typebox": "^0.34.3",
+    "@tensorflow/tfjs-node-gpu": "^4.22.0",
+    "@tensorflow/tfjs": "^4.22.0",
     "@typescript-eslint/eslint-plugin": "^8.16.0",
     "babel-jest": "^29.7.0",
     "colors": "^1.4.0",
