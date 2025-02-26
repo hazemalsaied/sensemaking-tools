@@ -79,3 +79,29 @@ export function voteTallySummary(comment: Comment): string {
     return "";
   }
 }
+
+/**
+ * Replace citation notation with hoverover links for analysis
+ * @param comments
+ * @param summary
+ * @returns the markdown summary
+ */
+export function formatCitations(comments: Comment[], summary: string): string {
+  // Regex for capturing all the ^[n,m] citation annotations from the summary (post grounding).
+  const groundingCitationRegex = /\[([\d,\s]+)\]/g;
+  // Create a mapping of comment ids to comment records.
+  const commentIndex = comments.reduce((acc, curr) => acc.set(curr.id, curr), new Map());
+
+  // Find every match of citation annotations and replace cited comment ids with markdown links.
+  const summaryWithLinks = summary.replace(groundingCitationRegex, (_, match: string): string => {
+    // Extract the individual comment ids from the match.
+    const commentIds = match.split(/,\s*/);
+    // Map to markdown links that display the comment text and vote patterns when you hover over.
+    const mdLinks = commentIds.map((commentId) => commentCitation(commentIndex.get(commentId)));
+
+    return "[" + mdLinks.join(", ") + "]";
+  });
+  // For debugging, add commentTable for searching comments that might have been removed at previous steps.
+  //return summaryWithLinks + commentTable(comments);
+  return summaryWithLinks;
+}

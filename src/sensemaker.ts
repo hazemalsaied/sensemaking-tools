@@ -30,9 +30,7 @@ import { summarizeByType } from "./tasks/summarization";
 import { getPrompt, hydrateCommentRecord, retryCall } from "./sensemaker_utils";
 import { Type } from "@sinclair/typebox";
 import { ModelSettings, Model } from "./models/model";
-import { groundSummary, parseStringIntoSummary } from "./validation/grounding";
 import { GroupedSummaryStats, SummaryStats } from "./stats_util";
-import { summaryContainsStats } from "./validation/stats_checker";
 import { resolvePromisesInParallel } from "./tasks/summarization_subtasks/recursive_summarization";
 
 // Class to make sense of conversation data. Uses LLMs to learn what topics were discussed and
@@ -82,8 +80,8 @@ export class Sensemaker {
    *  these comments are already categorized (have a `topics` property), the summarization will be
    *  based on those existing categories.
    * @param summarizationType  The type of summarization to perform (e.g.,
-   *  `SummarizationType.BASIC`, `SummarizationType.VOTE_TALLY`). Defaults to
-   *  `SummarizationType.VOTE_TALLY`.
+   *  `SummarizationType.GROUP_INFORMED_CONSENSUS`). Defaults to
+   *  `SummarizationType.GROUP_INFORMED_CONSENSUS`.
    * @param topics  An optional array of `Topic` objects. If provided, these topics will be used for
    *  comment categorization before summarization, ensuring that the summary addresses the specified
    *  topics. If `comments` are already categorized, this parameter is ignored.
@@ -95,7 +93,7 @@ export class Sensemaker {
    */
   public async summarize(
     comments: Comment[],
-    summarizationType: SummarizationType = SummarizationType.VOTE_TALLY,
+    summarizationType: SummarizationType = SummarizationType.GROUP_INFORMED_CONSENSUS,
     topics?: Topic[],
     additionalContext?: string
   ): Promise<Summary> {
@@ -114,7 +112,7 @@ export class Sensemaker {
       comments = await this.categorizeComments(comments, true, topics, additionalContext);
     }
     const summaryStats =
-      summarizationType == SummarizationType.MULTI_STEP
+      summarizationType == SummarizationType.GROUP_INFORMED_CONSENSUS
         ? new GroupedSummaryStats(comments)
         : new SummaryStats(comments);
     const summary = await retryCall(
@@ -122,15 +120,12 @@ export class Sensemaker {
         model: Model,
         summaryStats: SummaryStats,
         summarizationType: SummarizationType
-      ): Promise<string> {
+      ): Promise<Summary> {
         return summarizeByType(model, summaryStats, summarizationType, additionalContext);
       },
-      function (
-        summary: string,
-        summaryStats: SummaryStats,
-        summarizationType: SummarizationType
-      ): boolean {
-        return summaryContainsStats(summary, summaryStats, summarizationType);
+      // TODO: Consider if the Summary needs any final checks.
+      function (): boolean {
+        return true;
       },
       MAX_RETRIES,
       "The statistics don't match what's in the summary.",
@@ -139,13 +134,8 @@ export class Sensemaker {
       [summaryStats, summarizationType]
     );
 
-    // We only apply the grounding routines when not doing multi step summarization
-    const groundedSummary =
-      summarizationType == SummarizationType.MULTI_STEP
-        ? parseStringIntoSummary(summary, comments)
-        : await groundSummary(this.getModel("groundingModel"), summary, comments);
     console.log(`Summarization took ${(performance.now() - startTime) / (1000 * 60)} minutes.`);
-    return groundedSummary;
+    return summary;
   }
 
   /**

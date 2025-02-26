@@ -139,8 +139,7 @@ console.log(topics);
 // Summarize the conversation and print the result as Markdown.
 const summary = mySensemaker.summarize(
   comments,
-  // There's vote information so vote tally summarization is the best summarization method to use:
-  SummarizationType.VOTE_TALLY,
+  SummarizationType.GROUP_INFORMED_CONSENSUS,
   topics,
   // Additional context:
   "This is from a conversation on a $15 minimum wage in Seattle"

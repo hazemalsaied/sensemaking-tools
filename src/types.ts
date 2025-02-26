@@ -19,7 +19,7 @@
 
 import { Type, TSchema, type Static } from "@sinclair/typebox";
 import { TypeCheck, TypeCompiler } from "@sinclair/typebox/compiler";
-import { formatCitations } from "./validation/grounding";
+import { formatCitations } from "./tasks/utils/citation_utils";
 
 /**
  * TypeBox JSON Schema representation of a single topic record as a name, with no subtopics.
@@ -94,11 +94,11 @@ export type CommentRecord = Static<typeof CommentRecord>;
 
 /**
  * Describes the type of summarization to use.
+ *
+ * GROUP_INFORMED_CONSENSUS - summarizes the comments with the highest group informed consensus
  */
 export enum SummarizationType {
-  BASIC,
-  VOTE_TALLY,
-  MULTI_STEP,
+  GROUP_INFORMED_CONSENSUS,
 }
 
 /**
