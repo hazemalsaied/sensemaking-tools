@@ -51,10 +51,10 @@ describe("IntroTest", () => {
       ).getSummary()
     ).toEqual(`## Introduction
 
-This report summarizes the results of public input, encompassing __4 comments__. All voters were anonymous. The public input collected covered a wide range of topics and subtopics including:
- * __Topic A (3 comments)__
+This report summarizes the results of public input, encompassing __4 statements__. All voters were anonymous. The public input collected covered a wide range of topics and subtopics including:
+ * __Topic A (3 statements)__
      * Subtopic A.1 (2), Subtopic A.2 (1)
- * __Topic B (1 comments)__
+ * __Topic B (1 statements)__
      * Subtopic B.1 (1)\n`);
   });
 });

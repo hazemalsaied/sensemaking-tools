@@ -84,30 +84,30 @@ describe("TopicsSummaryTest", () => {
       ).getSummary()
     ).toEqual(`## Topics
 
-From the comments submitted, 2 high level topics were identified, as well as 3 subtopics. Based on voting patterns between the opinion groups described above, both points of common ground as well as differences of opinion between the groups have been identified and are described below.
+From the statements submitted, 2 high level topics were identified, as well as 3 subtopics. Based on voting patterns between the opinion groups described above, both points of common ground as well as differences of opinion between the groups have been identified and are described below.
 
-### Topic A (3 comments)
+### Topic A (3 statements)
 
 This topic included 2 subtopics.
 
-#### Subtopic A.1 (2 comments)
+#### Subtopic A.1 (2 statements)
 
 Common ground between groups: Some points of common ground...
 
 Differences of opinion: Areas of disagreement between groups...
 
-#### Subtopic A.2 (1 comments)
+#### Subtopic A.2 (1 statements)
 
 Common ground between groups: Some points of common ground...
 
 Differences of opinion: Areas of disagreement between groups...
 
 
-### Topic B (1 comments)
+### Topic B (1 statements)
 
 This topic included 1 subtopic.
 
-#### Subtopic B.1 (1 comments)
+#### Subtopic B.1 (1 statements)
 
 Common ground between groups: Some points of common ground...
 

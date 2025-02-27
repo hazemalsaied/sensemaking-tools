@@ -164,7 +164,7 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
     const groupSectionIntro =
       `## Opinion Groups\n\n` +
       `${groupCount} distinct groups (named here as ${formatStringList(groupNamesWithQuotes)}) ` +
-      `emerged with differing viewpoints in relation to the submitted comments. The groups are ` +
+      `emerged with differing viewpoints in relation to the submitted statements. The groups are ` +
       `based on people who tend to vote more similarly to each other than to those outside the group. ` +
       "However there are points of common ground where the groups voted similarly.\n\n";
     const groupDescriptions = this.getGroupDescriptions(groupNames);

@@ -23,14 +23,14 @@ export class IntroSummary extends RecursiveSummary<SummaryStats> {
     const voteCountFormatted = this.input.voteCount.toLocaleString();
     let text =
       `This report summarizes the results of public input, encompassing ` +
-      `__${commentCountFormatted} comments__` +
+      `__${commentCountFormatted} statements__` +
       `${this.input.voteCount > 0 ? ` and __${voteCountFormatted} votes__` : ""}. All voters were anonymous. The ` +
       `public input collected covered a wide range of topics ` +
       `${this.input.containsSubtopics ? "and subtopics " : ""}` +
       `including:\n`;
 
     for (const topicStats of this.input.getStatsByTopic()) {
-      text += ` * __${topicStats.name} (${topicStats.commentCount} comments)__\n`;
+      text += ` * __${topicStats.name} (${topicStats.commentCount} statements)__\n`;
       if (!topicStats.subtopicStats) {
         continue;
       }

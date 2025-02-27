@@ -59,7 +59,7 @@ export class TopicsSummary extends RecursiveSummary<GroupedSummaryStats> {
     const hasSubtopics: boolean = nSubtopics > 0;
     const subtopicsCountText: string = hasSubtopics ? `, as well as ${nSubtopics} subtopics` : "";
     const overviewText: string =
-      `From the comments submitted, ${nTopics} high level topics were identified${subtopicsCountText}. ` +
+      `From the statements submitted, ${nTopics} high level topics were identified${subtopicsCountText}. ` +
       `Based on voting patterns between the opinion groups described above, both points of common ground as well as differences of opinion between the groups have been identified and are described below.`;
 
     // Now construct the individual Topic summaries
@@ -108,7 +108,7 @@ export class TopicSummary extends RecursiveSummary<GroupedSummaryStats> {
    * Returns the section title for this topics summary section of the final report
    */
   getSectionTitle(): string {
-    return `### ${this.topicStat.name} (${this.topicStat.commentCount} comments)`;
+    return `### ${this.topicStat.name} (${this.topicStat.commentCount} statements)`;
   }
 
   /**
@@ -180,7 +180,7 @@ Differences of opinion: ${differencesSummary}
       ]);
 
       const otherCommentsSummary = `
-**Other comments** (${otherComments.length} comments)
+**Other statements** (${otherComments.length} statements)
 
 ${otherCommentsTable}
 `;
@@ -198,7 +198,7 @@ ${otherCommentsTable}
     const commonGroundComments = this.input.getCommonGroundComments();
     const nComments = commonGroundComments.length;
     if (nComments === 0) {
-      return `No comments met the thresholds necessary to be considered as a point of common ground (at least ${this.input.minVoteCount} votes, and at least ${decimalToPercent(this.input.minCommonGroundProb)} agreement across groups).`;
+      return `No statements met the thresholds necessary to be considered as a point of common ground (at least ${this.input.minVoteCount} votes, and at least ${decimalToPercent(this.input.minCommonGroundProb)} agreement across groups).`;
     } else {
       const summary = this.model.generateText(
         getPrompt(
@@ -219,7 +219,7 @@ ${otherCommentsTable}
     const topDisagreeCommentsAcrossGroups = this.input.getDifferencesBetweenGroupsComments();
     const nComments = topDisagreeCommentsAcrossGroups.length;
     if (nComments === 0) {
-      return `No comments met the thresholds necessary to be considered as a significant difference of opinion (at least ${this.input.minVoteCount} votes, and more than ${decimalToPercent(this.input.minAgreeProbDifference)} difference in agreement rate between groups).`;
+      return `No statements met the thresholds necessary to be considered as a significant difference of opinion (at least ${this.input.minVoteCount} votes, and more than ${decimalToPercent(this.input.minAgreeProbDifference)} difference in agreement rate between groups).`;
     } else {
       const summary = this.model.generateText(
         getPrompt(
@@ -241,6 +241,6 @@ ${otherCommentsTable}
  */
 export class SubtopicSummary extends TopicSummary {
   override getSectionTitle(): string {
-    return `#### ${this.topicStat.name} (${this.topicStat.commentCount} comments)`;
+    return `#### ${this.topicStat.name} (${this.topicStat.commentCount} statements)`;
   }
 }
