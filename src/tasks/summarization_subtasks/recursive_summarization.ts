@@ -15,6 +15,7 @@
 // Functions for different ways to summarize Comment and Vote data.
 
 import { Model } from "../../models/model";
+import { SummaryContent } from "../../types";
 
 export abstract class RecursiveSummary<InputType> {
   protected input: InputType;
@@ -28,7 +29,7 @@ export abstract class RecursiveSummary<InputType> {
     this.additionalContext = additionalContext;
   }
 
-  abstract getSummary(): Promise<string>;
+  abstract getSummary(): Promise<SummaryContent>;
 }
 
 /**

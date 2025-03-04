@@ -100,20 +100,23 @@ describe("Types Test", () => {
   describe("Summary", () => {
     describe("getText", () => {
       const chunks: SummaryContent[] = [
-        { text: "Claim 1 text", representativeCommentIds: ["id1", "id2"] },
-        { text: " " }, // Filler text
-        { text: "Claim 2 text.", representativeCommentIds: ["id3"] },
+        { text: "Claim 1 text", citations: ["id1", "id2"] },
+        { text: "Claim 2 text.", citations: ["id3"] },
         { text: " Filler text" },
       ];
       const summary = new Summary(chunks, []);
 
       it("should return XML formatted summary", () => {
-        const expectedXML = `Claim 1 text<citation comment_id=id1><citation comment_id=id2> Claim 2 text.<citation comment_id=id3> Filler text`;
+        const expectedXML = `Claim 1 text <citation comment_id=id1><citation comment_id=id2> 
+Claim 2 text. <citation comment_id=id3> 
+ Filler text`;
         expect(summary.getText("XML")).toBe(expectedXML);
       });
 
       it("should return MARKDOWN formatted summary", () => {
-        const expectedMarkdown = "Claim 1 text[id1,id2] Claim 2 text.[id3] Filler text";
+        const expectedMarkdown = `Claim 1 text [id1,id2] 
+Claim 2 text. [id3] 
+ Filler text`;
         expect(summary.getText("MARKDOWN")).toBe(expectedMarkdown);
       });
 

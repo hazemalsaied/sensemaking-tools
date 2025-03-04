@@ -47,68 +47,7 @@ export async function summarizeByType(
   } else {
     throw new TypeError("Unknown Summarization Type.");
   }
-  const summaryText = await new MultiStepSummary(
-    summaryStats,
-    model,
-    additionalContext
-  ).getSummary();
-  return parseStringIntoSummary(summaryText, comments);
-}
-
-/**
- * Parses a string containing claim annotations into a `Summary` object.
- *
- * @param summaryText The summary string.
- * @returns A `Summary` object representing the parsed summary.
- *
- */
-export async function parseStringIntoSummary(
-  groundingResult: string,
-  comments: Comment[]
-): Promise<Summary> {
-  // Regex for citation annotations like: "[[This is a grounded claim.]]^[id1,id2]"
-  const groundingCitationRegex = /\[\[(.*?)]]\^\[(.*?)]/g;
-  // The regex repeatedly splits summary into segments of 3 groups appended next to each other:
-  // 1. filler text, 2. claim (without brackets), 3 comment ids (without brackets)
-  //
-  // For example, this summary:
-  //  This is a filler text.
-  //  [[Grounded claim...]]^[id1] [[Deeply, fully grounded claim.]]^[id2,id3][[Claim with no space in front]]^[id4,id5,id6]
-  //  Finally, this is another filler text.
-  //
-  // will be split into:
-  // [
-  //   'This is a filler text.\n',
-  //   'Grounded claim...',
-  //   'id1',
-  //   ' ',
-  //   'Deeply, fully grounded claim.',
-  //   'id2,id3',
-  //   '',
-  //   'Claim with no space in front',
-  //   'id4,id5,id6',
-  //   '\nFinally, this is another filler text.'
-  // ]
-  const parts = groundingResult.split(groundingCitationRegex);
-  const chunks: SummaryContent[] = [];
-
-  for (let i = 0; i < parts.length; i++) {
-    if (parts[i] !== "") {
-      // Add filler text, if not empty (in case two claims have no space in between)
-      chunks.push({ text: parts[i] });
-    }
-
-    if (i < parts.length - 2) {
-      const claim = parts[i + 1];
-      const commentIds = parts[i + 2].split(",");
-      chunks.push({
-        text: claim,
-        representativeCommentIds: commentIds,
-      });
-      i += 2; // bypass processed claim and comment ids elements
-    }
-  }
-  return new Summary(chunks, comments);
+  return new MultiStepSummary(summaryStats, model, additionalContext).getSummary();
 }
 
 /**
@@ -126,26 +65,24 @@ export class MultiStepSummary {
     this.additionalContext = additionalContext;
   }
 
-  async getSummary() {
-    const introSummary = await new IntroSummary(
-      this.summaryStats,
-      this.model,
-      this.additionalContext
-    ).getSummary();
-    const groupsSummary = this.summaryStats.groupBasedSummarization
-      ? (await new GroupsSummary(
+  async getSummary(): Promise<Summary> {
+    const summarySections: SummaryContent[] = [];
+    summarySections.push(
+      await new IntroSummary(this.summaryStats, this.model, this.additionalContext).getSummary()
+    );
+    if (this.summaryStats.groupBasedSummarization) {
+      summarySections.push(
+        await new GroupsSummary(
           this.summaryStats as GroupedSummaryStats,
           this.model,
           this.additionalContext
-        ).getSummary()) + "\n\n"
-      : "";
-    const topicsSummary = await new TopicsSummary(
-      this.summaryStats,
-      this.model,
-      this.additionalContext
-    ).getSummary();
-    // return a concatenation of the separate sections, with two newlines separating each section
-    return introSummary + "\n\n" + groupsSummary + topicsSummary;
+        ).getSummary()
+      );
+    }
+    summarySections.push(
+      await new TopicsSummary(this.summaryStats, this.model, this.additionalContext).getSummary()
+    );
+    return new Summary(summarySections, this.summaryStats.comments);
   }
 }
 

@@ -17,8 +17,7 @@
 import { RecursiveSummary, resolvePromisesInParallel } from "./recursive_summarization";
 import { getPrompt, commentTableMarkdown, ColumnDefinition } from "../../sensemaker_utils";
 import { getMaxGroupAgreeProbDifference, getMinAgreeProb } from "../../stats/stats_util";
-import { Comment } from "../../types";
-import { getCommentCitations } from "../utils/citation_utils";
+import { Comment, SummaryContent } from "../../types";
 import { Model } from "../../models/model";
 import { SummaryStats, TopicStats } from "../../stats/summary_stats";
 
@@ -94,7 +93,7 @@ function getDifferencesOfOpinionSingleCommentInstructions(containsGroups: boolea
  * content for individual subsections corresponding to specific topics and subtopics.
  */
 export class TopicsSummary extends RecursiveSummary<SummaryStats> {
-  async getSummary() {
+  async getSummary(): Promise<SummaryContent> {
     // First construct the introductory description for the entire section
     const topicStats: TopicStats[] = this.input.getStatsByTopic();
     const nTopics: number = topicStats.length;
@@ -109,24 +108,17 @@ export class TopicsSummary extends RecursiveSummary<SummaryStats> {
       `${subtopicsCountText}. Based on voting patterns` +
       `${usesGroups ? " between the opinion groups described above," : ""} both points of common ` +
       `ground as well as differences of opinion ${usesGroups ? "between the groups " : ""}` +
-      `have been identified and are described below.`;
+      `have been identified and are described below.\n`;
 
     // Now construct the individual Topic summaries
-    const topicSummaries: Array<Promise<string>> = topicStats.map((topicStat) =>
+    const topicSummaries: Array<Promise<SummaryContent>> = topicStats.map((topicStat) =>
       new TopicSummary(topicStat, this.model, this.additionalContext).getSummary()
     );
-    const topicSummaryText: string = await resolvePromisesInParallel(topicSummaries).then(
-      (summaries) => summaries.join("\n")
-    );
-
-    return Promise.resolve(
-      `## Topics
-
-${overviewText}
-
-${topicSummaryText}
-`
-    );
+    return {
+      title: "## Topics",
+      text: overviewText,
+      subContents: await resolvePromisesInParallel(topicSummaries),
+    };
   }
 }
 
@@ -143,7 +135,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
     this.topicStat = topicStat;
   }
 
-  async getSummary() {
+  async getSummary(): Promise<SummaryContent> {
     const nSubtopics: number = this.topicStat.subtopicStats?.length || 0;
     if (nSubtopics == 0) {
       return this.getCommentSummary();
@@ -163,50 +155,40 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
    * When subtopics are present, compiles the individual summaries for those subtopics
    * @returns a promise of the summary string
    */
-  async getSubtopicsSummary(): Promise<string> {
-    const subtopicSummaries: Array<Promise<string>> =
+  async getSubtopicsSummary(): Promise<SummaryContent> {
+    const subtopicSummaries: Array<Promise<SummaryContent>> =
       this.topicStat.subtopicStats?.map((subtopicStat) =>
         new SubtopicSummary(subtopicStat, this.model, this.additionalContext).getSummary()
       ) || [];
-    const subtopicsSummaryText: string = await resolvePromisesInParallel(subtopicSummaries).then(
-      (summaries) => summaries.join("\n")
-    );
+
     // This is just a stub for now, and may eventually be added on to include more naunced descriptions of e.g. where the highest
     // points of common ground and most significant differences of opinion were across the subtopics.
     const nSubtopics: number = this.topicStat.subtopicStats?.length || 0;
     const topicSummary =
       nSubtopics > 0
-        ? `This topic included ${nSubtopics} subtopic${nSubtopics === 1 ? "" : "s"}.`
+        ? `This topic included ${nSubtopics} subtopic${nSubtopics === 1 ? "" : "s"}.\n`
         : "";
 
-    return Promise.resolve(
-      `${this.getSectionTitle()}
-
-${topicSummary}
-
-${subtopicsSummaryText}
-`
-    );
+    return {
+      title: this.getSectionTitle(),
+      text: topicSummary,
+      subContents: await resolvePromisesInParallel(subtopicSummaries),
+    };
   }
 
   /**
    * Summarizes the comments associated with the given topic
    * @returns a promise of the summary string
    */
-  async getCommentSummary(): Promise<string> {
-    // Generate the primary common ground and differences of opinion summaries
-    const commonGroundSummary = await this.getCommonGroundSummary();
-    const differencesSummary = await this.getDifferencesOfOpinionSummary();
-
-    const usesGroups = this.topicStat.summaryStats.groupBasedSummarization;
-    const commonGroundTitle = usesGroups ? "Common ground between groups" : "Common ground";
-
-    let result = `${this.getSectionTitle()}
-
-${commonGroundTitle}: ${commonGroundSummary}
-
-Differences of opinion: ${differencesSummary}
-`;
+  async getCommentSummary(): Promise<SummaryContent> {
+    const result: SummaryContent = {
+      title: this.getSectionTitle(),
+      text: "",
+      subContents: [
+        await this.getCommonGroundSummary(),
+        await this.getDifferencesOfOpinionSummary(),
+      ],
+    };
 
     if (process.env["DEBUG_MODE"] === "true") {
       // Based on the common ground and differences of opinion comments,
@@ -230,12 +212,11 @@ Differences of opinion: ${differencesSummary}
         } as ColumnDefinition,
       ]);
 
-      const otherCommentsSummary = `
-**Other statements** (${otherComments.length} statements)
-
-${otherCommentsTable}
-`;
-      result += otherCommentsSummary;
+      const otherCommentsSummary = {
+        title: `**Other statements** (${otherComments.length} statements`,
+        text: otherCommentsTable,
+      };
+      result.subContents?.push(otherCommentsSummary);
     }
 
     return Promise.resolve(result);
@@ -245,11 +226,12 @@ ${otherCommentsTable}
    * Summarizes the comments on which there was the strongest agreement.
    * @returns a short paragraph describing the similarities, including comment citations.
    */
-  async getCommonGroundSummary(): Promise<string> {
+  async getCommonGroundSummary(): Promise<SummaryContent> {
     const commonGroundComments = this.input.getCommonGroundComments();
     const nComments = commonGroundComments.length;
+    let text = "";
     if (nComments === 0) {
-      return this.input.getCommonGroundErrorMessage();
+      text = this.input.getCommonGroundNoCommentsMessage();
     } else {
       const summary = this.model.generateText(
         getPrompt(
@@ -260,19 +242,27 @@ ${otherCommentsTable}
           this.additionalContext
         )
       );
-      return (await summary) + getCommentCitations(commonGroundComments);
+      text = await summary;
     }
+    return {
+      title: this.input.groupBasedSummarization
+        ? "Common ground between groups: "
+        : "Common ground: ",
+      text: text,
+      citations: commonGroundComments.map((comment) => comment.id),
+    };
   }
 
   /**
    * Summarizes the comments on which there was the strongest disagreement.
    * @returns a short paragraph describing the differences, including comment citations.
    */
-  async getDifferencesOfOpinionSummary(): Promise<string> {
+  async getDifferencesOfOpinionSummary(): Promise<SummaryContent> {
     const topDisagreeCommentsAcrossGroups = this.input.getDifferenceOfOpinionComments();
     const nComments = topDisagreeCommentsAcrossGroups.length;
+    let text = "";
     if (nComments === 0) {
-      return this.input.getDifferencesOfOpinionErrorMessage();
+      text = this.input.getDifferencesOfOpinionNoCommentsMessage();
     } else {
       const summary = this.model.generateText(
         getPrompt(
@@ -283,8 +273,13 @@ ${otherCommentsTable}
           this.additionalContext
         )
       );
-      return (await summary) + getCommentCitations(topDisagreeCommentsAcrossGroups);
+      text = await summary;
     }
+    return {
+      title: "Differences of opinion: ",
+      text: text,
+      citations: topDisagreeCommentsAcrossGroups.map((comment) => comment.id),
+    };
   }
 }
 

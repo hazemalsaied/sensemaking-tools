@@ -15,10 +15,11 @@
 // Functions for different ways to summarize Comment and Vote data.
 
 import { SummaryStats, TopicStats } from "../../stats/summary_stats";
+import { SummaryContent } from "../../types";
 import { RecursiveSummary } from "./recursive_summarization";
 
 export class IntroSummary extends RecursiveSummary<SummaryStats> {
-  getSummary() {
+  getSummary(): Promise<SummaryContent> {
     const commentCountFormatted = this.input.commentCount.toLocaleString();
     const voteCountFormatted = this.input.voteCount.toLocaleString();
     let text =
@@ -40,10 +41,6 @@ export class IntroSummary extends RecursiveSummary<SummaryStats> {
       text += "     * " + subtopics.join(", ") + "\n";
     }
 
-    return Promise.resolve(
-      `## Introduction
-
-${text}`
-    );
+    return Promise.resolve({ title: "## Introduction", text: text });
   }
 }

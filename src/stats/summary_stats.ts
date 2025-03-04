@@ -60,7 +60,7 @@ export abstract class SummaryStats {
    * Returns an error message explaining why no common ground comments were found. The
    * requirements for inclusion and thresholds are typically mentioned.
    */
-  abstract getCommonGroundErrorMessage(): string;
+  abstract getCommonGroundNoCommentsMessage(): string;
 
   /**
    * Based on how the implementing class defines it, get the top disagreed on comments.
@@ -72,7 +72,7 @@ export abstract class SummaryStats {
    * Returns an error message explaining why no differences of opinion comments were found. The
    * requirements for inclusion and thresholds are typically mentioned.
    */
-  abstract getDifferencesOfOpinionErrorMessage(): string;
+  abstract getDifferencesOfOpinionNoCommentsMessage(): string;
 
   // The total number of votes across the entire set of input comments
   get voteCount(): number {

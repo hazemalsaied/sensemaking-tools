@@ -72,9 +72,17 @@ describe("TopicsSummaryTest", () => {
   });
   it("should create a properly formatted topics summary", async () => {
     // Mock the LLM calls
-    mockCommonGroundSummary.mockReturnValue(Promise.resolve("Some points of common ground..."));
+    mockCommonGroundSummary.mockReturnValue(
+      Promise.resolve({
+        text: "Some points of common ground...",
+        title: "Common ground between groups: ",
+      })
+    );
     mockDifferencesSummary.mockReturnValue(
-      Promise.resolve("Areas of disagreement between groups...")
+      Promise.resolve({
+        text: "Areas of disagreement between groups...",
+        title: "Differences of opinion: ",
+      })
     );
 
     expect(
@@ -82,38 +90,65 @@ describe("TopicsSummaryTest", () => {
         new GroupedSummaryStats(TEST_COMMENTS),
         new VertexModel("project123", "usa")
       ).getSummary()
-    ).toEqual(`## Topics
-
-From the statements submitted, 2 high level topics were identified, as well as 3 subtopics. Based on voting patterns between the opinion groups described above, both points of common ground as well as differences of opinion between the groups have been identified and are described below.
-
-### Topic A (3 statements)
-
-This topic included 2 subtopics.
-
-#### Subtopic A.1 (2 statements)
-
-Common ground between groups: Some points of common ground...
-
-Differences of opinion: Areas of disagreement between groups...
-
-#### Subtopic A.2 (1 statements)
-
-Common ground between groups: Some points of common ground...
-
-Differences of opinion: Areas of disagreement between groups...
-
-
-### Topic B (1 statements)
-
-This topic included 1 subtopic.
-
-#### Subtopic B.1 (1 statements)
-
-Common ground between groups: Some points of common ground...
-
-Differences of opinion: Areas of disagreement between groups...
-
-
-`);
+    ).toEqual({
+      title: "## Topics",
+      text: "From the statements submitted, 2 high level topics were identified, as well as 3 subtopics. Based on voting patterns between the opinion groups described above, both points of common ground as well as differences of opinion between the groups have been identified and are described below.\n",
+      subContents: [
+        {
+          title: "### Topic A (3 statements)",
+          text: "This topic included 2 subtopics.\n",
+          subContents: [
+            {
+              text: "",
+              title: "#### Subtopic A.1 (2 statements)",
+              subContents: [
+                {
+                  text: "Some points of common ground...",
+                  title: "Common ground between groups: ",
+                },
+                {
+                  text: "Areas of disagreement between groups...",
+                  title: "Differences of opinion: ",
+                },
+              ],
+            },
+            {
+              title: "#### Subtopic A.2 (1 statements)",
+              text: "",
+              subContents: [
+                {
+                  text: "Some points of common ground...",
+                  title: "Common ground between groups: ",
+                },
+                {
+                  text: "Areas of disagreement between groups...",
+                  title: "Differences of opinion: ",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          title: "### Topic B (1 statements)",
+          text: "This topic included 1 subtopic.\n",
+          subContents: [
+            {
+              text: "",
+              title: "#### Subtopic B.1 (1 statements)",
+              subContents: [
+                {
+                  text: "Some points of common ground...",
+                  title: "Common ground between groups: ",
+                },
+                {
+                  text: "Areas of disagreement between groups...",
+                  title: "Differences of opinion: ",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
   });
 });

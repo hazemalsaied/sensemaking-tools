@@ -14,7 +14,11 @@
 
 import { decimalToPercent } from "../sensemaker_utils";
 import { Comment, CommentWithVoteTallies } from "../types";
-import { getTotalAgreeProbability, getTotalDisagreeProbability, getTotalPassProbability } from "./stats_util";
+import {
+  getTotalAgreeProbability,
+  getTotalDisagreeProbability,
+  getTotalPassProbability,
+} from "./stats_util";
 import { SummaryStats } from "./summary_stats";
 
 // Stats basis for the summary that is based on majority vote algorithms. Does not use groups.
@@ -60,7 +64,7 @@ export class MajoritySummaryStats extends SummaryStats {
     );
   }
 
-  getCommonGroundErrorMessage(): string {
+  getCommonGroundNoCommentsMessage(): string {
     return (
       `No statements met the thresholds necessary to be considered as a point of common ` +
       `ground (at least ${this.minVoteCount} votes, and at least ` +
@@ -95,7 +99,7 @@ export class MajoritySummaryStats extends SummaryStats {
     );
   }
 
-  getDifferencesOfOpinionErrorMessage(): string {
+  getDifferencesOfOpinionNoCommentsMessage(): string {
     const threshold = decimalToPercent(this.minAgreeProbDifference);
     return (
       `No statements met the thresholds necessary to be considered as a significant ` +

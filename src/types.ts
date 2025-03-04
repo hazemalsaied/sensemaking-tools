@@ -122,7 +122,7 @@ export interface SummaryContent {
    * These IDs can be used for grounding and providing context.
    * Could be empty for fluffy/connecting text (e.g., ", and also" between two verifiable points).
    */
-  representativeCommentIds?: string[];
+  citations?: string[];
 
   /**
    * Summaries that belong underneath this summary. This is meant to capture relations like
@@ -178,27 +178,36 @@ export class Summary {
    * @returns The formatted summary text.  Throws an error if an unsupported format is provided.
    */
   getText(format: CitationFormat): string {
-    let result = "";
+    return this.contents
+      .map((content: SummaryContent) => this.getContentText(content, format))
+      .join("\n");
+  }
 
+  private getContentText(content: SummaryContent, format: CitationFormat): string {
+    let result = content.title ? "\n\n" + content.title + "\n" : "";
+    result += `${content.text}${this.getCitationText(content, format)}`;
+
+    for (const subcontent of content.subContents || []) {
+      result += this.getContentText(subcontent, format);
+    }
+
+    return result;
+  }
+
+  private getCitationText(content: SummaryContent, format: CitationFormat): string {
+    if (!content.citations || content.citations.length === 0) {
+      return "";
+    }
+    let result = " ";
     switch (format) {
       case "XML":
-        for (const content of this.contents) {
-          result += `${content.text}`;
-          if (content.representativeCommentIds) {
-            for (const id of content.representativeCommentIds) {
-              result += `<citation comment_id=${id}>`;
-            }
-          }
+        for (const id of content.citations) {
+          result += `<citation comment_id=${id}>`;
         }
         break;
 
       case "MARKDOWN":
-        for (const content of this.contents) {
-          result += `${content.text}`;
-          if (content.representativeCommentIds) {
-            result += `[${content.representativeCommentIds.join(",")}]`;
-          }
-        }
+        result += `[${content.citations.join(",")}]`;
         // Apply citation tooltips as markdown.
         result = formatCitations(this.comments, result);
         break;
@@ -206,8 +215,8 @@ export class Summary {
       default:
         throw new Error(`Unsupported citation type: ${format}`);
     }
-
-    return result;
+    // Add a trailing whitespace in case there's another SummaryContent directly after.
+    return result + " ";
   }
 }
 

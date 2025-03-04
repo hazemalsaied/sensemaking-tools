@@ -15,8 +15,7 @@
 import { getPrompt } from "../../sensemaker_utils";
 import { GroupStats, GroupedSummaryStats } from "../../stats/group_informed";
 import { RecursiveSummary, resolvePromisesInParallel } from "./recursive_summarization";
-import { Comment } from "../../types";
-import { commentCitationHtml, getCommentCitations } from "../utils/citation_utils";
+import { Comment, SummaryContent } from "../../types";
 
 /**
  * Format a list of strings to be a human readable list ending with "and"
@@ -49,7 +48,7 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
    * Describes what makes the groups similar and different.
    * @returns a two sentence description of similarities and differences.
    */
-  private async getGroupComparison(groupNames: string[]): Promise<string> {
+  private getGroupComparison(groupNames: string[]): Promise<SummaryContent>[] {
     const topAgreeCommentsAcrossGroups = this.input.getCommonGroundComments();
     const groupComparisonSimilar = this.model.generateText(
       getPrompt(
@@ -73,19 +72,22 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
     );
 
     // Combine the descriptions and add the comments used for summarization as citations.
-    return Promise.resolve(groupComparisonSimilar)
-      .then((result: string) => {
-        return result + getCommentCitations(topAgreeCommentsAcrossGroups);
-      })
-      .then(async (similarResult: string) => {
-        const differentResult = await Promise.resolve(groupComparisonDifferent);
-        return (
-          similarResult +
-          " " +
-          differentResult +
-          getCommentCitations(topDisagreeCommentsAcrossGroups)
-        );
-      });
+    return [
+      groupComparisonSimilar.then((result: string) => {
+        return {
+          // Hack to force these two sections to be on a new line.
+          title: "\n",
+          text: result,
+          citations: topAgreeCommentsAcrossGroups.map((comment) => comment.id),
+        };
+      }),
+      groupComparisonDifferent.then((result: string) => {
+        return {
+          text: result,
+          citations: topDisagreeCommentsAcrossGroups.map((comment) => comment.id),
+        };
+      }),
+    ];
   }
 
   /**
@@ -93,7 +95,7 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
    * @param groupNames the names of the groups to describe and compare
    * @returns text containing the description of each group and a compare and contrast section
    */
-  private async getGroupDescriptions(groupNames: string[]): Promise<string> {
+  private async getGroupDescriptions(groupNames: string[]): Promise<SummaryContent[]> {
     const groupDescriptions = [];
     for (const groupName of groupNames) {
       const topCommentsForGroup = this.input.getGroupRepresentativeComments(groupName);
@@ -111,7 +113,11 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
             )
           )
           .then((result: string) => {
-            return `__${groupName}__: ` + result + getCommentCitations(topCommentsForGroup) + "\n";
+            return {
+              title: `__${groupName}__: `,
+              text: result,
+              citations: topCommentsForGroup.map((comment) => comment.id),
+            };
           })
       );
     }
@@ -120,38 +126,11 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
     // the group comparison to be created and combine them all together.
     return resolvePromisesInParallel([
       ...groupDescriptions,
-      this.getGroupComparison(groupNames),
-    ]).then((results: string[]) => {
-      return results.join("\n");
-    });
+      ...this.getGroupComparison(groupNames),
+    ]);
   }
 
-  /**
-   * Summarize each comment as a separate bullet point.
-   * @param comments the comments to summarize.
-   * @returns the HTML elements for a bullet point list of summaries, includes citations.
-   */
-  private async getBulletPointSummary(comments: Comment[]): Promise<string> {
-    return await resolvePromisesInParallel(
-      comments.map(async (comment: Comment) => {
-        return (
-          "<li>" +
-          (await this.model.generateText(
-            getPrompt(
-              "Write a bullet point length summary of the following comment. Do not format it like a bullet point.",
-              [comment.text]
-            )
-          )) +
-          commentCitationHtml(comment) +
-          `</li>\n`
-        );
-      })
-    ).then((results: string[]) => {
-      return results.join(" ");
-    });
-  }
-
-  async getSummary() {
+  async getSummary(): Promise<SummaryContent> {
     const groupStats = this.input.getStatsByGroup();
     const groupCount = groupStats.length;
     const groupNamesWithQuotes = groupStats.map((stat: GroupStats) => {
@@ -161,15 +140,16 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
       return stat.name;
     });
 
-    const groupSectionIntro =
-      `## Opinion Groups\n\n` +
-      `${groupCount} distinct groups (named here as ${formatStringList(groupNamesWithQuotes)}) ` +
-      `emerged with differing viewpoints in relation to the submitted statements. The groups are ` +
-      `based on people who tend to vote more similarly to each other than to those outside the group. ` +
-      "However there are points of common ground where the groups voted similarly.\n\n";
-    const groupDescriptions = this.getGroupDescriptions(groupNames);
+    const content: SummaryContent = {
+      title: "## Opinion Groups",
+      text:
+        `${groupCount} distinct groups (named here as ${formatStringList(groupNamesWithQuotes)}) ` +
+        `emerged with differing viewpoints in relation to the submitted statements. The groups are ` +
+        `based on people who tend to vote more similarly to each other than to those outside the group. ` +
+        "However there are points of common ground where the groups voted similarly.\n\n",
+      subContents: await this.getGroupDescriptions(groupNames),
+    };
 
-    const descriptionResult = await groupDescriptions;
-    return groupSectionIntro + descriptionResult;
+    return content;
   }
 }

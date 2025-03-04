@@ -71,7 +71,7 @@ export class GroupedSummaryStats extends SummaryStats {
     );
   }
 
-  getCommonGroundErrorMessage(): string {
+  getCommonGroundNoCommentsMessage(): string {
     return (
       `No statements met the thresholds necessary to be considered as a point of common ` +
       `ground (at least ${this.minVoteCount} votes, and at least ` +
@@ -139,7 +139,7 @@ export class GroupedSummaryStats extends SummaryStats {
     );
   }
 
-  getDifferencesOfOpinionErrorMessage(): string {
+  getDifferencesOfOpinionNoCommentsMessage(): string {
     return (
       `No statements met the thresholds necessary to be considered as a significant ` +
       `difference of opinion (at least ${this.minVoteCount} votes, and more than ` +
