@@ -92,7 +92,7 @@ export class Sensemaker {
    */
   public async summarize(
     comments: Comment[],
-    summarizationType: SummarizationType = SummarizationType.GROUP_INFORMED_CONSENSUS,
+    summarizationType: SummarizationType = SummarizationType.AGGREGATE_VOTE,
     topics?: Topic[],
     additionalContext?: string
   ): Promise<Summary> {

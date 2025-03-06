@@ -93,7 +93,7 @@ export async function getSummary(
   // requirements (like requiring votes) would also need updated.
   return await sensemaker.summarize(
     comments,
-    SummarizationType.GROUP_INFORMED_CONSENSUS,
+    SummarizationType.AGGREGATE_VOTE,
     topics,
     additionalContext
   );
