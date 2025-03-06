@@ -16,7 +16,7 @@
 
 import { Model } from "../models/model";
 import { Comment, SummarizationType, Summary, SummaryContent } from "../types";
-import { GroupedSummaryStats, TopicStats } from "../stats_util";
+import { GroupedSummaryStats, MajoritySummaryStats, SummaryStats, TopicStats } from "../stats_util";
 import { IntroSummary } from "./summarization_subtasks/intro";
 import { GroupsSummary } from "./summarization_subtasks/groups";
 import { TopicsSummary } from "./summarization_subtasks/topics";
@@ -37,16 +37,20 @@ export async function summarizeByType(
   summarizationType: SummarizationType,
   additionalContext?: string
 ): Promise<Summary> {
+  let summaryStats: SummaryStats;
   if (summarizationType === SummarizationType.GROUP_INFORMED_CONSENSUS) {
-    const summaryText = await new MultiStepSummary(
-      new GroupedSummaryStats(comments),
-      model,
-      additionalContext
-    ).getSummary();
-    return parseStringIntoSummary(summaryText, comments);
+    summaryStats = new GroupedSummaryStats(comments);
+  } else if (summarizationType === SummarizationType.AGGREGATE_VOTE) {
+    summaryStats = new MajoritySummaryStats(comments);
   } else {
     throw new TypeError("Unknown Summarization Type.");
   }
+  const summaryText = await new MultiStepSummary(
+    summaryStats,
+    model,
+    additionalContext
+  ).getSummary();
+  return parseStringIntoSummary(summaryText, comments);
 }
 
 /**
@@ -109,12 +113,12 @@ export async function parseStringIntoSummary(
  *
  */
 export class MultiStepSummary {
-  private summaryStats: GroupedSummaryStats;
+  private summaryStats: SummaryStats;
   private model: Model;
   // TODO: Figure out how we handle additional instructions with this structure.
   private additionalContext?: string;
 
-  constructor(summaryStats: GroupedSummaryStats, model: Model, additionalContext?: string) {
+  constructor(summaryStats: SummaryStats, model: Model, additionalContext?: string) {
     this.summaryStats = summaryStats;
     this.model = model;
     this.additionalContext = additionalContext;
@@ -126,18 +130,20 @@ export class MultiStepSummary {
       this.model,
       this.additionalContext
     ).getSummary();
-    const groupsSummary = await new GroupsSummary(
-      this.summaryStats,
-      this.model,
-      this.additionalContext
-    ).getSummary();
+    const groupsSummary = this.summaryStats.groupBasedSummarization
+      ? (await new GroupsSummary(
+          this.summaryStats as GroupedSummaryStats,
+          this.model,
+          this.additionalContext
+        ).getSummary()) + "\n\n"
+      : "";
     const topicsSummary = await new TopicsSummary(
       this.summaryStats,
       this.model,
       this.additionalContext
     ).getSummary();
     // return a concatenation of the separate sections, with two newlines separating each section
-    return introSummary + "\n\n" + groupsSummary + "\n\n" + topicsSummary;
+    return introSummary + "\n\n" + groupsSummary + topicsSummary;
   }
 }
 

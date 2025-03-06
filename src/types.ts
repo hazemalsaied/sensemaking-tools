@@ -96,9 +96,11 @@ export type CommentRecord = Static<typeof CommentRecord>;
  * Describes the type of summarization to use.
  *
  * GROUP_INFORMED_CONSENSUS - summarizes the comments with the highest group informed consensus
+ * AGGREGATE_VOTE - summarizes the comments based on the majority vote. Does not use votes.
  */
 export enum SummarizationType {
   GROUP_INFORMED_CONSENSUS,
+  AGGREGATE_VOTE,
 }
 
 /**

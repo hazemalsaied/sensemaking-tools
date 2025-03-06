@@ -34,25 +34,37 @@ import { Model } from "../../models/model";
 const COMMON_INSTRUCTIONS =
   "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. " +
   "Do not generate bullet points or special formatting. Do not yap.";
-const COMMON_GROUND_INSTRUCTIONS =
-  `Here are several comments sharing different opinions. Your job is to summarize these ` +
-  `comments. Do not pretend that you hold any of these opinions. You are not a participant in ` +
-  `this discussion. Participants in this conversation have been clustered into opinion groups. ` +
-  `These opinion groups mostly approve of these comments. Write a concise summary of these ` +
-  `comments that is at least one sentence and at most three sentences long. The summary should ` +
-  `be substantiated, detailed and informative: include specific findings, requests, proposals, ` +
-  `action items and examples, grounded in the comments. Refer to the people who made these ` +
-  `comments as participants, not commenters. Do not talk about how strongly they approve of ` +
-  `these comments. Use complete sentences. ${COMMON_INSTRUCTIONS}`;
+const GROUP_SPECIFIC_INSTRUCTIONS =
+  `Participants in this conversation have been clustered into opinion groups. ` +
+  `These opinion groups mostly approve of these comments. `;
 
-const COMMON_GROUND_SINGLE_COMMENT_INSTRUCTIONS =
-  `Here is a comment presenting an opinion from a discussion. Your job is to rewrite this ` +
-  `comment clearly without embellishment. Do not pretend that you hold this opinion. You are not` +
-  ` a participant in this discussion. Participants in this conversation have been clustered into ` +
-  `opinion groups. These opinion groups mostly approve of this comment. Refer to the people who ` +
-  `made these comments as participants, not commenters. Do not talk about how strongly they ` +
-  `approve of these comments. Write a complete sentence. ${COMMON_INSTRUCTIONS}`;
+function getCommonGroundInstructions(containsGroups: boolean): string {
+  const groupSpecificText = containsGroups ? GROUP_SPECIFIC_INSTRUCTIONS : "";
+  return (
+    `Here are several comments sharing different opinions. Your job is to summarize these ` +
+    `comments. Do not pretend that you hold any of these opinions. You are not a participant in ` +
+    `this discussion. ${groupSpecificText}Write a concise summary of these ` +
+    `comments that is at least one sentence and at most three sentences long. The summary should ` +
+    `be substantiated, detailed and informative: include specific findings, requests, proposals, ` +
+    `action items and examples, grounded in the comments. Refer to the people who made these ` +
+    `comments as participants, not commenters. Do not talk about how strongly they approve of ` +
+    `these comments. Use complete sentences. ${COMMON_INSTRUCTIONS}`
+  );
+}
 
+function getCommonGroundSingleCommentInstructions(containsGroups: boolean): string {
+  const groupSpecificText = containsGroups ? GROUP_SPECIFIC_INSTRUCTIONS : "";
+  return (
+    `Here is a comment presenting an opinion from a discussion. Your job is to rewrite this ` +
+    `comment clearly without embellishment. Do not pretend that you hold this opinion. You are not` +
+    ` a participant in this discussion. ${groupSpecificText}Refer to the people who ` +
+    `made these comments as participants, not commenters. Do not talk about how strongly they ` +
+    `approve of these comments. Write a complete sentence. ${COMMON_INSTRUCTIONS}`
+  );
+}
+
+// TODO: Test whether conditionally including group specific text in this prompt improves
+// performance.
 const DIFFERENCES_OF_OPINION_INSTRUCTIONS =
   `Here are several comments which generated disagreement. Your job is summarize the ideas ` +
   `contained in the comments. Do not pretend that you hold any of these opinions. You are not a ` +
@@ -69,15 +81,21 @@ Do not pretend that these comments were written by different participants. These
 Your output should begin in the form "There was low consensus". For each sentence use a unique ` +
   `phrase to indicate that there was low consensus on the topic.`;
 
-const DIFFERENCES_OF_OPINION_SINGLE_COMMENT_INSTRUCTIONS =
-  `Here is a comment presenting an opinion from a discussion. Your job is to rewrite this ` +
-  `comment clearly without embellishment. Do not pretend that you hold this opinion. You are ` +
-  `not a participant in this discussion. Participants in this conversation have been clustered ` +
-  `into opinion groups. There were very different levels of agreement between the two opinion ` +
-  `groups regarding this comment. Refer to the people who made these comments as participants, ` +
-  `not commenters. Do not talk about how strongly they approve of these comments. Write a ` +
-  `complete sentence. Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do ` +
-  `not generate bullet points or special formatting. Do not yap.`;
+function getDifferencesOfOpinionSingleCommentInstructions(containsGroups: boolean): string {
+  const groupSpecificText = containsGroups
+    ? `Participants in this conversation have been clustered ` +
+      `into opinion groups. There were very different levels of agreement between the two opinion ` +
+      `groups regarding this comment. `
+    : "";
+  return (
+    `Here is a comment presenting an opinion from a discussion. Your job is to rewrite this ` +
+    `comment clearly without embellishment. Do not pretend that you hold this opinion. You are ` +
+    `not a participant in this discussion. ${groupSpecificText}Refer to the people who made these comments as participants, ` +
+    `not commenters. Do not talk about how strongly they approve of these comments. Write a ` +
+    `complete sentence. Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do ` +
+    `not generate bullet points or special formatting. Do not yap.`
+  );
+}
 
 /**
  * This RecursiveSummary subclass constructs a top level "Topics" summary section,
@@ -94,10 +112,12 @@ export class TopicsSummary extends RecursiveSummary<SummaryStats> {
       .reduce((n, m) => n + m, 0);
     const hasSubtopics: boolean = nSubtopics > 0;
     const subtopicsCountText: string = hasSubtopics ? `, as well as ${nSubtopics} subtopics` : "";
+    const usesGroups = topicStats.some((t) => t.summaryStats.groupBasedSummarization);
     const overviewText: string =
       `From the statements submitted, ${nTopics} high level topics were identified` +
-      `${subtopicsCountText}. Based on voting patterns between the opinion groups described ` +
-      `above, both points of common ground as well as differences of opinion between the groups ` +
+      `${subtopicsCountText}. Based on voting patterns` +
+      `${usesGroups ? " between the opinion groups described above," : ""} both points of common ` +
+      `ground as well as differences of opinion ${usesGroups ? "between the groups " : ""}` +
       `have been identified and are described below.`;
 
     // Now construct the individual Topic summaries
@@ -187,9 +207,12 @@ ${subtopicsSummaryText}
     const commonGroundSummary = await this.getCommonGroundSummary();
     const differencesSummary = await this.getDifferencesOfOpinionSummary();
 
+    const usesGroups = this.topicStat.summaryStats.groupBasedSummarization;
+    const commonGroundTitle = usesGroups ? "Common ground between groups" : "Common ground";
+
     let result = `${this.getSectionTitle()}
 
-Common ground between groups: ${commonGroundSummary}
+${commonGroundTitle}: ${commonGroundSummary}
 
 Differences of opinion: ${differencesSummary}
 `;
@@ -228,18 +251,21 @@ ${otherCommentsTable}
   }
 
   /**
-   * Summarizes the comments on which there was the strongest agreement between groups.
-   * @returns a short paragraph describing the similarities between groups, including comment citations.
+   * Summarizes the comments on which there was the strongest agreement.
+   * @returns a short paragraph describing the similarities, including comment citations.
    */
   async getCommonGroundSummary(): Promise<string> {
     const commonGroundComments = this.input.getCommonGroundComments();
     const nComments = commonGroundComments.length;
     if (nComments === 0) {
+      // TODO: update error messages to be based on the actual requreiments for inclusion
       return `No statements met the thresholds necessary to be considered as a point of common ground (at least ${this.input.minVoteCount} votes, and at least ${decimalToPercent(this.input.minCommonGroundProb)} agreement across groups).`;
     } else {
       const summary = this.model.generateText(
         getPrompt(
-          nComments === 1 ? COMMON_GROUND_SINGLE_COMMENT_INSTRUCTIONS : COMMON_GROUND_INSTRUCTIONS,
+          nComments === 1
+            ? getCommonGroundSingleCommentInstructions(this.input.groupBasedSummarization)
+            : getCommonGroundInstructions(this.input.groupBasedSummarization),
           commonGroundComments.map((comment: Comment): string => comment.text),
           this.additionalContext
         )
@@ -249,19 +275,20 @@ ${otherCommentsTable}
   }
 
   /**
-   * Summarizes the comments on which there was the strongest disagreement between groups.
-   * @returns a short paragraph describing the differences between groups, including comment citations.
+   * Summarizes the comments on which there was the strongest disagreement.
+   * @returns a short paragraph describing the differences, including comment citations.
    */
   async getDifferencesOfOpinionSummary(): Promise<string> {
     const topDisagreeCommentsAcrossGroups = this.input.getDifferenceOfOpinionComments();
     const nComments = topDisagreeCommentsAcrossGroups.length;
     if (nComments === 0) {
+      // TODO: remove mentions of groups from error messages.
       return `No statements met the thresholds necessary to be considered as a significant difference of opinion (at least ${this.input.minVoteCount} votes, and more than ${decimalToPercent(this.input.minAgreeProbDifference)} difference in agreement rate between groups).`;
     } else {
       const summary = this.model.generateText(
         getPrompt(
           nComments === 1
-            ? DIFFERENCES_OF_OPINION_SINGLE_COMMENT_INSTRUCTIONS
+            ? getDifferencesOfOpinionSingleCommentInstructions(this.input.groupBasedSummarization)
             : DIFFERENCES_OF_OPINION_INSTRUCTIONS,
           topDisagreeCommentsAcrossGroups.map((comment: Comment) => comment.text),
           this.additionalContext

@@ -29,6 +29,64 @@ export function getAgreeProbability(voteTally: VoteTally): number {
 }
 
 /**
+ * Compute the MAP probability estimate of an agree vote for a given map of VoteTallies.
+ */
+export function getTotalAgreeProbability(voteTalliesByGroup: { [key: string]: VoteTally }): number {
+  const totalCount = Object.values(voteTalliesByGroup)
+    .map(
+      (voteTally: VoteTally) =>
+        voteTally.agreeCount + voteTally.disagreeCount + (voteTally.passCount || 0)
+    )
+    .reduce((a: number, b: number) => a + b, 0);
+  const totalAgreeCount = Object.values(voteTalliesByGroup)
+    .map((voteTally: VoteTally) => voteTally.agreeCount)
+    .reduce((a: number, b: number) => a + b, 0);
+  // We add +1 and +2 to the numerator and demonenator respectively as a psuedo-count prior so that probabilities tend to 1/2 in the
+  // absence of data, and to avoid division/multiplication by zero in group informed consensus and risk ratio calculations. This is technically
+  // a simple maxima a priori (MAP) probability estimate.
+  return (totalAgreeCount + 1) / (totalCount + 2);
+}
+
+/**
+ * Compute the MAP probability estimate of an disagree vote for a given map of VoteTallies.
+ */
+export function getTotalDisagreeProbability(voteTalliesByGroup: {
+  [key: string]: VoteTally;
+}): number {
+  const totalCount = Object.values(voteTalliesByGroup)
+    .map(
+      (voteTally: VoteTally) =>
+        voteTally.agreeCount + voteTally.disagreeCount + (voteTally.passCount || 0)
+    )
+    .reduce((a: number, b: number) => a + b, 0);
+  const totalDisagreeCount = Object.values(voteTalliesByGroup)
+    .map((voteTally: VoteTally) => voteTally.disagreeCount)
+    .reduce((a: number, b: number) => a + b, 0);
+  // We add +1 and +2 to the numerator and demonenator respectively as a psuedo-count prior so that probabilities tend to 1/2 in the
+  // absence of data, and to avoid division/multiplication by zero in group informed consensus and risk ratio calculations. This is technically
+  // a simple maxima a priori (MAP) probability estimate.
+  return (totalDisagreeCount + 1) / (totalCount + 2);
+}
+
+/**
+ * Compute the MAP probability estimate of an pass vote for a given map of VoteTallies.
+ */
+export function getTotalPassProbability(voteTalliesByGroup: { [key: string]: VoteTally }): number {
+  const totalCount = Object.values(voteTalliesByGroup)
+    .map(
+      (voteTally: VoteTally) =>
+        voteTally.agreeCount + voteTally.disagreeCount + (voteTally.passCount || 0)
+    )
+    .reduce((a: number, b: number) => a + b, 0);
+  const totalPassCount = Object.values(voteTalliesByGroup)
+    .map((voteTally: VoteTally) => voteTally.passCount || 0)
+    .reduce((a: number, b: number) => a + b, 0);
+  // We add +1 and +2 to the numerator and demonenator respectively as a psuedo-count prior so that probabilities tend to 1/2 in the
+  // absence of data, and to avoid division/multiplication by zero in group informed consensus and risk ratio calculations. This is technically
+  // a simple maxima a priori (MAP) probability estimate.
+  return (totalPassCount + 1) / (totalCount + 2);
+}
+/**
  * Computes group informed (agree) consensus for a comment's vote tallies,
  * computed as the product of the aggree probabilities across groups.
  */
@@ -146,13 +204,20 @@ export function getCommentVoteCount(comment: Comment): number {
  */
 export abstract class SummaryStats {
   comments: Comment[];
+  // Comments with at least minVoteCount votes.
+  filteredComments: CommentWithVoteTallies[];
   minCommonGroundProb = 0.6;
   minAgreeProbDifference = 0.3;
   maxSampleSize = 5;
   public minVoteCount = 20;
+  // Whether group data is used as part of the summary.
+  groupBasedSummarization: boolean = true;
 
   constructor(comments: Comment[]) {
     this.comments = comments;
+    this.filteredComments = comments.filter(isCommentWithVoteTalliesType).filter((comment) => {
+      return getCommentVoteCount(comment) >= this.minVoteCount;
+    });
   }
 
   /**
@@ -276,23 +341,80 @@ export abstract class SummaryStats {
     return topicStats;
   }
 }
-
-/**
- * This subclass of the SummaryStats class provides the same abstract purpose
- * (that is, serving as the interface to the RecursiveSummary abstraction),
- * but is specifically tailored to data input in terms of votes and opinion
- * groups data.
- */
-export class GroupedSummaryStats extends SummaryStats {
-  filteredComments: CommentWithVoteTallies[];
-
-  constructor(comments: Comment[]) {
-    super(comments);
-    this.filteredComments = comments.filter(isCommentWithVoteTalliesType).filter((comment) => {
-      return getCommentVoteCount(comment) >= this.minVoteCount;
-    });
+export class MajoritySummaryStats extends SummaryStats {
+  minAgreeProb = 0.7;
+  groupBasedSummarization = false;
+  /**
+   * An override of the SummaryStats static factory method,
+   * to allow for MajoritySummaryStats specific initialization.
+   */
+  static override create(comments: Comment[]): MajoritySummaryStats {
+    return new MajoritySummaryStats(comments);
   }
 
+  /**
+   * Returns the top k comments according to the given metric.
+   */
+  override topK(
+    sortBy: (comment: CommentWithVoteTallies) => number,
+    k: number = this.maxSampleSize,
+    filterFn: (comment: CommentWithVoteTallies) => boolean = () => true
+  ): Comment[] {
+    return this.filteredComments
+      .filter(filterFn)
+      .sort((a, b) => sortBy(b) - sortBy(a))
+      .slice(0, k);
+  }
+
+  /**
+   * Gets the topK agreed upon comments based on highest % of agree votes.
+   *
+   * @param k the number of comments to get
+   * @returns the top agreed on comments
+   */
+  getCommonGroundComments(k: number = this.maxSampleSize) {
+    return this.topK(
+      (comment) => getTotalAgreeProbability(comment.voteTalliesByGroup),
+      k,
+      // Before getting the top agreed comments, enforce a minimum level of agreement
+      (comment: CommentWithVoteTallies) =>
+        getTotalAgreeProbability(comment.voteTalliesByGroup) >= this.minAgreeProb
+    );
+  }
+
+  /**
+   * Gets the topK low consensus comments based on highest % of agree votes and disagree votes.
+   *
+   * @param k the number of comments to get
+   * @returns the top agreed on comments
+   */
+  getDifferenceOfOpinionComments(k: number = this.maxSampleSize) {
+    return this.topK(
+      // Rank comments with the same agree and disagree rates the most highly and prefer when these
+      // values are higher. So the best score would be when both the agree rate and the disagree
+      // rate are 0.5.
+      (comment) =>
+        1 -
+        Math.abs(
+          getTotalAgreeProbability(comment.voteTalliesByGroup) -
+            getTotalDisagreeProbability(comment.voteTalliesByGroup)
+        ) -
+        getTotalPassProbability(comment.voteTalliesByGroup),
+      k,
+      // Before getting the top differences comments, enforce a minimum level of difference of
+      // opinion.
+      (comment: CommentWithVoteTallies) =>
+        getTotalAgreeProbability(comment.voteTalliesByGroup) <= this.minAgreeProb &&
+        getTotalDisagreeProbability(comment.voteTalliesByGroup) <= this.minAgreeProb
+    );
+  }
+}
+/**
+ * This child class of the SummaryStats class provides the same abstract purpose
+ * (that is, serving as the interface to the RecursiveSummary abstraction),
+ * but is specifically tailored to group based summarization.
+ */
+export class GroupedSummaryStats extends SummaryStats {
   /**
    * An override of the SummaryStats static factory method,
    * to allow for GroupedSummaryStats specific initialization.
