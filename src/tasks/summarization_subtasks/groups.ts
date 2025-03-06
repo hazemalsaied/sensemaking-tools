@@ -61,7 +61,7 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
       )
     );
 
-    const topDisagreeCommentsAcrossGroups = this.input.getDifferencesBetweenGroupsComments();
+    const topDisagreeCommentsAcrossGroups = this.input.getDifferenceOfOpinionComments();
     const groupComparisonDifferent = this.model.generateText(
       getPrompt(
         "The following are comments that different groups had different opinions on. Write one sentence describing " +

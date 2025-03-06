@@ -30,7 +30,6 @@ import { summarizeByType } from "./tasks/summarization";
 import { getPrompt, hydrateCommentRecord, retryCall } from "./sensemaker_utils";
 import { Type } from "@sinclair/typebox";
 import { ModelSettings, Model } from "./models/model";
-import { GroupedSummaryStats, SummaryStats } from "./stats_util";
 import { resolvePromisesInParallel } from "./tasks/summarization_subtasks/recursive_summarization";
 
 // Class to make sense of conversation data. Uses LLMs to learn what topics were discussed and
@@ -111,17 +110,13 @@ export class Sensemaker {
       }
       comments = await this.categorizeComments(comments, true, topics, additionalContext);
     }
-    const summaryStats =
-      summarizationType == SummarizationType.GROUP_INFORMED_CONSENSUS
-        ? new GroupedSummaryStats(comments)
-        : new SummaryStats(comments);
     const summary = await retryCall(
       async function (
         model: Model,
-        summaryStats: SummaryStats,
+        comments: Comment[],
         summarizationType: SummarizationType
       ): Promise<Summary> {
-        return summarizeByType(model, summaryStats, summarizationType, additionalContext);
+        return summarizeByType(model, comments, summarizationType, additionalContext);
       },
       // TODO: Consider if the Summary needs any final checks.
       function (): boolean {
@@ -130,8 +125,8 @@ export class Sensemaker {
       MAX_RETRIES,
       "The statistics don't match what's in the summary.",
       undefined,
-      [this.getModel("summarizationModel"), summaryStats, summarizationType],
-      [summaryStats, summarizationType]
+      [this.getModel("summarizationModel"), comments, summarizationType],
+      []
     );
 
     console.log(`Summarization took ${(performance.now() - startTime) / (1000 * 60)} minutes.`);

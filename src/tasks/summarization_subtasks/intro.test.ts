@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import { VertexModel } from "../../models/vertex_model";
-import { SummaryStats } from "../../stats_util";
+import { GroupedSummaryStats } from "../../stats_util";
 import { Comment } from "../../types";
 import { IntroSummary } from "./intro";
 
@@ -42,11 +42,11 @@ const TEST_COMMENTS: Comment[] = [
 
 describe("IntroTest", () => {
   it("should create an intro section", async () => {
-    const temp = new SummaryStats(TEST_COMMENTS);
+    const temp = new GroupedSummaryStats(TEST_COMMENTS);
     console.log(temp);
     expect(
       await new IntroSummary(
-        new SummaryStats(TEST_COMMENTS),
+        new GroupedSummaryStats(TEST_COMMENTS),
         new VertexModel("project123", "usa")
       ).getSummary()
     ).toEqual(`## Introduction

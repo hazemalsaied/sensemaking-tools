@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import { TopicStats } from "../stats_util";
+import { GroupedSummaryStats, TopicStats } from "../stats_util";
 import { _quantifyTopicNames } from "./summarization";
 
 describe("SummaryTest", () => {
@@ -20,10 +20,18 @@ describe("SummaryTest", () => {
       {
         name: "Topic A",
         commentCount: 5,
-        comments: [{ id: "1", text: "comment1" }],
+        summaryStats: new GroupedSummaryStats([{ id: "1", text: "comment1" }]),
         subtopicStats: [
-          { name: "Subtopic A.1", commentCount: 2, comments: [{ id: "1", text: "comment1" }] },
-          { name: "Subtopic A.2", commentCount: 3, comments: [{ id: "2", text: "comment2" }] },
+          {
+            name: "Subtopic A.1",
+            commentCount: 2,
+            summaryStats: new GroupedSummaryStats([{ id: "1", text: "comment1" }]),
+          },
+          {
+            name: "Subtopic A.2",
+            commentCount: 3,
+            summaryStats: new GroupedSummaryStats([{ id: "2", text: "comment2" }]),
+          },
         ],
       },
     ];

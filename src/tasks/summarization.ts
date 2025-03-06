@@ -16,7 +16,7 @@
 
 import { Model } from "../models/model";
 import { Comment, SummarizationType, Summary, SummaryContent } from "../types";
-import { SummaryStats, GroupedSummaryStats, TopicStats } from "../stats_util";
+import { GroupedSummaryStats, TopicStats } from "../stats_util";
 import { IntroSummary } from "./summarization_subtasks/intro";
 import { GroupsSummary } from "./summarization_subtasks/groups";
 import { TopicsSummary } from "./summarization_subtasks/topics";
@@ -33,17 +33,17 @@ import { TopicsSummary } from "./summarization_subtasks/topics";
  */
 export async function summarizeByType(
   model: Model,
-  summaryStats: SummaryStats,
+  comments: Comment[],
   summarizationType: SummarizationType,
   additionalContext?: string
 ): Promise<Summary> {
   if (summarizationType === SummarizationType.GROUP_INFORMED_CONSENSUS) {
     const summaryText = await new MultiStepSummary(
-      summaryStats as GroupedSummaryStats,
+      new GroupedSummaryStats(comments),
       model,
       additionalContext
     ).getSummary();
-    return parseStringIntoSummary(summaryText, summaryStats.comments);
+    return parseStringIntoSummary(summaryText, comments);
   } else {
     throw new TypeError("Unknown Summarization Type.");
   }

@@ -144,14 +144,37 @@ export function getCommentVoteCount(comment: Comment): number {
  * therefore the vessel through which all data is ultimately communicated to
  * the individual summarization routines.
  */
-export class SummaryStats {
+export abstract class SummaryStats {
   comments: Comment[];
   minCommonGroundProb = 0.6;
   minAgreeProbDifference = 0.3;
   maxSampleSize = 5;
+  public minVoteCount = 20;
+
   constructor(comments: Comment[]) {
     this.comments = comments;
   }
+
+  /**
+   * A static factory method that creates a new instance of SummaryStats
+   * or a subclass. This is meant to be overriden by subclasses.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  static create(comments: Comment[]): SummaryStats {
+    throw new Error("Cannot instantiate abstract class SummaryStats");
+  }
+
+  /**
+   * Based on how the implementing class defines it, get the top agreed on comments.
+   * @param k the number of comments to return
+   */
+  abstract getCommonGroundComments(k?: number): Comment[];
+
+  /**
+   * Based on how the implementing class defines it, get the top disagreed on comments.
+   * @param k the number of comments to return.
+   */
+  abstract getDifferenceOfOpinionComments(k?: number): Comment[];
 
   // The total number of votes across the entire set of input comments
   get voteCount(): number {
@@ -219,14 +242,18 @@ export class SummaryStats {
         totalTopicComments += commentCount;
         // aggregate comment objects
         topicComments.push(...comments);
-        subtopicStats.push({ name: subtopicName, commentCount, comments: comments });
+        subtopicStats.push({
+          name: subtopicName,
+          commentCount,
+          summaryStats: (this.constructor as typeof SummaryStats).create(comments),
+        });
       }
 
       topicStats.push({
         name: topicName,
         commentCount: totalTopicComments,
-        comments: topicComments,
         subtopicStats: subtopicStats,
+        summaryStats: (this.constructor as typeof SummaryStats).create(topicComments),
       });
     }
 
@@ -258,13 +285,20 @@ export class SummaryStats {
  */
 export class GroupedSummaryStats extends SummaryStats {
   filteredComments: CommentWithVoteTallies[];
-  public minVoteCount = 20;
 
   constructor(comments: Comment[]) {
     super(comments);
     this.filteredComments = comments.filter(isCommentWithVoteTalliesType).filter((comment) => {
       return getCommentVoteCount(comment) >= this.minVoteCount;
     });
+  }
+
+  /**
+   * An override of the SummaryStats static factory method,
+   * to allow for GroupedSummaryStats specific initialization.
+   */
+  static override create(comments: Comment[]): GroupedSummaryStats {
+    return new GroupedSummaryStats(comments);
   }
 
   /**
@@ -323,7 +357,7 @@ export class GroupedSummaryStats extends SummaryStats {
    * @param k dfaults to this.maxSampleSize
    * @returns The corresponding set of comments
    */
-  getGroupRepresentativeComments(group: string, k: number = this.maxSampleSize) {
+  getGroupRepresentativeComments(group: string, k: number = this.maxSampleSize): Comment[] {
     return this.topK(
       (comment: CommentWithVoteTallies) => getGroupAgreeProbDifference(comment, group),
       k,
@@ -343,7 +377,7 @@ export class GroupedSummaryStats extends SummaryStats {
    * @param k defaults to this.maxSampleSize
    * @returns the top disagreed on comments
    */
-  getDifferencesBetweenGroupsComments(k: number = this.maxSampleSize) {
+  getDifferenceOfOpinionComments(k: number = this.maxSampleSize): Comment[] {
     return this.topK(
       // Get the maximum absolute group agree difference for any group.
       getMaxGroupAgreeProbDifference,
@@ -380,8 +414,9 @@ export class GroupedSummaryStats extends SummaryStats {
 export interface TopicStats {
   name: string;
   commentCount: number;
-  comments: Comment[];
   subtopicStats?: TopicStats[];
+  // The stats for the subset of comments.
+  summaryStats: SummaryStats;
 }
 
 /**

@@ -13,7 +13,6 @@
 // limitations under the License.
 
 import {
-  SummaryStats,
   GroupedSummaryStats,
   getAgreeProbability,
   getGroupInformedConsensus,
@@ -222,12 +221,12 @@ describe("stats utility functions", () => {
 
 describe("StatsUtilTest", () => {
   it("should get the total number of votes from multiple comments", () => {
-    const summaryStats = new SummaryStats(TEST_COMMENTS);
+    const summaryStats = new GroupedSummaryStats(TEST_COMMENTS);
     expect(summaryStats.voteCount).toEqual(70);
   });
 
   it("SummaryStats should get the total number of comments", () => {
-    const summaryStats = new SummaryStats(TEST_COMMENTS);
+    const summaryStats = new GroupedSummaryStats(TEST_COMMENTS);
     expect(summaryStats.commentCount).toEqual(2);
   });
 
@@ -250,7 +249,7 @@ describe("StatsUtilTest", () => {
       },
     ];
 
-    const statsByTopic = new SummaryStats(comments).getStatsByTopic();
+    const statsByTopic = new GroupedSummaryStats(comments).getStatsByTopic();
     expect(statsByTopic[0].commentCount).toEqual(3);
     expect(statsByTopic[0]?.subtopicStats?.map((subtopic) => subtopic.commentCount)).toEqual([
       2, 1,
@@ -321,7 +320,7 @@ describe("StatsUtilTest", () => {
       },
     ];
 
-    const statsByTopic = new SummaryStats(comments).getStatsByTopic();
+    const statsByTopic = new GroupedSummaryStats(comments).getStatsByTopic();
     expect(statsByTopic.map((topic) => topic.name)).toEqual(["Topic B", "Topic A", "Other"]);
   });
 
