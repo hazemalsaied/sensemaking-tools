@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import { getPrompt } from "../../sensemaker_utils";
-import { GroupStats, GroupedSummaryStats } from "../../stats_util";
+import { GroupStats, GroupedSummaryStats } from "../../stats/group_informed";
 import { RecursiveSummary, resolvePromisesInParallel } from "./recursive_summarization";
 import { Comment } from "../../types";
 import { commentCitationHtml, getCommentCitations } from "../utils/citation_utils";

@@ -15,21 +15,12 @@
 // Functions for different ways to summarize Comment and Vote data.
 
 import { RecursiveSummary, resolvePromisesInParallel } from "./recursive_summarization";
-import {
-  getPrompt,
-  decimalToPercent,
-  commentTableMarkdown,
-  ColumnDefinition,
-} from "../../sensemaker_utils";
-import {
-  TopicStats,
-  getMaxGroupAgreeProbDifference,
-  getMinAgreeProb,
-  SummaryStats,
-} from "../../stats_util";
+import { getPrompt, commentTableMarkdown, ColumnDefinition } from "../../sensemaker_utils";
+import { getMaxGroupAgreeProbDifference, getMinAgreeProb } from "../../stats/stats_util";
 import { Comment } from "../../types";
 import { getCommentCitations } from "../utils/citation_utils";
 import { Model } from "../../models/model";
+import { SummaryStats, TopicStats } from "../../stats/summary_stats";
 
 const COMMON_INSTRUCTIONS =
   "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. " +
@@ -258,8 +249,7 @@ ${otherCommentsTable}
     const commonGroundComments = this.input.getCommonGroundComments();
     const nComments = commonGroundComments.length;
     if (nComments === 0) {
-      // TODO: update error messages to be based on the actual requreiments for inclusion
-      return `No statements met the thresholds necessary to be considered as a point of common ground (at least ${this.input.minVoteCount} votes, and at least ${decimalToPercent(this.input.minCommonGroundProb)} agreement across groups).`;
+      return this.input.getCommonGroundErrorMessage();
     } else {
       const summary = this.model.generateText(
         getPrompt(
@@ -282,8 +272,7 @@ ${otherCommentsTable}
     const topDisagreeCommentsAcrossGroups = this.input.getDifferenceOfOpinionComments();
     const nComments = topDisagreeCommentsAcrossGroups.length;
     if (nComments === 0) {
-      // TODO: remove mentions of groups from error messages.
-      return `No statements met the thresholds necessary to be considered as a significant difference of opinion (at least ${this.input.minVoteCount} votes, and more than ${decimalToPercent(this.input.minAgreeProbDifference)} difference in agreement rate between groups).`;
+      return this.input.getDifferencesOfOpinionErrorMessage();
     } else {
       const summary = this.model.generateText(
         getPrompt(

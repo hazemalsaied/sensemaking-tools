@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import { VertexModel } from "../../models/vertex_model";
-import { GroupedSummaryStats } from "../../stats_util";
+import { GroupedSummaryStats } from "../../stats/group_informed";
 import { CommentWithVoteTallies } from "../../types";
 import { TopicsSummary, TopicSummary } from "./topics";
 

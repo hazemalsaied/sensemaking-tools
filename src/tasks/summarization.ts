@@ -16,10 +16,12 @@
 
 import { Model } from "../models/model";
 import { Comment, SummarizationType, Summary, SummaryContent } from "../types";
-import { GroupedSummaryStats, MajoritySummaryStats, SummaryStats, TopicStats } from "../stats_util";
 import { IntroSummary } from "./summarization_subtasks/intro";
 import { GroupsSummary } from "./summarization_subtasks/groups";
 import { TopicsSummary } from "./summarization_subtasks/topics";
+import { GroupedSummaryStats } from "../stats/group_informed";
+import { MajoritySummaryStats } from "../stats/majority_vote";
+import { SummaryStats, TopicStats } from "../stats/summary_stats";
 
 /**
  * Summarizes comments based on the specified summarization type.

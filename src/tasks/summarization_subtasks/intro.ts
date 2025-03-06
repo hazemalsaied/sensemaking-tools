@@ -14,7 +14,7 @@
 
 // Functions for different ways to summarize Comment and Vote data.
 
-import { SummaryStats, TopicStats } from "../../stats_util";
+import { SummaryStats, TopicStats } from "../../stats/summary_stats";
 import { RecursiveSummary } from "./recursive_summarization";
 
 export class IntroSummary extends RecursiveSummary<SummaryStats> {
