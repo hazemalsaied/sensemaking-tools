@@ -73,35 +73,20 @@ Token Counts for a 1000 statement conversation
 ## **Running the tools \- Setup**
 
 First make sure you have `npm` installed (`apt-get install npm` on Ubuntu-esque systems).
-First make sure you have `npm` installed (`apt-get install npm` on Ubuntu-esque systems).
-
-First make sure you have `npm` installed (`apt-get install npm` on Ubuntu-esque systems).  
 
 Next install the project modules by running:  
 `npm install`
 
 ### **Using the Default Models \- GCloud Authentication**
 
-A Google Cloud project is required to control quota and access when using the default models that connect to Model Garden. Installation instructions for all machines are [here](https://cloud.google.com/sdk/docs/install-sdk#deb).
-A Google Cloud project is required to control quota and access when using the default models that connect to Model Garden. Installation instructions for all machines are [here](https://cloud.google.com/sdk/docs/install-sdk#deb).
-
-A Google Cloud project is required to control quota and access when using the default models that connect to Model Garden. Installation instructions for all machines are [here](https://cloud.google.com/sdk/docs/install-sdk#deb).  
+A Google Cloud project is required to control quota and access when using the default models that connect to Model Garden. Installation instructions for all machines are [here](https://cloud.google.com/sdk/docs/install-sdk#deb). 
 
 For Linux the GCloud CLI can be installed like:  
 `sudo apt install -y google-cloud-cli`
-`sudo apt install -y google-cloud-cli`
-
-`sudo apt install -y google-cloud-cli`  
 
 Then to log in locally run:
-Then to log in locally run:
-
-Then to log in locally run:  
 
 `gcloud config set project <your project name here>`
-`gcloud config set project <your project name here>`
-
-`gcloud config set project <your project name here>`  
 
 `gcloud auth application-default login`
 
@@ -154,15 +139,6 @@ There is also a simple CLI set up for testing. There are two tools:
 * ./runner-cli/runner.ts: takes in a CSV representing a conversation and outputs an HTML file containing the summary. The summary is best viewed as an HTML file so that the included citations can be hovered over to see the original comment and votes.  
 * ./runner-cli/rerunner.ts: takes in a CSV representing a conversation and reruns summarization a number of times and outputs each of the summaries in one CSV. This is useful for testing consistency.
 
-## **Running the Checks**
-
-In the ./evals directory there are a number of checks that can be run on an unlabeled conversation. There are three categories of checks:
-
-* Monitoring Checks: summary generation failure rate and time to run  
-* Quick Checks: whether the summary has an intro and conclusion, and whether all the topics and subtopics from categorization are present  
-* Qualitative Checks: measures how often each group is mentioned
-
-All three checks are run using the ./evals/run\_checks.ts script.
 
 ## **Making Changes to the tools \- Development**
 
