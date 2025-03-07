@@ -100,6 +100,13 @@ for group_id in group_ids:
 
 comments["votes"] = comments["agrees"] + comments["disagrees"] + comments["passes"]
 
+comments["agree_rate"] = comments["agrees"] / comments["votes"]
+comments["disagree_rate"] = comments["disagrees"] / comments["votes"]
+comments["pass_rate"] = comments["passes"] / comments["votes"]
+comments["difference_of_opinion_rank"] = (
+    1 - abs(comments["agree_rate"] - comments["disagree_rate"]) - comments["pass_rate"])
+
+
 # Go through and check that all of our output comment["votes"] counts are no
 # larger than the counts from our initial `comment_vote_counts` dictionary. We do
 # not check for equality here, because it's possible that the counts get lower as
