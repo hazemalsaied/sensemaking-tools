@@ -41,25 +41,20 @@
 // evidential bar for comments to recieve a high helpfulness score, improving robustness, especially
 // with sparse data.
 
-import * as tf from '@tensorflow/tfjs-core';
-
-let gpuAvailable: boolean | null = null;
+import * as tf from "@tensorflow/tfjs-core";
 
 async function loadTFJS() {
-  if (process.env.TFJS_NODE_GPU === 'false') {
-    await import('@tensorflow/tfjs');
-    gpuAvailable = false;
+  if (process.env.TFJS_NODE_GPU === "false") {
+    await import("@tensorflow/tfjs");
     console.log("TFJS_NODE_GPU set to false, using CPU-only version");
   } else {
     try {
-      await import('@tensorflow/tfjs-node-gpu');
-      gpuAvailable = true;
+      await import("@tensorflow/tfjs-node-gpu");
       console.log("GPU version of tensorflow loaded");
     } catch (error) {
       console.warn("Failed to load GPU version of tensorflow:", error);
       console.warn("Falling back to CPU-only version");
-      await import('@tensorflow/tfjs');
-      gpuAvailable = false;
+      await import("@tensorflow/tfjs");
     }
   }
 }
@@ -76,8 +71,8 @@ export interface Rating {
  * Given ratings, return helpfulness scores and other model parameters for the given set of ratings.
  * @param ratings A collection of Rating values
  * @param numFactors The factor dimensionality, by default 1
- * @param epochs Defaults to 300
- * @param learningRate Defaults 0.05
+ * @param epochs Number of training iterations to run per learningRate (defaults to 400)
+ * @param learningRate Either a single learning rate value, or an array of values for a learning rate schedule (defaults to [0.05, 0.01, 0.002, 0.0004])
  * @param lambdaI Intercept term regularization parameter (defaults to 0.15)
  * @param lambdaF Factor term regularization parameter (defaults to 0.03)
  * @returns Helpfulness scores
@@ -85,14 +80,16 @@ export interface Rating {
 export async function communityNotesMatrixFactorization(
   ratings: Rating[],
   numFactors: number = 1, // Dimensionality of the factor vectors
-  epochs: number = 200, // Number of training iterations
-  learningRate: number = 0.05,
+  epochs: number = 400, // Number of training iterations
+  learningRate: number | number[] = [0.05, 0.01, 0.002, 0.0004],
   lambdaI: number = 0.15,
-  lambdaF: number = 0.03,
+  lambdaF: number = 0.03
 ): Promise<number[]> {
   // infer numUsers as the max of all userId values in the ratings collection
-  const numUsers = ratings.map((r) => r.userId).reduce((prev, current) => Math.max(prev, current), 0) + 1;
-  const numNotes = ratings.map((r) => r.noteId).reduce((prev, current) => Math.max(prev, current), 0) + 1;
+  const numUsers =
+    ratings.map((r) => r.userId).reduce((prev, current) => Math.max(prev, current), 0) + 1;
+  const numNotes =
+    ratings.map((r) => r.noteId).reduce((prev, current) => Math.max(prev, current), 0) + 1;
 
   // Initialize parameters randomly.  Using tf.variable allows us to update them during training.
   const mu = tf.variable(tf.scalar(0.0));
@@ -101,7 +98,7 @@ export async function communityNotesMatrixFactorization(
   const userFactors = tf.variable(tf.randomNormal([numUsers, numFactors]));
   const noteFactors = tf.variable(tf.randomNormal([numNotes, numFactors]));
 
-  const optimizer = tf.train.adam(learningRate);
+  const learningRates = typeof learningRate === "number" ? [learningRate] : learningRate;
 
   // Convert ratings to tensors for efficient computation.
   const userIds = tf.tensor1d(
@@ -149,11 +146,20 @@ export async function communityNotesMatrixFactorization(
   };
 
   // Training loop.
-  for (let epoch = 0; epoch < epochs; epoch++) {
-    optimizer.minimize(loss, true, [mu, userIntercepts, noteIntercepts, userFactors, noteFactors]);
-
-    if ((epoch + 1) % 10 === 0) {
-      console.log(`Epoch ${epoch + 1}, Loss: ${await loss().data()}`);
+  for (const rate of learningRates) {
+    console.log("Setting learning rate to:", rate);
+    const optimizer = tf.train.adam(rate);
+    for (let epoch = 0; epoch < epochs; epoch++) {
+      optimizer.minimize(loss, true, [
+        mu,
+        userIntercepts,
+        noteIntercepts,
+        userFactors,
+        noteFactors,
+      ]);
+      if ((epoch + 1) % 10 === 0) {
+        console.log(`Epoch ${epoch + 1}, Loss: ${await loss().data()}`);
+      }
     }
   }
 
