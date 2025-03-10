@@ -19,10 +19,19 @@
 
 import { Sensemaker } from "../src/sensemaker";
 import { VertexModel } from "../src/models/vertex_model";
-import { Summary, VoteTally, Comment, SummarizationType, Topic } from "../src/types";
+import {
+  Summary,
+  VoteTally,
+  Comment,
+  SummarizationType,
+  Topic,
+  SummaryContent,
+} from "../src/types";
 import * as path from "path";
 import * as fs from "fs";
 import { parse } from "csv-parse";
+import { marked } from "marked";
+import { createObjectCsvWriter } from "csv-writer";
 
 /**
  * Core comment columns, sans any vote tally rows
@@ -56,6 +65,62 @@ export interface VoteTallyCsvRow {
 //This is a type that combines VoteTallyCsvRow and CoreCommentCsvRow
 export type CommentCsvRow = VoteTallyCsvRow & CoreCommentCsvRow;
 
+/**
+ * Add the text and supporting comments to statementsWithComments. Also adds nested content.
+ * @param summaryContent the content and subcontent to add
+ * @param allComments all the comments from the deliberation
+ * @param statementsWithComments where to add new text and supporting comments
+ * @returns none
+ */
+function addStatement(
+  summaryContent: SummaryContent,
+  allComments: Comment[],
+  statementsWithComments: { summary: string; comments: string }[]
+) {
+  if (summaryContent.subContents) {
+    summaryContent.subContents.forEach((subContent) => {
+      addStatement(subContent, allComments, statementsWithComments);
+    });
+  }
+
+  if (summaryContent.text.length === 0 && !summaryContent.title) {
+    return;
+  }
+  let comments: Comment[] = [];
+  if (summaryContent.citations) {
+    comments = summaryContent.citations
+      .map((commentId: string) => allComments.find((comment: Comment) => comment.id === commentId))
+      .filter((comment) => comment !== undefined);
+  }
+  statementsWithComments.push({
+    summary: (summaryContent.title || "") + summaryContent.text,
+    comments: comments.map((comment) => `*        [${comment.id}] ${comment.text}`).join("\n"),
+  });
+}
+
+/**
+ * Outputs a CSV where each row represents a statement and its associated comments.
+ *
+ * @param summary the summary to split.
+ * @param outputFilePath Path to the output CSV file that will have columns "summary" for the statement, and "comments" for the comment texts associated with that statement.
+ */
+export function writeSummaryToGroundedCSV(summary: Summary, outputFilePath: string) {
+  const statementsWithComments: { summary: string; comments: string }[] = [];
+
+  for (const summaryContent of summary.contents) {
+    addStatement(summaryContent, summary.comments, statementsWithComments);
+  }
+
+  const csvWriter = createObjectCsvWriter({
+    path: outputFilePath,
+    header: [
+      { id: "summary", title: "summary" },
+      { id: "comments", title: "comments" },
+    ],
+  });
+  csvWriter.writeRecords(statementsWithComments);
+  console.log(`Summary statements saved to ${outputFilePath}`);
+}
 /**
  * Identify topics and subtopics when input data has not already been categorized.
  * @param project The Vertex GCloud project name
@@ -97,6 +162,55 @@ export async function getSummary(
     topics,
     additionalContext
   );
+}
+
+// Gets existing topics from comments or learns them if not provided.
+export async function getTopics(comments: Comment[], vertexProject: string): Promise<Topic[]> {
+  if (comments.length > 0 && comments.some((comment) => comment.topics)) {
+    console.log("Comments already have topics. Skipping topic learning.");
+    return getTopicsFromComments(comments);
+  } else {
+    console.log("Learning topics from comments.");
+    return await getTopicsAndSubtopics(vertexProject, comments);
+  }
+}
+
+export function writeSummaryToHtml(summary: Summary, outputFile: string) {
+  const markdownContent = summary.getText("MARKDOWN");
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Summary</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+    </style>
+    ${
+      // When in DEBUG_MODE, we need to add the DataTables and jQuery libraries, and hook
+      // into our table elements to add support for features like sorting and search.
+      process.env.DEBUG_MODE === "true"
+        ? `
+    <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+    <script src="https://cdn.datatables.net/2.2.1/js/dataTables.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.2.1/css/dataTables.dataTables.css" />
+    <script>$(document).ready( function () {$('table').DataTable();} )</script>
+    `
+        : ""
+    }
+</head>
+<body>
+    ${marked(markdownContent)}
+</body>
+</html>`;
+
+  fs.writeFileSync(outputFile, htmlContent);
+  console.log(`Written summary to ${outputFile}`);
 }
 
 /**
