@@ -79,8 +79,7 @@ export class Sensemaker {
    *  these comments are already categorized (have a `topics` property), the summarization will be
    *  based on those existing categories.
    * @param summarizationType  The type of summarization to perform (e.g.,
-   *  `SummarizationType.GROUP_INFORMED_CONSENSUS`). Defaults to
-   *  `SummarizationType.GROUP_INFORMED_CONSENSUS`.
+   *  `SummarizationType.GROUP_INFORMED_CONSENSUS`).
    * @param topics  An optional array of `Topic` objects. If provided, these topics will be used for
    *  comment categorization before summarization, ensuring that the summary addresses the specified
    *  topics. If `comments` are already categorized, this parameter is ignored.

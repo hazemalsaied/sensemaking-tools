@@ -70,17 +70,17 @@ export interface Rating {
 /**
  * Given ratings, return helpfulness scores and other model parameters for the given set of ratings.
  * @param ratings A collection of Rating values
- * @param numFactors The factor dimensionality, by default 1
- * @param epochs Number of training iterations to run per learningRate (defaults to 400)
- * @param learningRate Either a single learning rate value, or an array of values for a learning rate schedule (defaults to [0.05, 0.01, 0.002, 0.0004])
- * @param lambdaI Intercept term regularization parameter (defaults to 0.15)
- * @param lambdaF Factor term regularization parameter (defaults to 0.03)
+ * @param numFactors The factor dimensionality
+ * @param epochs Number of training iterations to run per learningRate
+ * @param learningRate Either a single learning rate value, or an array of values for a learning rate schedule
+ * @param lambdaI Intercept term regularization parameter
+ * @param lambdaF Factor term regularization parameter
  * @returns Helpfulness scores
  */
 export async function communityNotesMatrixFactorization(
   ratings: Rating[],
-  numFactors: number = 1, // Dimensionality of the factor vectors
-  epochs: number = 400, // Number of training iterations
+  numFactors: number = 1,
+  epochs: number = 400,
   learningRate: number | number[] = [0.05, 0.01, 0.002, 0.0004],
   lambdaI: number = 0.15,
   lambdaF: number = 0.03

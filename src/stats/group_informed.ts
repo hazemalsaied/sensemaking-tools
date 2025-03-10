@@ -41,7 +41,7 @@ export class GroupedSummaryStats extends SummaryStats {
   }
 
   /**
-   * Returns the top k comments according to the given metric. K defaults to 12.
+   * Returns the top k comments according to the given metric.
    */
   override topK(
     sortBy: (comment: CommentWithVoteTallies) => number,
@@ -121,7 +121,7 @@ export class GroupedSummaryStats extends SummaryStats {
    * as compared with the rest of the participant body, as computed by the getGroupAgreeDifference method,
    * and subject to this.minVoteCount, this.minAgreeProbCommonGround and this.minAgreeProbDifference.
    *
-   * @param k defaults to this.maxSampleSize
+   * @param k the number of comments to find, this is a maximum and is not guaranteed
    * @returns the top disagreed on comments
    */
   getDifferenceOfOpinionComments(k: number = this.maxSampleSize): Comment[] {

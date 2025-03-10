@@ -101,7 +101,7 @@ export abstract class SummaryStats {
   }
 
   /**
-   * Returns the top k comments according to the given metric. K defaults to 12.
+   * Returns the top k comments according to the given metric.
    */
   topK(
     sortBy: (comment: Comment) => number,
