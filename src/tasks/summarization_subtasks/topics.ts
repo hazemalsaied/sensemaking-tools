@@ -95,7 +95,7 @@ function getDifferencesOfOpinionSingleCommentInstructions(containsGroups: boolea
 export class TopicsSummary extends RecursiveSummary<SummaryStats> {
   async getSummary(): Promise<SummaryContent> {
     // First construct the introductory description for the entire section
-    const topicStats: TopicStats[] = this.input.getStatsByTopic();
+    const topicStats: TopicStats[] = this.input.getStatsByTopic(true);
     const nTopics: number = topicStats.length;
     const nSubtopics: number = topicStats
       .map((t) => t.subtopicStats?.length || 0)

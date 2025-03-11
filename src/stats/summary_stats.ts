@@ -115,15 +115,97 @@ export abstract class SummaryStats {
   }
 
   /**
-   * Sorts topics and their subtopics based on comment count in descending order, with
-   * "Other" topics and subtopics going last.
+   * Allow comments to only be used in one subtopic. They are kept in the smallest subtopic only.
+   * @param topicStats the stats by topic to filter repeat comments out of
+   * @returns the TopicStats with each comment only appearing once.
+   */
+  private useCommentOnlyOnce(topicStats: TopicStats[]): TopicStats[] {
+    let alreadyUsedComments = new Set<string>();
+    // Consider the subtopics with the least comments first so they will keep the comment and all
+    // future duplicates will be removed.
+    const reversedTopicStats = this.sortTopicStats(topicStats, false);
+
+    const filteredTopicStats: TopicStats[] = [];
+    for (const topic of reversedTopicStats) {
+      const newTopicStats: TopicStats = {
+        name: topic.name,
+        commentCount: topic.commentCount,
+        summaryStats: topic.summaryStats,
+        subtopicStats: [],
+      };
+      if (topic.subtopicStats) {
+        for (const subtopic of topic.subtopicStats) {
+          // Ignore repeats in the "Other":"Other" category, these are a special case and should
+          // eventually be handled separately.
+          if (topic.name === "Other" && subtopic.name === "Other") {
+            newTopicStats.subtopicStats!.push(subtopic);
+            continue;
+          }
+          // Remove comments that have already been used previously and regenerate the
+          // SummmaryStats object.
+          const unusedComments = subtopic.summaryStats.comments.filter((comment) => {
+            return !alreadyUsedComments.has(comment.id);
+          });
+          newTopicStats.subtopicStats!.push({
+            name: subtopic.name,
+            commentCount: unusedComments.length,
+            summaryStats: (this.constructor as typeof SummaryStats).create(unusedComments),
+          });
+          alreadyUsedComments = new Set<string>([
+            ...alreadyUsedComments,
+            ...unusedComments.map((comment) => comment.id),
+          ]);
+        }
+      }
+      filteredTopicStats.push(newTopicStats);
+    }
+    return this.sortTopicStats(filteredTopicStats);
+  }
+
+  /**
+   * Sorts topics and their subtopics based on comment count, with
+   * "Other" topics and subtopics going last in sortByDescendingCount order.
+   * @param topicStats what to sort
+   * @param sortByDescendingCount whether to sort by comment count sortByDescendingCount or ascending
+   * @returns the topics and subtopics sorted by comment count
+   */
+  private sortTopicStats(
+    topicStats: TopicStats[],
+    sortByDescendingCount: boolean = true
+  ): TopicStats[] {
+    topicStats.sort((a, b) => {
+      if (a.name === "Other") return sortByDescendingCount ? 1 : -1;
+      if (b.name === "Other") return sortByDescendingCount ? -1 : 1;
+      return sortByDescendingCount
+        ? b.commentCount - a.commentCount
+        : a.commentCount - b.commentCount;
+    });
+
+    topicStats.forEach((topic) => {
+      if (topic.subtopicStats) {
+        topic.subtopicStats.sort((a, b) => {
+          if (a.name === "Other") return sortByDescendingCount ? 1 : -1;
+          if (b.name === "Other") return sortByDescendingCount ? -1 : 1;
+          return sortByDescendingCount
+            ? b.commentCount - a.commentCount
+            : a.commentCount - b.commentCount;
+        });
+      }
+    });
+
+    return topicStats;
+  }
+
+  /**
+   * Gets a sorted list of stats for each topic and subtopic.
    *
-   * @param commentsByTopic A nested map where keys are topic names, values are maps
-   *                        where keys are subtopic names, and values are maps where
-   *                        keys are comment IDs and values are comment texts.
+   * @param forceOneSubtopicEach whether to force comments with multiple topic/subtopics to only
+   * have one. This is done by keeping only the subtopic with the least comments that's not in
+   * the Other:Other category.
+   *
    * @returns A list of TopicStats objects sorted by comment count with "Other" topics last.
    */
-  getStatsByTopic(): TopicStats[] {
+  getStatsByTopic(forceOneSubtopicEach: boolean = false): TopicStats[] {
     const commentsByTopic = groupCommentsBySubtopic(this.comments);
     const topicStats: TopicStats[] = [];
 
@@ -155,23 +237,11 @@ export abstract class SummaryStats {
       });
     }
 
-    topicStats.sort((a, b) => {
-      if (a.name === "Other") return 1;
-      if (b.name === "Other") return -1;
-      return b.commentCount - a.commentCount;
-    });
+    if (forceOneSubtopicEach) {
+      return this.useCommentOnlyOnce(topicStats);
+    }
 
-    topicStats.forEach((topic) => {
-      if (topic.subtopicStats) {
-        topic.subtopicStats.sort((a, b) => {
-          if (a.name === "Other") return 1;
-          if (b.name === "Other") return -1;
-          return b.commentCount - a.commentCount;
-        });
-      }
-    });
-
-    return topicStats;
+    return this.sortTopicStats(topicStats);
   }
 }
 
