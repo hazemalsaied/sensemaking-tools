@@ -23,7 +23,7 @@ import {
   ColumnDefinition,
   resolvePromisesInParallel,
 } from "../../sensemaker_utils";
-import { Comment, SummaryContent } from "../../types";
+import { Comment, SummaryContent, isCommentType } from "../../types";
 import { Model } from "../../models/model";
 import { SummaryStats, TopicStats } from "../../stats/summary_stats";
 import { RelativeContext } from "./relative_context";
@@ -63,20 +63,25 @@ function getCommonGroundSingleCommentInstructions(containsGroups: boolean): stri
 // TODO: Test whether conditionally including group specific text in this prompt improves
 // performance.
 const DIFFERENCES_OF_OPINION_INSTRUCTIONS =
-  `Here are several comments which generated disagreement. Your job is summarize the ideas ` +
-  `contained in the comments. Do not pretend that you hold any of these opinions. You are not a ` +
+  `You are going to be presented with several comments from a discussion on which there were differing opinions, ` +
+  `as well as a summary of points of common ground from this discussion. Your job is summarize the ideas ` +
+  `contained in the comments, keeping in mind the points of common ground as backgrounnd in describing ` +
+  `the differences of opinion. Do not pretend that you hold any of these opinions. You are not a ` +
   `participant in this discussion. Write a concise summary of these comments that is at least ` +
-  `one sentence and at most five sentences long. Refer to the people who made these comments as` +
-  ` participants, not commenters.  Do not talk about how strongly they disagree on these ` +
+  `one sentence and at most five sentences long. Refer to the people who made these comments as ` +
+  `participants, not commenters.  Do not talk about how strongly they disagree with these ` +
   `comments. Use complete sentences. ${COMMON_INSTRUCTIONS}
 
-Do not pretend that these comments were written by different participants. These comments may ` +
-  `all be from the same participant, so do not say some participants prosed one things while other` +
-  ` participants proposed another.  Do not say "Some participants proposed X while others Y".  ` +
+Do not assume that these comments were written by different participants. These comments could be from ` +
+  `the same participant, so do not say some participants prosed one things while other ` +
+  `participants proposed another.  Do not say "Some participants proposed X while others Y".  ` +
   `Instead say "One statement proposed X while another Y"
 
-Your output should begin in the form "There was low consensus". For each sentence use a unique ` +
-  `phrase to indicate that there was low consensus on the topic.`;
+Where the difference of opinion comments refer to topics that are also covered in the common ground ` +
+  `summary, your output should begin in some variant of the form "While there was broad support for ..., ` +
+  `opinions differed with respect to ...". When this is not the case, you can beging simple as ` +
+  `"There was disagreement ..." or something similar to contextualize that the comments you are ` +
+  `summarizing had mixed support.`;
 
 function getDifferencesOfOpinionSingleCommentInstructions(containsGroups: boolean): string {
   const groupSpecificText = containsGroups
@@ -85,12 +90,21 @@ function getDifferencesOfOpinionSingleCommentInstructions(containsGroups: boolea
       `groups regarding this comment. `
     : "";
   return (
-    `Here is a comment presenting an opinion from a discussion. Your job is to rewrite this ` +
-    `comment clearly without embellishment. Do not pretend that you hold this opinion. You are ` +
-    `not a participant in this discussion. ${groupSpecificText}Refer to the people who made these comments as participants, ` +
-    `not commenters. Do not talk about how strongly they approve of these comments. Write a ` +
-    `complete sentence. Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do ` +
-    `not generate bullet points or special formatting. Do not yap.`
+    `You are going to be presented with a single comment from a discussion on which there were differing opinions, ` +
+    `as well as a summary of points of common ground from this discussion. ` +
+    `Your job is to rewrite this comment to summarize the main points or ideas it is trying to make, clearly and without embellishment,` +
+    `keeping in mind the points of common ground as backgrounnd in describing the differences of opinion participants had in relation to this comment. ` +
+    `Do not pretend that you hold  opinions. You are not a participant in this discussion. ` +
+    groupSpecificText +
+    `Write your summary as a single complete sentence.` +
+    `Refer to the people who made these comments as participants, not commenters. ` +
+    `Do not talk about how strongly they disagree with these comments. ${COMMON_INSTRUCTIONS}
+
+  Where the difference of opinion comments refer to topics that are also covered in the common ground ` +
+    `summary, your output should begin in some variant of the form "While there was broad support for ..., ` +
+    `opinions differed with respect to ...". When this is not the case, you can beging simple as ` +
+    `"There was disagreement ..." or something similar to contextualize that the comments you are ` +
+    `summarizing had mixed support.`
   );
 }
 
@@ -243,13 +257,14 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
     );
 
     const agreementDescription = `This subtopic had ${relativeAgreement} and ${relativeEngagement} compared to the other subtopics.`;
+    const commonGroundSummary = await this.getCommonGroundSummary();
     const result: SummaryContent = {
       title: this.getSectionTitle(),
       text: agreementDescription,
       subContents: [
         await this.getThemesSummary(),
-        await this.getCommonGroundSummary(),
-        await this.getDifferencesOfOpinionSummary(),
+        commonGroundSummary,
+        await this.getDifferencesOfOpinionSummary(commonGroundSummary),
       ],
     };
 
@@ -340,22 +355,24 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
    * Summarizes the comments on which there was the strongest disagreement.
    * @returns a short paragraph describing the differences, including comment citations.
    */
-  async getDifferencesOfOpinionSummary(): Promise<SummaryContent> {
+  async getDifferencesOfOpinionSummary(
+    commonGroundSummary: SummaryContent
+  ): Promise<SummaryContent> {
     const topDisagreeCommentsAcrossGroups = this.input.getDifferenceOfOpinionComments();
     const nComments = topDisagreeCommentsAcrossGroups.length;
     let text = "";
     if (nComments === 0) {
       text = this.input.getDifferencesOfOpinionNoCommentsMessage();
     } else {
-      const summary = this.model.generateText(
-        getPrompt(
-          nComments === 1
-            ? getDifferencesOfOpinionSingleCommentInstructions(this.input.groupBasedSummarization)
-            : DIFFERENCES_OF_OPINION_INSTRUCTIONS,
-          topDisagreeCommentsAcrossGroups.map((comment: Comment) => comment.text),
-          this.additionalContext
-        )
+      const prompt = getAbstractPrompt(
+        nComments === 1
+          ? getDifferencesOfOpinionSingleCommentInstructions(this.input.groupBasedSummarization)
+          : DIFFERENCES_OF_OPINION_INSTRUCTIONS,
+        [commonGroundSummary].concat(topDisagreeCommentsAcrossGroups),
+        formatDifferenceOfOpinionData,
+        this.additionalContext
       );
+      const summary = this.model.generateText(prompt);
       text = await summary;
     }
     return {
@@ -373,5 +390,25 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
 export class SubtopicSummary extends TopicSummary {
   override getSectionTitle(): string {
     return `#### ${this.topicStat.name} (${this.topicStat.commentCount} statements)`;
+  }
+}
+
+function formatDifferenceOfOpinionData(datum: SummaryContent | Comment) {
+  // Warning: `Comment` and `SummaryContent` types are very similar, and comments actually pass
+  // the `isSummaryContent` typecheck function. We are checking for isCommentType
+  // first because comments _must_ have `id` fields, so the code below works.
+  // However, if for some reason `SummaryContent` ended up getting an `id` field, this would no
+  // longer work. There does not seem to be a simple way around this though because of the
+  // differences between types and interfaces in typescript.
+  // TODO: Add some testing of this in case there's ever a regression, or write with a more
+  // custom prompt construction function.
+  if (isCommentType(datum)) {
+    return `<comment>${datum.text}</comment>`;
+  } else {
+    return (
+      `<commonGroundSummary>\n` +
+      `    <text>\n${datum.text}` +
+      `    </text>\n  </commonGroundSummary>`
+    );
   }
 }
