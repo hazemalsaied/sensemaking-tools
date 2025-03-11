@@ -15,13 +15,14 @@
 // Functions for different ways to summarize Comment and Vote data.
 
 import { RecursiveSummary } from "./recursive_summarization";
+import { getMaxGroupAgreeProbDifference, getMinAgreeProb } from "../../stats/stats_util";
 import {
   getPrompt,
+  getAbstractPrompt,
   commentTableMarkdown,
   ColumnDefinition,
   resolvePromisesInParallel,
 } from "../../sensemaker_utils";
-import { getMaxGroupAgreeProbDifference, getMinAgreeProb } from "../../stats/stats_util";
 import { Comment, SummaryContent } from "../../types";
 import { Model } from "../../models/model";
 import { SummaryStats, TopicStats } from "../../stats/summary_stats";
@@ -90,6 +91,27 @@ function getDifferencesOfOpinionSingleCommentInstructions(containsGroups: boolea
     `not commenters. Do not talk about how strongly they approve of these comments. Write a ` +
     `complete sentence. Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do ` +
     `not generate bullet points or special formatting. Do not yap.`
+  );
+}
+
+function getRecursiveTopicSummaryInstructions(topicStat: TopicStats): string {
+  return (
+    `Your job is to compose a summary paragraph to be included in a report on the results of a ` +
+    `discussion among some number of participants. You are specifically tasked with producing ` +
+    `a paragraph about the following topic of discussion: ${topicStat.name}. ` +
+    `You will base this summary off of a number of already composed summaries corresponding to ` +
+    `subtopics of said topic. These summaries have been based on comments that participants submitted ` +
+    `as part of the discussion. ` +
+    `Do not pretend that you hold any of these opinions. You are not a participant in this ` +
+    `discussion. Write a concise summary of these summaries that is at least one sentence ` +
+    `and at most three to five sentences long. The summary should be substantiated, detailed and ` +
+    `informative. However, do not provide any meta-commentary ` +
+    `about your task, or the fact that your summary is being based on other summaries. Also do not ` +
+    `include specific numbers about how many comments were included in each subtopic, as these will be ` +
+    `included later in the final report output. You also do not need to recap the context of the conversation, ` +
+    `as this will have already been stated earlier in the report. Remember: this is just one paragraph in a larger ` +
+    `summary, and you should compose this paragraph so that it will flow naturally in the context of the rest of the report. ` +
+    `${COMMON_INSTRUCTIONS}`
   );
 }
 
@@ -180,13 +202,26 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
         ).getSummary()
       ) || [];
 
-    // This is just a stub for now, and may eventually be added on to include more naunced descriptions of e.g. where the highest
-    // points of common ground and most significant differences of opinion were across the subtopics.
+    const subtopicSummaryContents = await resolvePromisesInParallel(subtopicSummaries);
+
     const nSubtopics: number = this.topicStat.subtopicStats?.length || 0;
-    const topicSummary =
-      nSubtopics > 0
-        ? `This topic included ${nSubtopics} subtopic${nSubtopics === 1 ? "" : "s"}.\n`
-        : "";
+    let topicSummary = "";
+    if (nSubtopics > 0) {
+      topicSummary =
+        `This topic included ${nSubtopics} subtopic${nSubtopics === 1 ? "" : "s"}, comprising a ` +
+        `total of ${this.topicStat.commentCount} statement${this.topicStat.commentCount === 1 ? "" : "s"}.\n\n`;
+      const subtopicSummaryPrompt = getAbstractPrompt(
+        getRecursiveTopicSummaryInstructions(this.topicStat),
+        subtopicSummaryContents,
+        (summary: SummaryContent) =>
+          `<subtopicSummary>\n` +
+          `    <title>${summary.title}</title>\n` +
+          `    <text>\n${summary.subContents?.map((s) => s.title + s.text).join("\n\n")}\n` +
+          `    </text>\n  </subtopicSummary>`,
+        this.additionalContext
+      );
+      topicSummary += await this.model.generateText(subtopicSummaryPrompt);
+    }
 
     return {
       title: this.getSectionTitle(),

@@ -21,6 +21,7 @@ import { TopicsSummary, TopicSummary } from "./topics";
 let mockThemesSummary: jest.SpyInstance;
 let mockCommonGroundSummary: jest.SpyInstance;
 let mockDifferencesSummary: jest.SpyInstance;
+let mockGenerateText: jest.SpyInstance;
 
 const TEST_COMMENTS: CommentWithVoteTallies[] = [
   {
@@ -66,12 +67,16 @@ describe("TopicsSummaryTest", () => {
     mockThemesSummary = jest.spyOn(TopicSummary.prototype, "getThemesSummary");
     mockCommonGroundSummary = jest.spyOn(TopicSummary.prototype, "getCommonGroundSummary");
     mockDifferencesSummary = jest.spyOn(TopicSummary.prototype, "getDifferencesOfOpinionSummary");
+    mockGenerateText = jest
+      .spyOn(VertexModel.prototype, "generateText")
+      .mockResolvedValue("A recursive summary...");
   });
 
   afterEach(() => {
     mockThemesSummary.mockRestore();
     mockCommonGroundSummary.mockRestore();
     mockDifferencesSummary.mockRestore();
+    mockGenerateText.mockRestore();
   });
   it("should create a properly formatted topics summary", async () => {
     // Mock the LLM calls
@@ -104,7 +109,7 @@ describe("TopicsSummaryTest", () => {
       subContents: [
         {
           title: "### Topic A (3 statements)",
-          text: "This topic included 2 subtopics.\n",
+          text: "This topic included 2 subtopics, comprising a total of 3 statements.\n\nA recursive summary...",
           subContents: [
             {
               text: "This subtopic had high agreement and high engagement compared to the other subtopics.",
@@ -144,7 +149,7 @@ describe("TopicsSummaryTest", () => {
         },
         {
           title: "### Topic B (1 statements)",
-          text: "This topic included 1 subtopic.\n",
+          text: "This topic included 1 subtopic, comprising a total of 1 statement.\n\nA recursive summary...",
           subContents: [
             {
               text: "This subtopic had high agreement and moderately low engagement compared to the other subtopics.",

@@ -62,17 +62,43 @@ export async function retryCall<T>(
  * @param instructions: what the model should do.
  * @param data: the data that the model should consider.
  * @param additionalContext additional context to include in the prompt.
+ * @param dataWrapper: a function for wrapping each data entry
  * @returns the instructions and the data as a text
  */
-export function getPrompt(instructions: string, data: string[], additionalContext?: string) {
+export function getAbstractPrompt<T>(
+  instructions: string,
+  data: T[],
+  dataWrapper: (data: T) => string,
+  additionalContext?: string
+) {
   return `
 <instructions>
   ${instructions}
 </instructions>
 ${additionalContext ? "\n<additionalContext>\n  " + additionalContext + "\n</additionalContext>\n" : ""}
 <data>
-  <comment>${data.join("</comment>\n  <comment>")}</comment>
+  ${data.map(dataWrapper).join("\n  ")}
 </data>`;
+}
+
+/**
+ * Combines the data and instructions into a prompt to send to Vertex.
+ * @param instructions: what the model should do.
+ * @param data: the data that the model should consider.
+ * @param additionalContext additional context to include in the prompt.
+ * @returns the instructions and the data as a text
+ */
+export function getPrompt(
+  instructions: string,
+  data: string[],
+  additionalContext?: string
+): string {
+  return getAbstractPrompt(
+    instructions,
+    data,
+    (data: string) => `<comment>${data}</comment>`,
+    additionalContext
+  );
 }
 
 /**
