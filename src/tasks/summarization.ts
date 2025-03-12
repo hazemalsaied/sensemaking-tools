@@ -22,6 +22,7 @@ import { TopicsSummary } from "./summarization_subtasks/topics";
 import { GroupedSummaryStats } from "../stats/group_informed";
 import { MajoritySummaryStats } from "../stats/majority_vote";
 import { SummaryStats, TopicStats } from "../stats/summary_stats";
+import { OverviewSummary } from "./summarization_subtasks/overview";
 
 /**
  * Summarizes comments based on the specified summarization type.
@@ -69,6 +70,9 @@ export class MultiStepSummary {
     const summarySections: SummaryContent[] = [];
     summarySections.push(
       await new IntroSummary(this.summaryStats, this.model, this.additionalContext).getSummary()
+    );
+    summarySections.push(
+      await new OverviewSummary(this.summaryStats, this.model, this.additionalContext).getSummary()
     );
     if (this.summaryStats.groupBasedSummarization) {
       summarySections.push(

@@ -20,26 +20,21 @@ import { RecursiveSummary } from "./recursive_summarization";
 
 export class IntroSummary extends RecursiveSummary<SummaryStats> {
   getSummary(): Promise<SummaryContent> {
+    let text = `This report summarizes the results of public input, encompassing:\n`;
     const commentCountFormatted = this.input.commentCount.toLocaleString();
+    text += ` * __${commentCountFormatted} statements__\n`;
     const voteCountFormatted = this.input.voteCount.toLocaleString();
-    let text =
-      `This report summarizes the results of public input, encompassing ` +
-      `__${commentCountFormatted} statements__` +
-      `${this.input.voteCount > 0 ? ` and __${voteCountFormatted} votes__` : ""}. All voters were anonymous. The ` +
-      `public input collected covered a wide range of topics ` +
-      `${this.input.containsSubtopics ? "and subtopics " : ""}` +
-      `including:\n`;
-
-    for (const topicStats of this.input.getStatsByTopic()) {
-      text += ` * __${topicStats.name} (${topicStats.commentCount} statements)__\n`;
-      if (!topicStats.subtopicStats) {
-        continue;
-      }
-      const subtopics = topicStats.subtopicStats.map((subtopic: TopicStats) => {
-        return `${subtopic.name} (${subtopic.commentCount})`;
-      });
-      text += "     * " + subtopics.join(", ") + "\n";
-    }
+    text += ` * __${voteCountFormatted} votes__\n`;
+    const statsByTopic = this.input.getStatsByTopic();
+    text += ` * ${statsByTopic.length} topics\n`;
+    const subtopicCount = statsByTopic
+      .map((topic: TopicStats) => {
+        return topic.subtopicStats ? topic.subtopicStats.length : 0;
+      })
+      .reduce((a, b) => a + b, 0);
+    text += ` * ${subtopicCount} subtopics\n\n`;
+    // TODO: Add how many themes there are when it's available.
+    text += "All voters were anonymous.";
 
     return Promise.resolve({ title: "## Introduction", text: text });
   }

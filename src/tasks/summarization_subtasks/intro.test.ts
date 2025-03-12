@@ -49,12 +49,13 @@ describe("IntroTest", () => {
       ).getSummary()
     ).toEqual({
       title: "## Introduction",
-      text: `This report summarizes the results of public input, encompassing __4 statements__. All voters were anonymous. The public input collected covered a wide range of topics and subtopics including:
- * __Topic A (3 statements)__
-     * Subtopic A.1 (2), Subtopic A.2 (1)
- * __Topic B (1 statements)__
-     * Subtopic B.1 (1)
-`,
+      text: `This report summarizes the results of public input, encompassing:
+ * __4 statements__
+ * __0 votes__
+ * 2 topics
+ * 3 subtopics
+
+All voters were anonymous.`,
     });
   });
 });
