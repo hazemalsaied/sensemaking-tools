@@ -27,6 +27,18 @@ export function getAgreeProbability(voteTally: VoteTally): number {
   return (voteTally.agreeCount + 1) / (totalCount + 2);
 }
 
+export function getStandardDeviation(numbers: number[]): number {
+  if (numbers.length <= 1) {
+    return 0; // Standard deviation of a single number is 0
+  }
+
+  const mean = numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
+  const squaredDifferences = numbers.map((num) => Math.pow(num - mean, 2));
+  const variance =
+    squaredDifferences.reduce((sum, squaredDiff) => sum + squaredDiff, 0) / (numbers.length - 1); // Use (n-1) for sample standard deviation
+  return Math.sqrt(variance);
+}
+
 /**
  * Compute the MAP probability estimate of an agree vote for a given map of VoteTallies.
  */
@@ -47,22 +59,22 @@ export function getTotalAgreeProbability(voteTalliesByGroup: { [key: string]: Vo
 }
 
 /**
-* Compute the MAP probability estimate of an pass vote for a given map of VoteTallies.
-*/
+ * Compute the MAP probability estimate of an pass vote for a given map of VoteTallies.
+ */
 export function getTotalPassProbability(voteTalliesByGroup: { [key: string]: VoteTally }): number {
- const totalCount = Object.values(voteTalliesByGroup)
-   .map(
-     (voteTally: VoteTally) =>
-       voteTally.agreeCount + voteTally.disagreeCount + (voteTally.passCount || 0)
-   )
-   .reduce((a: number, b: number) => a + b, 0);
- const totalPassCount = Object.values(voteTalliesByGroup)
-   .map((voteTally: VoteTally) => voteTally.passCount || 0)
-   .reduce((a: number, b: number) => a + b, 0);
- // We add +1 and +2 to the numerator and demonenator respectively as a psuedo-count prior so that probabilities tend to 1/2 in the
- // absence of data, and to avoid division/multiplication by zero in group informed consensus and risk ratio calculations. This is technically
- // a simple maxima a priori (MAP) probability estimate.
- return (totalPassCount + 1) / (totalCount + 2);
+  const totalCount = Object.values(voteTalliesByGroup)
+    .map(
+      (voteTally: VoteTally) =>
+        voteTally.agreeCount + voteTally.disagreeCount + (voteTally.passCount || 0)
+    )
+    .reduce((a: number, b: number) => a + b, 0);
+  const totalPassCount = Object.values(voteTalliesByGroup)
+    .map((voteTally: VoteTally) => voteTally.passCount || 0)
+    .reduce((a: number, b: number) => a + b, 0);
+  // We add +1 and +2 to the numerator and demonenator respectively as a psuedo-count prior so that probabilities tend to 1/2 in the
+  // absence of data, and to avoid division/multiplication by zero in group informed consensus and risk ratio calculations. This is technically
+  // a simple maxima a priori (MAP) probability estimate.
+  return (totalPassCount + 1) / (totalCount + 2);
 }
 
 /**
