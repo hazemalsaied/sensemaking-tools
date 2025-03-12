@@ -18,6 +18,7 @@ import { CommentWithVoteTallies } from "../../types";
 import { TopicsSummary, TopicSummary } from "./topics";
 
 // Mock the model response. This mock needs to be set up to return response specific for each test.
+let mockThemesSummary: jest.SpyInstance;
 let mockCommonGroundSummary: jest.SpyInstance;
 let mockDifferencesSummary: jest.SpyInstance;
 
@@ -62,16 +63,23 @@ const TEST_COMMENTS: CommentWithVoteTallies[] = [
 
 describe("TopicsSummaryTest", () => {
   beforeEach(() => {
+    mockThemesSummary = jest.spyOn(TopicSummary.prototype, "getThemesSummary");
     mockCommonGroundSummary = jest.spyOn(TopicSummary.prototype, "getCommonGroundSummary");
     mockDifferencesSummary = jest.spyOn(TopicSummary.prototype, "getDifferencesOfOpinionSummary");
   });
 
   afterEach(() => {
+    mockThemesSummary.mockRestore();
     mockCommonGroundSummary.mockRestore();
     mockDifferencesSummary.mockRestore();
   });
   it("should create a properly formatted topics summary", async () => {
     // Mock the LLM calls
+    mockThemesSummary.mockReturnValue(
+      Promise.resolve({
+        text: "Themes were..."
+      })
+    );
     mockCommonGroundSummary.mockReturnValue(
       Promise.resolve({
         text: "Some points of common ground...",
@@ -103,6 +111,9 @@ describe("TopicsSummaryTest", () => {
               title: "#### Subtopic A.1 (2 statements)",
               subContents: [
                 {
+                  text: "Themes were...",
+                },
+                {
                   text: "Some points of common ground...",
                   title: "Common ground between groups: ",
                 },
@@ -116,6 +127,9 @@ describe("TopicsSummaryTest", () => {
               title: "#### Subtopic A.2 (1 statements)",
               text: "",
               subContents: [
+                {
+                  text: "Themes were...",
+                },
                 {
                   text: "Some points of common ground...",
                   title: "Common ground between groups: ",
@@ -136,6 +150,9 @@ describe("TopicsSummaryTest", () => {
               text: "",
               title: "#### Subtopic B.1 (1 statements)",
               subContents: [
+                {
+                  text: "Themes were...",
+                },
                 {
                   text: "Some points of common ground...",
                   title: "Common ground between groups: ",
