@@ -107,7 +107,7 @@ describe("TopicsSummaryTest", () => {
           text: "This topic included 2 subtopics.\n",
           subContents: [
             {
-              text: "This subtopic had high agreement compared to the other subtopics.",
+              text: "This subtopic had high agreement and high engagement compared to the other subtopics.",
               title: "#### Subtopic A.1 (2 statements)",
               subContents: [
                 {
@@ -125,7 +125,7 @@ describe("TopicsSummaryTest", () => {
             },
             {
               title: "#### Subtopic A.2 (1 statements)",
-              text: "This subtopic had high agreement compared to the other subtopics.",
+              text: "This subtopic had high agreement and moderately low engagement compared to the other subtopics.",
               subContents: [
                 {
                   text: "Themes were...",
@@ -147,7 +147,7 @@ describe("TopicsSummaryTest", () => {
           text: "This topic included 1 subtopic.\n",
           subContents: [
             {
-              text: "This subtopic had high agreement compared to the other subtopics.",
+              text: "This subtopic had high agreement and moderately low engagement compared to the other subtopics.",
               title: "#### Subtopic B.1 (1 statements)",
               subContents: [
                 {

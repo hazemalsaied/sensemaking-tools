@@ -16,14 +16,11 @@
 
 import { RecursiveSummary, resolvePromisesInParallel } from "./recursive_summarization";
 import { getPrompt, commentTableMarkdown, ColumnDefinition } from "../../sensemaker_utils";
-import {
-  getMaxGroupAgreeProbDifference,
-  getMinAgreeProb,
-  getStandardDeviation,
-} from "../../stats/stats_util";
+import { getMaxGroupAgreeProbDifference, getMinAgreeProb } from "../../stats/stats_util";
 import { Comment, SummaryContent } from "../../types";
 import { Model } from "../../models/model";
 import { SummaryStats, TopicStats } from "../../stats/summary_stats";
+import { RelativeContext } from "./relative_context";
 
 const COMMON_INSTRUCTIONS =
   "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. " +
@@ -115,14 +112,9 @@ export class TopicsSummary extends RecursiveSummary<SummaryStats> {
       `have been identified and are described below.\n`;
 
     // Now construct the individual Topic summaries
-    const relativeAgreement = new RelativeAgreement(topicStats);
+    const relativeContext = new RelativeContext(topicStats);
     const topicSummaries: Array<Promise<SummaryContent>> = topicStats.map((topicStat) =>
-      new TopicSummary(
-        topicStat,
-        this.model,
-        relativeAgreement,
-        this.additionalContext
-      ).getSummary()
+      new TopicSummary(topicStat, this.model, relativeContext, this.additionalContext).getSummary()
     );
     return {
       title: "## Topics",
@@ -132,66 +124,24 @@ export class TopicsSummary extends RecursiveSummary<SummaryStats> {
   }
 }
 
-class RelativeAgreement {
-  averageCount: number;
-  stdDeviation: number;
-
-  constructor(topicStats: TopicStats[]) {
-    const subtopicStats = topicStats.flatMap((t) => t.subtopicStats || []);
-    const highAgreementRatePerSubtopic = subtopicStats.map((subtopicStats) =>
-      this.getHighAgreementRate(subtopicStats.summaryStats)
-    );
-    this.averageCount =
-      highAgreementRatePerSubtopic.reduce((sum, num) => sum + num, 0) /
-      highAgreementRatePerSubtopic.length;
-    this.stdDeviation = getStandardDeviation(highAgreementRatePerSubtopic);
-  }
-
-  /**
-   * Get the rate of all comments being considered high agreement
-   * @param summaryStats the subset of comments to consider
-   * @returns the count of all potential high agreement comments.
-   */
-  private getHighAgreementRate(summaryStats: SummaryStats): number {
-    // Allow all the comments to be chosen if they match the requirements.
-    const maxLength = summaryStats.comments.length;
-    return summaryStats.getCommonGroundComments(maxLength).length / summaryStats.commentCount;
-  }
-
-  getRelativeAgreement(summaryStats: SummaryStats): string {
-    const highAgreementRate = this.getHighAgreementRate(summaryStats);
-    if (highAgreementRate < this.averageCount - this.stdDeviation) {
-      return "low agreement";
-    }
-    if (highAgreementRate < this.averageCount) {
-      return "moderately low agreement";
-    }
-    if (highAgreementRate < this.averageCount + this.stdDeviation) {
-      return "moderately high agreement";
-    } else {
-      return "high agreement";
-    }
-  }
-}
-
 /**
  * This RecursiveSummary subclass generates summaries for individual topics.
  */
 export class TopicSummary extends RecursiveSummary<SummaryStats> {
   // TopicSummary also needs to know about the topic, like name and subtopics
   topicStat: TopicStats;
-  relativeAgreement: RelativeAgreement;
+  relativeContext: RelativeContext;
 
   // This override is necessary to pass through a TopicStat object, rather than a SummaryStats object
   constructor(
     topicStat: TopicStats,
     model: Model,
-    relativeAgreement: RelativeAgreement,
+    relativeContext: RelativeContext,
     additionalContext?: string
   ) {
     super(topicStat.summaryStats, model, additionalContext);
     this.topicStat = topicStat;
-    this.relativeAgreement = relativeAgreement;
+    this.relativeContext = relativeContext;
   }
 
   async getSummary(): Promise<SummaryContent> {
@@ -220,7 +170,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
         new SubtopicSummary(
           subtopicStat,
           this.model,
-          this.relativeAgreement,
+          this.relativeContext,
           this.additionalContext
         ).getSummary()
       ) || [];
@@ -245,10 +195,14 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
    * @returns a promise of the summary string
    */
   async getCommentSummary(): Promise<SummaryContent> {
-    const relativeAgreement = this.relativeAgreement.getRelativeAgreement(
+    const relativeAgreement = this.relativeContext.getRelativeAgreement(
       this.topicStat.summaryStats
     );
-    const agreementDescription = `This subtopic had ${relativeAgreement} compared to the other subtopics.`;
+    const relativeEngagement = this.relativeContext.getRelativeEngagement(
+      this.topicStat.summaryStats
+    );
+
+    const agreementDescription = `This subtopic had ${relativeAgreement} and ${relativeEngagement} compared to the other subtopics.`;
     const result: SummaryContent = {
       title: this.getSectionTitle(),
       text: agreementDescription,
