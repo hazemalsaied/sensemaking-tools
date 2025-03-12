@@ -29,7 +29,7 @@ export abstract class SummaryStats {
   filteredComments: CommentWithVoteTallies[];
   minCommonGroundProb = 0.6;
   minAgreeProbDifference = 0.3;
-  maxSampleSize = 5;
+  maxSampleSize = 12;
   public minVoteCount = 20;
   // Whether group data is used as part of the summary.
   groupBasedSummarization: boolean = true;

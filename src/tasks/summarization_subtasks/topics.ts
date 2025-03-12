@@ -35,7 +35,7 @@ function getCommonGroundInstructions(containsGroups: boolean): string {
     `Here are several comments sharing different opinions. Your job is to summarize these ` +
     `comments. Do not pretend that you hold any of these opinions. You are not a participant in ` +
     `this discussion. ${groupSpecificText}Write a concise summary of these ` +
-    `comments that is at least one sentence and at most three sentences long. The summary should ` +
+    `comments that is at least one sentence and at most five sentences long. The summary should ` +
     `be substantiated, detailed and informative: include specific findings, requests, proposals, ` +
     `action items and examples, grounded in the comments. Refer to the people who made these ` +
     `comments as participants, not commenters. Do not talk about how strongly they approve of ` +
@@ -60,7 +60,7 @@ const DIFFERENCES_OF_OPINION_INSTRUCTIONS =
   `Here are several comments which generated disagreement. Your job is summarize the ideas ` +
   `contained in the comments. Do not pretend that you hold any of these opinions. You are not a ` +
   `participant in this discussion. Write a concise summary of these comments that is at least ` +
-  `one sentence and at most three sentences long. Refer to the people who made these comments as` +
+  `one sentence and at most five sentences long. Refer to the people who made these comments as` +
   ` participants, not commenters.  Do not talk about how strongly they disagree on these ` +
   `comments. Use complete sentences. ${COMMON_INSTRUCTIONS}
 
