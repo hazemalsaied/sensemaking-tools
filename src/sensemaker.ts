@@ -27,10 +27,14 @@ import {
 } from "./types";
 import { categorizeWithRetry, generateCategorizationPrompt } from "./tasks/categorization";
 import { summarizeByType } from "./tasks/summarization";
-import { getPrompt, hydrateCommentRecord, retryCall } from "./sensemaker_utils";
+import {
+  getPrompt,
+  hydrateCommentRecord,
+  retryCall,
+  resolvePromisesInParallel,
+} from "./sensemaker_utils";
 import { Type } from "@sinclair/typebox";
 import { ModelSettings, Model } from "./models/model";
-import { resolvePromisesInParallel } from "./tasks/summarization_subtasks/recursive_summarization";
 
 // Class to make sense of conversation data. Uses LLMs to learn what topics were discussed and
 // categorize comments. Then these categorized comments can be used with optional Vote data to

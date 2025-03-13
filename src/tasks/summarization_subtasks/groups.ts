@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { getPrompt } from "../../sensemaker_utils";
+import { getPrompt, resolvePromisesInParallel } from "../../sensemaker_utils";
 import { GroupStats, GroupedSummaryStats } from "../../stats/group_informed";
-import { RecursiveSummary, resolvePromisesInParallel } from "./recursive_summarization";
+import { RecursiveSummary } from "./recursive_summarization";
 import { Comment, SummaryContent } from "../../types";
 
 /**

@@ -14,8 +14,13 @@
 
 // Functions for different ways to summarize Comment and Vote data.
 
-import { RecursiveSummary, resolvePromisesInParallel } from "./recursive_summarization";
-import { getPrompt, commentTableMarkdown, ColumnDefinition } from "../../sensemaker_utils";
+import { RecursiveSummary } from "./recursive_summarization";
+import {
+  getPrompt,
+  commentTableMarkdown,
+  ColumnDefinition,
+  resolvePromisesInParallel,
+} from "../../sensemaker_utils";
 import { getMaxGroupAgreeProbDifference, getMinAgreeProb } from "../../stats/stats_util";
 import { Comment, SummaryContent } from "../../types";
 import { Model } from "../../models/model";
@@ -261,7 +266,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
     );
     return {
       title: "Prominent themes were: ",
-      text: text
+      text: text,
     };
   }
 

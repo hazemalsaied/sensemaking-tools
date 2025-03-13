@@ -15,7 +15,7 @@
 // Simple utils.
 
 import { CommentRecord, Comment } from "./types";
-import { RETRY_DELAY_MS } from "./models/vertex_model";
+import { RETRY_DELAY_MS, MAX_RETRIES } from "./models/vertex_model";
 import { voteTallySummary } from "./tasks/utils/citation_utils";
 
 /**
@@ -252,4 +252,44 @@ export function commentTableMarkdown(
       ""
     )
   );
+}
+
+/**
+ * Resolves Promises sequentially, optionally using batching for limited parallelization.
+ * Adds a one-second backoff for failed calls.
+ *
+ * Batching can be used to execute multiple promises in parallel that will then be resolved in
+ * order. The batchSize can be thought of as the maximum number of parallel threads.
+ * @param promises the promises to resolve.
+ * @param numParallelExecutions how many promises to resolve at once, the default is 2 based on the
+ * current Gemini qps quotas, see: https://cloud.google.com/gemini/docs/quotas#per-second.
+ * @returns A list of the resolved values of the promises.
+ */
+export async function resolvePromisesInParallel<T>(
+  promises: Promise<T>[],
+  numParallelExecutions: number = 2
+): Promise<T[]> {
+  const results: T[] = [];
+
+  async function retryPromise(promise: Promise<T>, currentRetry: number = 0): Promise<T> {
+    try {
+      return await promise;
+    } catch (error) {
+      if (currentRetry >= MAX_RETRIES) {
+        console.error(`Promise failed after ${MAX_RETRIES} retries:`, error);
+        throw error;
+      }
+      console.error("Promise failed, retrying in 1 second:", error);
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // 1 second delay
+      return retryPromise(promise, currentRetry + 1);
+    }
+  }
+
+  for (let i = 0; i < promises.length; i += numParallelExecutions) {
+    const batch = promises.slice(i, i + numParallelExecutions).map(retryPromise); // Apply retry to each promise in the batch
+    const batchResults = await Promise.all(batch);
+    results.push(...batchResults);
+  }
+
+  return results;
 }
