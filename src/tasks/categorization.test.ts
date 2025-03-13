@@ -12,12 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {
-  findMissingComments,
-  generateCategorizationPrompt,
-  validateCommentRecords,
-  categorizeWithRetry,
-} from "./categorization";
+import { findMissingComments, validateCommentRecords, categorizeWithRetry } from "./categorization";
 import { CommentRecord, Comment, Topic } from "../types";
 import { VertexModel } from "../models/vertex_model";
 
@@ -48,23 +43,22 @@ describe("CategorizationTest", () => {
       { id: "2", text: "Comment 2" },
       { id: "3", text: "Comment 3" },
     ];
-    const includeSubtopics = false;
     const instructions = "Categorize the comments based on these topics:  [{'name': 'Topic 1'}]";
     const commentsWithTextAndTopics = [
       {
         id: "1",
         text: "Comment 1",
-        topics: [{ name: "Topic 1", subtopics: [] }],
+        topics: [{ name: "Topic 1" }],
       },
       {
         id: "2",
         text: "Comment 2",
-        topics: [{ name: "Topic 1", subtopics: [] }],
+        topics: [{ name: "Topic 1" }],
       },
       {
         id: "3",
         text: "Comment 3",
-        topics: [{ name: "Topic 1", subtopics: [] }],
+        topics: [{ name: "Topic 1" }],
       },
     ];
 
@@ -78,8 +72,7 @@ describe("CategorizationTest", () => {
       new VertexModel("project", "location", "gemini-1000"),
       instructions,
       comments,
-      includeSubtopics,
-      [{ name: "Topic 1", subtopics: [] }]
+      [{ name: "Topic 1" }]
     );
 
     expect(mockGenerateData).toHaveBeenCalledTimes(2);
@@ -92,23 +85,22 @@ describe("CategorizationTest", () => {
       { id: "2", text: "Comment 2" },
       { id: "3", text: "Comment 3" },
     ];
-    const includeSubtopics = false;
     const instructions = "Categorize the comments based on these topics:  [{'name': 'Topic 1'}]";
     const commentsWithTextAndTopics = [
       {
         id: "1",
         text: "Comment 1",
-        topics: [{ name: "Topic 1", subtopics: [] }],
+        topics: [{ name: "Topic 1" }],
       },
       {
         id: "2",
         text: "Comment 2",
-        topics: [{ name: "Topic 1", subtopics: [] }],
+        topics: [{ name: "Topic 1" }],
       },
       {
         id: "3",
         text: "Comment 3",
-        topics: [{ name: "Topic 1", subtopics: [] }],
+        topics: [{ name: "Topic 1" }],
       },
     ];
 
@@ -124,15 +116,14 @@ describe("CategorizationTest", () => {
       new VertexModel("project", "location", "gemini-1000"),
       instructions,
       comments,
-      includeSubtopics,
-      [{ name: "Topic 1", subtopics: [] }]
+      [{ name: "Topic 1" }]
     );
 
     expect(mockGenerateData).toHaveBeenCalledTimes(2);
     expect(commentRecords).toEqual(commentsWithTextAndTopics);
   });
 
-  it('should assign "Other" topic and "Uncategorized" subtopic to comments that failed categorization after max retries', async () => {
+  it('should assign "Other" topic to comments that failed categorization after max retries', async () => {
     const comments: Comment[] = [
       { id: "1", text: "Comment 1" },
       { id: "2", text: "Comment 2" },
@@ -140,7 +131,6 @@ describe("CategorizationTest", () => {
     ];
     const topics = '[{"name": "Topic 1", "subtopics": []}]';
     const instructions = "Categorize the comments based on these topics: " + topics;
-    const includeSubtopics = true;
     const topicsJson = [{ name: "Topic 1", subtopics: [] }];
 
     // Mock the model to always return an empty response. This simulates a
@@ -151,7 +141,6 @@ describe("CategorizationTest", () => {
       new VertexModel("project", "location", "gemini-1000"),
       instructions,
       comments,
-      includeSubtopics,
       topicsJson
     );
 
@@ -161,17 +150,17 @@ describe("CategorizationTest", () => {
       {
         id: "1",
         text: "Comment 1",
-        topics: [{ name: "Other", subtopics: [{ name: "Uncategorized" }] }],
+        topics: [{ name: "Other" }],
       },
       {
         id: "2",
         text: "Comment 2",
-        topics: [{ name: "Other", subtopics: [{ name: "Uncategorized" }] }],
+        topics: [{ name: "Other" }],
       },
       {
         id: "3",
         text: "Comment 3",
-        topics: [{ name: "Other", subtopics: [{ name: "Uncategorized" }] }],
+        topics: [{ name: "Other" }],
       },
     ];
     expect(commentRecords).toEqual(expected);
@@ -185,7 +174,6 @@ describe("CategorizationTest", () => {
     ];
     const topics = '[{"name": "Topic 1", "subtopics": []}]';
     const instructions = "Categorize the comments based on these topics: " + topics;
-    const includeSubtopics = false;
     const topicsJson = [{ name: "Topic 1", subtopics: [] }];
 
     // Mock the model to always return an empty response. This simulates a
@@ -196,7 +184,6 @@ describe("CategorizationTest", () => {
       new VertexModel("project", "location", "gemini-1000"),
       instructions,
       comments,
-      includeSubtopics,
       topicsJson
     );
 
@@ -221,36 +208,6 @@ describe("CategorizationTest", () => {
     ];
 
     expect(commentRecords).toEqual(expected);
-  });
-
-  it("should generate a 1-level categorization prompt (topics only)", () => {
-    const sampleTopics: Topic[] = [{ name: "Economic Development" }, { name: "Housing" }];
-    const includeSubtopics = false;
-    const prompt = generateCategorizationPrompt(sampleTopics, includeSubtopics);
-    expect(prompt).toContain(
-      "For each of the following comments, identify the most relevant topic from the list below."
-    );
-    expect(prompt).toContain("Economic Development");
-  });
-
-  it("should generate a 2-level categorization prompt (topics and subtopics)", () => {
-    const sampleTopics: Topic[] = [
-      {
-        name: "Economic Development",
-        subtopics: [{ name: "Job Creation" }, { name: "Business Growth" }],
-      },
-      {
-        name: "Housing",
-        subtopics: [{ name: "Affordable Housing Options" }, { name: "Rental Market Prices" }],
-      },
-    ];
-    const includeSubtopics = true;
-    const prompt = generateCategorizationPrompt(sampleTopics, includeSubtopics);
-    expect(prompt).toContain(
-      "For each of the following comments, identify the most relevant topic and subtopic from the list below."
-    );
-    expect(prompt).toContain("Economic Development");
-    expect(prompt).toContain("Job Creation");
   });
 });
 
@@ -279,7 +236,6 @@ describe("validateCommentRecord", () => {
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
       commentRecords,
       inputComments,
-      true,
       topics
     );
     expect(commentsPassedValidation.length).toBe(2);
@@ -304,7 +260,6 @@ describe("validateCommentRecord", () => {
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
       commentRecords,
       inputComments,
-      true,
       topics
     );
     expect(commentsPassedValidation.length).toBe(2);
@@ -322,7 +277,6 @@ describe("validateCommentRecord", () => {
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
       commentRecords,
       inputComments,
-      true,
       topics
     );
     expect(commentsPassedValidation.length).toBe(1);
@@ -343,7 +297,6 @@ describe("validateCommentRecord", () => {
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
       commentRecords,
       inputComments,
-      true,
       topics
     );
     expect(commentsPassedValidation.length).toBe(1);
@@ -364,7 +317,6 @@ describe("validateCommentRecord", () => {
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
       commentRecords,
       inputComments,
-      true,
       topics
     );
     expect(commentsPassedValidation.length).toBe(1);
@@ -388,7 +340,6 @@ describe("validateCommentRecord", () => {
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
       commentRecords,
       inputComments,
-      true,
       topics
     );
     expect(commentsPassedValidation.length).toBe(1); // Only Comment 2 should pass
@@ -409,7 +360,6 @@ describe("validateCommentRecord", () => {
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
       commentRecords,
       inputComments,
-      true,
       topics
     );
     expect(commentsPassedValidation.length).toBe(1);
@@ -435,7 +385,6 @@ describe("validateCommentRecord", () => {
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
       commentRecords,
       inputComments,
-      true,
       topics
     );
     expect(commentsPassedValidation.length).toBe(1); // Only Comment 2 should pass
@@ -456,7 +405,6 @@ describe("validateCommentRecord", () => {
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
       commentRecords,
       inputComments,
-      true,
       topics
     );
     expect(commentsPassedValidation.length).toBe(2);

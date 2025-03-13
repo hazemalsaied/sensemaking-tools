@@ -12,18 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {
-  CommentRecord,
-  Comment,
-  Topic,
-  NestedTopic,
-  FlatTopic,
-  TopicCategorizedComment,
-  SubtopicCategorizedComment,
-} from "../types";
+import { CommentRecord, Comment, Topic, FlatTopic, TopicCategorizedComment } from "../types";
 import { Model } from "../models/model";
-import { getPrompt, hydrateCommentRecord } from "../sensemaker_utils";
+import { executeInParallel, getPrompt, hydrateCommentRecord } from "../sensemaker_utils";
 import { TSchema, Type } from "@sinclair/typebox";
+import { learnOneLevelOfTopics } from "./topic_modeling";
 import { MAX_RETRIES, RETRY_DELAY_MS } from "../models/model_util";
 
 /**
@@ -34,7 +27,6 @@ import { MAX_RETRIES, RETRY_DELAY_MS } from "../models/model_util";
  * Makes API call to generate JSON and retries with any comments that were not properly categorized.
  * @param instructions Instructions for the LLM on how to categorize the comments.
  * @param inputComments The comments to categorize.
- * @param includeSubtopics Whether to include subtopics in the categorization.
  * @param topics The topics and subtopics provided to the LLM for categorization.
  * @param additionalContext - extra context to be included to the LLM prompt
  * @returns The categorized comments.
@@ -43,7 +35,6 @@ export async function categorizeWithRetry(
   model: Model,
   instructions: string,
   inputComments: Comment[],
-  includeSubtopics: boolean,
   topics: Topic[],
   additionalContext?: string
 ): Promise<CommentRecord[]> {
@@ -56,9 +47,7 @@ export async function categorizeWithRetry(
     const uncategorizedCommentsForModel: string[] = uncategorized.map((comment) =>
       JSON.stringify({ id: comment.id, text: comment.text })
     );
-    const outputSchema: TSchema = Type.Array(
-      includeSubtopics ? SubtopicCategorizedComment : TopicCategorizedComment
-    );
+    const outputSchema: TSchema = Type.Array(TopicCategorizedComment);
     const newCategorized: CommentRecord[] = (await model.generateData(
       getPrompt(instructions, uncategorizedCommentsForModel, additionalContext),
       outputSchema
@@ -68,7 +57,6 @@ export async function categorizeWithRetry(
       newCategorized,
       inputComments,
       uncategorized,
-      includeSubtopics,
       topics
     );
     categorized = categorized.concat(newProcessedComments.commentRecords);
@@ -84,7 +72,7 @@ export async function categorizeWithRetry(
       );
       await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
     } else {
-      categorized = categorized.concat(assignDefaultCategory(uncategorized, includeSubtopics));
+      categorized = categorized.concat(assignDefaultCategory(uncategorized));
     }
   }
 
@@ -108,37 +96,6 @@ Important Considerations:
 `;
 }
 
-export function subtopicCategorizationPrompt(topics: Topic[]): string {
-  return `
-For each of the following comments, identify the most relevant topic and subtopic from the list below.
-
-Input Topics and Subtopics (JSON formatted):
-${JSON.stringify(topics)}
-
-Important Considerations:
-- Ensure the assignment of comments to subtopics is accurate and reflects the meaning of the comment.
-- If comments relate to multiple topics, they should be added to each of the corresponding topics and their relevant subtopics.
-- Prioritize assigning comments to existing subtopics whenever possible.
-- All comments must be assigned to at least one existing topic and subtopic.
-- If none of the provided topic–subtopic pairs accurately fit the comment, assign it to the 'Other' topic and its 'Other' subtopic.
-- Do not create any new topics that are not listed in the Input Topics and Subtopics.
-- Do not create any new subtopics that are not listed in the Input Topics and Subtopics.
-`;
-}
-
-/**
- * Generates a prompt for an LLM to categorize comments based on a predefined set of topics (and subtopics).
- *
- * @param topics The user provided topics (and subtopic).
- * @param includeSubtopics Whether to include subtopics in the categorization.
- * @returns The generated prompt string, including instructions, output format, and considerations for categorization.
- */
-export function generateCategorizationPrompt(topics: Topic[], includeSubtopics: boolean): string {
-  return includeSubtopics
-    ? subtopicCategorizationPrompt(topics)
-    : topicCategorizationPrompt(topics);
-}
-
 /**
  * Validates categorized comments, checking for:
  *  - Extra comments (not present in the original input)
@@ -146,7 +103,6 @@ export function generateCategorizationPrompt(topics: Topic[], includeSubtopics: 
  *  - Invalid topic or subtopic names
  * @param commentRecords The categorized comments to validate.
  * @param inputComments The original input comments.
- * @param includeSubtopics Whether to include subtopics in the categorization.
  * @param topics The topics and subtopics provided to the LLM for categorization.
  * @returns An object containing:
  *  - `validCommentRecords`: comments that passed validation.
@@ -155,7 +111,6 @@ export function generateCategorizationPrompt(topics: Topic[], includeSubtopics: 
 export function validateCommentRecords(
   commentRecords: CommentRecord[],
   inputComments: Comment[],
-  includeSubtopics: boolean,
   topics: Topic[]
 ): {
   commentsPassedValidation: CommentRecord[];
@@ -173,12 +128,12 @@ export function validateCommentRecords(
       return; // Skip to the next comment
     }
 
-    if (hasEmptyTopicsOrSubtopics(comment, includeSubtopics)) {
+    if (hasEmptyTopicsOrSubtopics(comment)) {
       commentsWithInvalidTopics.push(comment);
       return; // Skip to the next comment
     }
 
-    if (hasInvalidTopicNames(comment, includeSubtopics, topicLookup)) {
+    if (hasInvalidTopicNames(comment, topicLookup)) {
       commentsWithInvalidTopics.push(comment);
       return; // Skip to the next comment
     }
@@ -227,16 +182,14 @@ function isExtraComment(comment: Comment | CommentRecord, inputCommentIds: Set<s
 /**
  * Checks if a comment has empty topics or subtopics.
  * @param comment The categorized comment to check.
- * @param includeSubtopics Whether to include subtopics in the categorization.
  * @returns True if the comment has empty topics or subtopics, false otherwise.
  */
-function hasEmptyTopicsOrSubtopics(comment: CommentRecord, includeSubtopics: boolean): boolean {
+function hasEmptyTopicsOrSubtopics(comment: CommentRecord): boolean {
   if (comment.topics.length === 0) {
     console.warn(`Comment with empty topics: ${JSON.stringify(comment)}`);
     return true;
   }
   if (
-    includeSubtopics &&
     comment.topics.some(
       (topic: Topic) => "subtopics" in topic && (!topic.subtopics || topic.subtopics.length === 0)
     )
@@ -250,13 +203,11 @@ function hasEmptyTopicsOrSubtopics(comment: CommentRecord, includeSubtopics: boo
 /**
  * Checks if a categorized comment has topic or subtopic names different from the provided ones to the LLM.
  * @param comment The categorized comment to check.
- * @param includeSubtopics Whether to include subtopics in the categorization.
  * @param inputTopics The lookup table mapping the input topic names to arrays of their subtopic names.
  * @returns True if the comment has invalid topic or subtopic names, false otherwise.
  */
 function hasInvalidTopicNames(
   comment: CommentRecord,
-  includeSubtopics: boolean,
   inputTopics: Record<string, string[]>
 ): boolean {
   // We use `some` here to return as soon as we find an invalid topic (or subtopic).
@@ -273,7 +224,7 @@ function hasInvalidTopicNames(
       return true; // Invalid topic found, stop checking and return `hasInvalidTopicNames` true for this comment.
     }
 
-    if (includeSubtopics && "subtopics" in topic) {
+    if ("subtopics" in topic) {
       const areAllSubtopicsValid = areSubtopicsValid(topic.subtopics, inputTopics[topic.name]);
       if (!areAllSubtopicsValid) {
         console.warn(
@@ -332,7 +283,6 @@ export function findMissingComments(
  * @param commentRecords The newly categorized comments from the LLM.
  * @param inputComments The original input comments.
  * @param uncategorized The current set of uncategorized comments to check if any are missing in the model response.
- * @param includeSubtopics Whether to include subtopics in the categorization.
  * @param topics The topics and subtopics provided to the LLM for categorization.
  * @returns The successfully categorized comments and the unsuccessfully categorized comments with
  * the topics removed.
@@ -341,7 +291,6 @@ function processCategorizedComments(
   commentRecords: CommentRecord[],
   inputComments: Comment[],
   uncategorized: Comment[],
-  includeSubtopics: boolean,
   topics: Topic[]
 ): {
   commentRecords: CommentRecord[];
@@ -351,7 +300,6 @@ function processCategorizedComments(
   const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
     commentRecords,
     inputComments,
-    includeSubtopics,
     topics
   );
 
@@ -375,13 +323,9 @@ function processCategorizedComments(
  * failed categorization.
  *
  * @param uncategorized The array of comments that failed categorization.
- * @param includeSubtopics whether to include the default subtopic
  * @returns the uncategorized comments now categorized into a "Other" category.
  */
-function assignDefaultCategory(
-  uncategorized: Comment[],
-  includeSubtopics: boolean
-): CommentRecord[] {
+function assignDefaultCategory(uncategorized: Comment[]): CommentRecord[] {
   console.warn(
     `Failed to categorize ${uncategorized.length} comments after maximum number of retries. Assigning "Other" topic and "Uncategorized" subtopic to failed comments.`
   );
@@ -389,11 +333,149 @@ function assignDefaultCategory(
   return uncategorized.map((comment: Comment): CommentRecord => {
     return {
       ...comment,
-      topics: [
-        includeSubtopics
-          ? ({ name: "Other", subtopics: [{ name: "Uncategorized" }] } as NestedTopic)
-          : ({ name: "Other" } as FlatTopic),
-      ],
+      topics: [{ name: "Other" } as FlatTopic],
     };
   });
+}
+
+function getTopicDepthFromTopics(topics: Topic[], currentDepth: number = 1): number {
+  return topics.every((topic) => "subtopics" in topic)
+    ? getTopicDepthFromTopics(topics.map((topic) => topic.subtopics).flat(), currentDepth + 1)
+    : currentDepth;
+}
+
+/**
+ * Get the minimum topic depth across all comments.
+ */
+function getTopicDepth(comments: Comment[]): number {
+  return comments
+    .map((comment) => {
+      return comment.topics ? getTopicDepthFromTopics(comment.topics, 1) : 0;
+    })
+    .reduce((minDepth, depth) => Math.min(minDepth, depth), Number.MAX_VALUE);
+}
+
+function getTopicsAtDepth(topics: Topic[], depth: number): Topic[] {
+  if (depth === 1) {
+    return topics;
+  } else if (depth === 2) {
+    return topics
+      .map((topic) => {
+        return "subtopics" in topic ? topic.subtopics : [];
+      })
+      .flat();
+  } else {
+    throw Error("Not yet implemented!!");
+  }
+}
+
+function getCommentsWithTopic(comments: Comment[], topicName: string) {
+  return comments.filter(
+    (comment) => comment.topics && comment.topics.map((topic) => topic.name).includes(topicName)
+  );
+}
+
+function mergeCommentTopics(
+  comments: Comment[],
+  categorizedComments: Comment[],
+  topic: Topic
+): Comment[] {
+  const commentsInTopic = getCommentsWithTopic(comments, topic.name);
+
+  for (const comment of commentsInTopic) {
+    const matchingCategorized = categorizedComments.find(
+      (categorized) => categorized.id === comment.id
+    );
+    if (!matchingCategorized || !matchingCategorized.topics || !comment.topics) {
+      continue;
+    }
+    for (let i = 0; i < comment.topics.length; i++) {
+      const existingTopic = comment.topics[i];
+      if (existingTopic.name === topic.name) {
+        comment.topics[i] = { name: existingTopic.name, subtopics: matchingCategorized.topics };
+      }
+    }
+  }
+  return comments;
+}
+
+export async function categorizeCommentsRecursive(
+  comments: Comment[],
+  topicDepth: 1 | 2,
+  model: Model,
+  topics?: Topic[],
+  additionalContext?: string
+): Promise<Comment[]> {
+  // The exit condition - if the requested topic depth matches the current depth of topics on the
+  // comments then exit.
+  const currentTopicDepth = getTopicDepth(comments);
+  if (currentTopicDepth >= topicDepth) {
+    return comments;
+  }
+
+  if (!topics) {
+    topics = await learnOneLevelOfTopics(comments, model, undefined, undefined, additionalContext);
+    comments = await oneLevelCategorization(comments, model, topics, additionalContext);
+    return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext);
+  }
+
+  if (topics && currentTopicDepth === 0) {
+    comments = await oneLevelCategorization(comments, model, topics, additionalContext);
+    return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext);
+  }
+
+  const parentTopics = getTopicsAtDepth(topics, currentTopicDepth);
+  for (let topic of parentTopics) {
+    const commentsInTopic = structuredClone(getCommentsWithTopic(comments, topic.name));
+    if (!("subtopics" in topic)) {
+      // The subtopics are added to the existing topic, but so a list of length one is returned.
+      topic = (
+        await learnOneLevelOfTopics(commentsInTopic, model, topic, parentTopics, additionalContext)
+      )[0];
+    }
+    if (!("subtopics" in topic)) {
+      throw Error("Badly formed LLM response - expected 'subtopics' to be in topics ");
+    }
+
+    // Use the subtopics as high-level topics and merge them in later.
+    const categorizedComments = await oneLevelCategorization(
+      commentsInTopic,
+      model,
+      topic.subtopics,
+      additionalContext
+    );
+    comments = mergeCommentTopics(comments, categorizedComments, topic);
+  }
+  return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext);
+}
+
+export async function oneLevelCategorization(
+  comments: Comment[],
+  model: Model,
+  topics: Topic[],
+  additionalContext?: string
+): Promise<Comment[]> {
+  const instructions = topicCategorizationPrompt(topics);
+  // TODO: Consider the effects of smaller batch sizes. 1 comment per batch was much faster, but
+  // the distribution was significantly different from what we're currently seeing. More testing
+  // is needed to determine the ideal size and distribution.
+  const batchesToCategorize: (() => Promise<CommentRecord[]>)[] = []; // callbacks
+  for (let i = 0; i < comments.length; i += model.categorizationBatchSize) {
+    const uncategorizedBatch = comments.slice(i, i + model.categorizationBatchSize);
+
+    // Create a callback function for each batch and add it to the list, preparing them for parallel execution.
+    batchesToCategorize.push(() =>
+      categorizeWithRetry(model, instructions, uncategorizedBatch, topics, additionalContext)
+    );
+  }
+
+  // categorize comment batches in parallel
+  const CategorizedBatches: CommentRecord[][] = await executeInParallel(batchesToCategorize);
+
+  // flatten categorized batches
+  const categorized: CommentRecord[] = [];
+  CategorizedBatches.forEach((batch) => categorized.push(...batch));
+
+  const categorizedComments = hydrateCommentRecord(categorized, comments);
+  return categorizedComments;
 }

@@ -14,22 +14,12 @@
 
 // Module to interact with sensemaking tools.
 
-import { generateTopicModelingPrompt, learnedTopicsValid } from "./tasks/topic_modeling";
 import { MAX_RETRIES } from "./models/model_util";
-import {
-  CommentRecord,
-  Comment,
-  SummarizationType,
-  Summary,
-  FlatTopic,
-  NestedTopic,
-  Topic,
-} from "./types";
-import { categorizeWithRetry, generateCategorizationPrompt } from "./tasks/categorization";
+import { Comment, SummarizationType, Summary, Topic } from "./types";
+import { categorizeCommentsRecursive } from "./tasks/categorization";
 import { summarizeByType } from "./tasks/summarization";
-import { getPrompt, hydrateCommentRecord, retryCall, executeInParallel } from "./sensemaker_utils";
-import { Type } from "@sinclair/typebox";
 import { ModelSettings, Model } from "./models/model";
+import { retryCall, getUniqueTopics } from "./sensemaker_utils";
 
 // Class to make sense of conversation data. Uses LLMs to learn what topics were discussed and
 // categorize comments. Then these categorized comments can be used with optional Vote data to
@@ -96,18 +86,9 @@ export class Sensemaker {
   ): Promise<Summary> {
     const startTime = performance.now();
 
-    // categories are required for summarization - make sure comments are categorized
-    if (comments.length > 0 && !comments[0].topics) {
-      if (!topics) {
-        topics = await this.learnTopics(
-          comments,
-          true, // including subtopics (as they are important for summaries)
-          undefined, // no top level topics specified
-          additionalContext
-        );
-      }
-      comments = await this.categorizeComments(comments, true, topics, additionalContext);
-    }
+    // Categories are required for summarization, this is a no-op if they already have categories.
+    comments = await this.categorizeComments(comments, true, topics, additionalContext);
+
     const summary = await retryCall(
       async function (
         model: Model,
@@ -151,32 +132,20 @@ export class Sensemaker {
   ): Promise<Topic[]> {
     const startTime = performance.now();
 
-    const instructions = generateTopicModelingPrompt(includeSubtopics, topics);
-
-    // surround each comment by triple backticks to avoid model's confusion with single, double quotes and new lines
-    const commentTexts = comments.map((comment) => "```" + comment.text + "```");
-    // decide which schema to use based on includeSubtopics
-    const schema = Type.Array(includeSubtopics ? NestedTopic : FlatTopic);
-
-    return retryCall(
-      async function (model: Model): Promise<Topic[]> {
-        return (await model.generateData(
-          getPrompt(instructions, commentTexts, additionalContext),
-          schema
-        )) as Topic[];
-      },
-      function (response: Topic[]): boolean {
-        console.log(
-          `Topic learning took ${(performance.now() - startTime) / (1000 * 60)} minutes.`
-        );
-        return learnedTopicsValid(response, topics);
-      },
-      MAX_RETRIES,
-      "Topic modeling failed.",
-      undefined,
-      [this.getModel("categorizationModel")],
-      []
+    // Categorization learns one level of topics and categorizes them and repeats recursively. We want
+    // to use this logic here as well, so just categorize the comments and take only the learned
+    // topics.
+    const categorizedComments = await this.categorizeComments(
+      comments,
+      includeSubtopics,
+      topics,
+      additionalContext
     );
+    const learnedTopics = getUniqueTopics(categorizedComments);
+
+    console.log(`Topic learning took ${(performance.now() - startTime) / (1000 * 60)} minutes.`);
+
+    return learnedTopics;
   }
 
   /**
@@ -197,47 +166,16 @@ export class Sensemaker {
   ): Promise<Comment[]> {
     const startTime = performance.now();
 
-    if (!topics) {
-      topics = await this.learnTopics(comments, includeSubtopics, undefined, additionalContext);
-    }
+    // TODO: ensure the topics argument and the topics assigned to the passed in comments are in
+    // sync.
+    const categorizedComments = await categorizeCommentsRecursive(
+      comments,
+      includeSubtopics ? 2 : 1,
+      this.getModel("categorizationModel"),
+      topics,
+      additionalContext
+    );
 
-    const instructions = generateCategorizationPrompt(topics, includeSubtopics);
-
-    // TODO: Consider the effects of smaller batch sizes. 1 comment per batch was much faster, but
-    // the distribution was significantly different from what we're currently seeing. More testing
-    // is needed to determine the ideal size and distribution.
-    const batchesToCategorize: (() => Promise<CommentRecord[]>)[] = []; // callbacks
-    for (
-      let i = 0;
-      i < comments.length;
-      i += this.modelSettings.defaultModel.categorizationBatchSize
-    ) {
-      const uncategorizedBatch = comments.slice(
-        i,
-        i + this.modelSettings.defaultModel.categorizationBatchSize
-      );
-
-      // Create a callback function for each batch and add it to the list, preparing them for parallel execution.
-      batchesToCategorize.push(() =>
-        categorizeWithRetry(
-          this.modelSettings.defaultModel,
-          instructions,
-          uncategorizedBatch,
-          includeSubtopics,
-          topics,
-          additionalContext
-        )
-      );
-    }
-
-    // categorize comment batches in parallel
-    const CategorizedBatches: CommentRecord[][] = await executeInParallel(batchesToCategorize);
-
-    // flatten categorized batches
-    const categorized: CommentRecord[] = [];
-    CategorizedBatches.forEach((batch) => categorized.push(...batch));
-
-    const categorizedComments = hydrateCommentRecord(categorized, comments);
     console.log(`Categorization took ${(performance.now() - startTime) / (1000 * 60)} minutes.`);
     return categorizedComments;
   }

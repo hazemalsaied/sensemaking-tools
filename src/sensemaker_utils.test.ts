@@ -18,6 +18,7 @@ import {
   formatCommentsWithVotes,
   decimalToPercent,
   executeInParallel,
+  getUniqueTopics,
 } from "./sensemaker_utils";
 import { Comment } from "./types";
 import pLimit from "p-limit";
@@ -168,6 +169,27 @@ describe("SensemakerUtilsTest", () => {
       vote info per group: {"0":{"agreeCount":10,"disagreeCount":5,"passCount":0,"totalCount":15},"1":{"agreeCount":5,"disagreeCount":10,"passCount":5,"totalCount":20}}`,
       `comment2
       vote info per group: {"0":{"agreeCount":2,"disagreeCount":5,"passCount":3,"totalCount":10},"1":{"agreeCount":5,"disagreeCount":3,"passCount":2,"totalCount":10}}`,
+    ]);
+  });
+
+  it("Should get unique topics from a list of comments", () => {
+    expect(
+      getUniqueTopics([
+        { id: "1", text: "hi", topics: [{ name: "topic1", subtopics: [{ name: "subtopic1" }] }] },
+        {
+          id: "2",
+          text: "hello",
+          topics: [{ name: "topic1", subtopics: [{ name: "subtopic1" }, { name: "subtopic2" }] }],
+        },
+        {
+          id: "3",
+          text: "hola",
+          topics: [{ name: "topic2", subtopics: [{ name: "subtopic3" }] }],
+        },
+      ])
+    ).toEqual([
+      { name: "topic1", subtopics: [{ name: "subtopic1" }, { name: "subtopic2" }] },
+      { name: "topic2", subtopics: [{ name: "subtopic3" }] },
     ]);
   });
 

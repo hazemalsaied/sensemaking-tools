@@ -12,41 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {
-  generateTopicModelingPrompt,
-  LEARN_TOPICS_PROMPT,
-  LEARN_TOPICS_AND_SUBTOPICS_PROMPT,
-  learnSubtopicsPrompt,
-  learnedTopicsValid,
-} from "./topic_modeling";
+import { learnedTopicsValid } from "./topic_modeling";
 import { Topic } from "../types";
-
-describe("generateTopicModelingPrompt", () => {
-  it("should generate a prompt for learning top-level topics only (depth 1, no subtopics)", () => {
-    const includeSubtopics = false;
-    const prompt = generateTopicModelingPrompt(includeSubtopics);
-    expect(prompt).toEqual(LEARN_TOPICS_PROMPT);
-  });
-
-  it("should generate a prompt for learning subtopics with given top-level topics (depth 2)", () => {
-    const includeSubtopics = true;
-    const parentTopics = [
-      { name: "Economic Development" },
-      { name: "Housing" },
-      { name: "Infrastructure" },
-    ];
-    const expectedPrompt = learnSubtopicsPrompt(parentTopics);
-
-    const prompt = generateTopicModelingPrompt(includeSubtopics, parentTopics);
-    expect(prompt).toEqual(expectedPrompt);
-  });
-
-  it("should generate a prompt for learning topics and subtopics (depth 2, no given top-level topics)", () => {
-    const includeSubtopics = true;
-    const prompt = generateTopicModelingPrompt(includeSubtopics);
-    expect(prompt).toEqual(LEARN_TOPICS_AND_SUBTOPICS_PROMPT);
-  });
-});
 
 describe("learnedTopicsValid", () => {
   it('should allow "Other" subtopic to have the same name as "Other" topic', () => {

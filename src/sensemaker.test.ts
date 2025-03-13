@@ -98,20 +98,14 @@ describe("SensemakerTest", () => {
     it("should retry topic modeling when the subtopic is the same as a main topic", async () => {
       const comments: Comment[] = [
         { id: "1", text: "Comment about Roads" },
-        { id: "2", text: "Comment about Parks" },
-        { id: "3", text: "Another comment about Roads" },
+        { id: "2", text: "Another comment about Roads" },
       ];
       const includeSubtopics = true;
-      const topics = [{ name: "Infrastructure" }, { name: "Environment" }];
 
       const validResponse = [
         {
           name: "Infrastructure",
           subtopics: [{ name: "Roads" }],
-        },
-        {
-          name: "Environment",
-          subtopics: [{ name: "Parks" }],
         },
       ];
 
@@ -122,49 +116,80 @@ describe("SensemakerTest", () => {
           Promise.resolve([
             {
               name: "Infrastructure",
-              subtopics: [{ name: "Roads" }, { name: "Environment" }],
-            },
-            {
-              name: "Environment",
-              subtopics: [{ name: "Parks" }],
             },
           ])
         )
-        .mockReturnValueOnce(Promise.resolve(validResponse));
+        .mockReturnValueOnce(
+          Promise.resolve([
+            { id: "1", text: "Comment about Roads", topics: [{ name: "Infrastructure" }] },
+            { id: "2", text: "Another comment about Roads", topics: [{ name: "Infrastructure" }] },
+          ])
+        )
+        .mockReturnValueOnce(
+          Promise.resolve([
+            {
+              name: "Infrastructure",
+              subtopics: [{ name: "Roads" }, { name: "Infrastructure" }],
+            },
+          ])
+        )
+        .mockReturnValueOnce(
+          Promise.resolve([
+            {
+              name: "Infrastructure",
+              subtopics: [{ name: "Roads" }],
+            },
+          ])
+        )
+        .mockReturnValueOnce(
+          Promise.resolve([
+            {
+              id: "1",
+              text: "Comment about Roads",
+              topics: [{ name: "Roads" }],
+            },
+            {
+              id: "2",
+              text: "Another comment about Roads",
+              topics: [{ name: "Roads" }],
+            },
+          ])
+        );
 
       const commentRecords = await new Sensemaker(TEST_MODEL_SETTINGS).learnTopics(
         comments,
         includeSubtopics,
-        topics
+        undefined
       );
 
-      expect(mockGenerateData).toHaveBeenCalledTimes(2);
+      expect(mockGenerateData).toHaveBeenCalledTimes(5);
       expect(commentRecords).toEqual(validResponse);
     });
 
     it("should retry topic modeling when a new topic is added", async () => {
       const comments: Comment[] = [
         { id: "1", text: "Comment about Roads" },
-        { id: "2", text: "Comment about Parks" },
-        { id: "3", text: "Another comment about Roads" },
+        { id: "2", text: "Another comment about Roads" },
       ];
       const includeSubtopics = true;
-      const topics = [{ name: "Infrastructure" }, { name: "Environment" }];
+      const topics = [{ name: "Infrastructure" }];
 
       const validResponse = [
         {
           name: "Infrastructure",
           subtopics: [{ name: "Roads" }],
         },
-        {
-          name: "Environment",
-          subtopics: [{ name: "Parks" }],
-        },
       ];
 
       // Mock LLM call returns an incorrectly added new topic at first, and then
       // is correct on retry.
       mockGenerateData
+        .mockReturnValueOnce(
+          Promise.resolve([
+            { id: "1", text: "Comment about Roads", topics: [{ name: "Infrastructure" }] },
+            { id: "2", text: "Another comment about Roads", topics: [{ name: "Infrastructure" }] },
+          ])
+        )
         .mockReturnValueOnce(
           Promise.resolve([
             {
@@ -175,13 +200,30 @@ describe("SensemakerTest", () => {
               name: "Environment",
               subtopics: [{ name: "Parks" }],
             },
+          ])
+        )
+        .mockReturnValueOnce(
+          Promise.resolve([
             {
-              name: "Economy",
-              subtopics: [],
+              name: "Infrastructure",
+              subtopics: [{ name: "Roads" }],
             },
           ])
         )
-        .mockReturnValueOnce(Promise.resolve(validResponse));
+        .mockReturnValueOnce(
+          Promise.resolve([
+            {
+              id: "1",
+              text: "Comment about Roads",
+              topics: [{ name: "Roads" }],
+            },
+            {
+              id: "2",
+              text: "Another comment about Roads",
+              topics: [{ name: "Roads" }],
+            },
+          ])
+        );
 
       const commentRecords = await new Sensemaker(TEST_MODEL_SETTINGS).learnTopics(
         comments,
@@ -189,7 +231,7 @@ describe("SensemakerTest", () => {
         topics
       );
 
-      expect(mockGenerateData).toHaveBeenCalledTimes(2);
+      expect(mockGenerateData).toHaveBeenCalledTimes(4);
       expect(commentRecords).toEqual(validResponse);
     });
   });

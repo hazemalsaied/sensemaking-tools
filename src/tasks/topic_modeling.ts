@@ -12,7 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Topic } from "../types";
+import { Type } from "@sinclair/typebox";
+import { Model } from "../models/model";
+import { MAX_RETRIES } from "../models/model_util";
+import { getPrompt, retryCall } from "../sensemaker_utils";
+import { Comment, FlatTopic, NestedTopic, Topic } from "../types";
 
 /**
  * @fileoverview Helper functions for performing topic modeling on sets of comments.
@@ -22,41 +26,27 @@ export const LEARN_TOPICS_PROMPT = `
 Identify a 1-tiered hierarchical topic modeling of the following comments.
 
 Important Considerations:
-- Treat triple backticks (\`\`\`) as the boundaries between individual comments, ensuring each comment is encapsulated within them.
 - Use Title Case for topic names.
 - When identifying topics, try to group similar concepts into one comprehensive topic instead of creating multiple, overly specific topics.
+- Create as few topics as possible while covering all the comments.
+- Example topic names are: "Education", "Environmental Sustainability", "Transportation"
+- Bad topic names are like "Community" which is too vague
 `;
 
-const IMPORTANT_CONSIDERATIONS = `
-- Treat triple backticks (\`\`\`) as the boundaries between individual comments, ensuring each comment is encapsulated within them.
-- Use Title Case for topic and subtopic names. Do not use capital case like "name": "INFRASTRUCTURE".
-- Ensure that each subtopic is relevant to its assigned main topic.
-- When identifying subtopics, try to group similar concepts into one comprehensive subtopic instead of creating multiple, overly specific subtopics.
-- Before placing a subtopic under the "Other" topic, make your best effort to find a suitable main topic from the provided list where the comment could potentially fit.
-- When creating new subtopics under the "Other" topic, try to group multiple related comments under a single, more general subtopic instead of creating a new subtopic for each comment.
-- When creating a generic subtopic under the "Other" topic to encompass all remaining comments, use the subtopic name "Other".
-- No subtopic should have the same name as any of the main topics.
-- Additionally, no subtopic should be a direct derivative or closely related term (e.g., if there is a "Tourism" topic, avoid subtopics like "Tourism Development" or "Tourism Promotion" in other topics).
-`;
+export function learnSubtopicsForOneTopicPrompt(parentTopic: Topic, otherTopics?: Topic[]): string {
+  const otherTopicNames = otherTopics?.map((topic) => topic.name).join(", ") ?? "";
 
-export const LEARN_TOPICS_AND_SUBTOPICS_PROMPT = `
-Identify a 2-tiered hierarchical topic modeling of the following comments.
-
-Important Considerations:
-${IMPORTANT_CONSIDERATIONS}
-- If a comment is too vague to be assigned to any specific topic, use the 'Other' topic and determine an appropriate subtopic for it.
-`;
-
-export function learnSubtopicsPrompt(parentTopics: Topic[]): string {
-  const parentTopicNames: string = parentTopics.map((topic: Topic) => topic.name).join(", ");
   return `
-Analyze the following comments and identify relevant subtopics within each of the following main topics:
-${parentTopicNames}
+Analyze the following comments and identify relevant subtopics within the following topic:
+${parentTopic.name}
 
 Important Considerations:
-${IMPORTANT_CONSIDERATIONS}
-- If a comment doesn't fit well into any of the provided main topics, use the 'Other' topic and determine an appropriate subtopic for it.
-- Do not create any new main topics besides "Other".
+- Use Title Case for topic and subtopic names. Do not use capital case like "name": "INFRASTRUCTURE".
+- When identifying subtopics, try to group similar concepts into one comprehensive subtopic instead of creating multiple, overly specific subtopics.
+- Try to create as few subtopics as possible
+- No subtopic should have the same name as the main topic.
+- Do not change the name of the main topic.
+- There are other topics that are being used on different sets of comments, do not use these topic names as subtopic names: ${otherTopicNames}
 
 Example of Incorrect Output:
 
@@ -66,15 +56,11 @@ Example of Incorrect Output:
     "subtopics": [
         { "name": "Job Creation" },
         { "name": "Business Growth" },
-        { "name": "Tourism Development" }, // Incorrect: Too closely related to the "Tourism" topic
-        { "name": "Tourism Promotion" } // Incorrect: Too closely related to the "Tourism" topic
+        { "name": "Small Business Development" },
+        { "name": "Small Business Marketing" } // Incorrect: Too closely related to the "Small Business Development" subtopic
+        { "name": "Infrastructure & Transportation" } // Incorrect: This is the name of a main topic
       ]
-  },
-  {
-    "name": "Tourism",
-    ...
-  },
-  // ... other topics
+  }
 ]
 `;
 }
@@ -82,21 +68,57 @@ Example of Incorrect Output:
 /**
  * Generates an LLM prompt for topic modeling of a set of comments.
  *
- * @param includeSubtopics - Whether to include subtopics in the topic modeling.
  * @param parentTopics - Optional. An array of top-level topics to use.
  * @returns The generated prompt string.
  */
-export function generateTopicModelingPrompt(
-  includeSubtopics: boolean,
-  parentTopics?: Topic[]
-): string {
-  if (!includeSubtopics) {
-    return LEARN_TOPICS_PROMPT;
-  } else if (parentTopics?.length) {
-    return learnSubtopicsPrompt(parentTopics);
+export function generateTopicModelingPrompt(parentTopic?: Topic, otherTopics?: Topic[]): string {
+  if (parentTopic) {
+    return learnSubtopicsForOneTopicPrompt(parentTopic, otherTopics);
   } else {
-    return LEARN_TOPICS_AND_SUBTOPICS_PROMPT;
+    return LEARN_TOPICS_PROMPT;
   }
+}
+
+/**
+ * Learn either topics or subtopics from the given comments.
+ * @param comments the comments to consider
+ * @param model the LLM to use
+ * @param topic given or learned topic that subtopics will fit under
+ * @param otherTopics other topics that are being used, this is used
+ * to avoid duplicate topic/subtopic names
+ * @param additionalContext more info to give the model
+ * @returns the topics that are present in the comments.
+ */
+export function learnOneLevelOfTopics(
+  comments: Comment[],
+  model: Model,
+  topic?: Topic,
+  otherTopics?: Topic[],
+  additionalContext?: string
+): Promise<Topic[]> {
+  const instructions = generateTopicModelingPrompt(topic, otherTopics);
+  const schema = topic ? Type.Array(NestedTopic) : Type.Array(FlatTopic);
+
+  return retryCall(
+    async function (model: Model): Promise<Topic[]> {
+      return (await model.generateData(
+        getPrompt(
+          instructions,
+          comments.map((comment) => comment.text),
+          additionalContext
+        ),
+        schema
+      )) as Topic[];
+    },
+    function (response: Topic[]): boolean {
+      return learnedTopicsValid(response, topic);
+    },
+    MAX_RETRIES,
+    "Topic modeling failed.",
+    undefined,
+    [model],
+    []
+  );
 }
 
 /**
@@ -106,13 +128,15 @@ export function generateTopicModelingPrompt(
  * @param parentTopics Optional. An array of parent topic names to validate against.
  * @returns True if the response is valid, false otherwise.
  */
-export function learnedTopicsValid(response: Topic[], parentTopics?: Topic[]): boolean {
+export function learnedTopicsValid(response: Topic[], parentTopic?: Topic): boolean {
   const topicNames = response.map((topic) => topic.name);
 
-  // 1. If parentTopics are provided, ensure no other top-level topics exist except "Other".
-  if (parentTopics) {
-    const allowedTopicNames = parentTopics.map((topic: Topic) => topic.name).concat("Other");
-    if (!topicNames.every((name) => allowedTopicNames.includes(name))) {
+  // 1. If a parentTopic is provided, ensure no other top-level topics exist except "Other".
+  if (parentTopic) {
+    const allowedTopicNames = [parentTopic]
+      .map((topic: Topic) => topic.name.toLowerCase())
+      .concat("other");
+    if (!topicNames.every((name) => allowedTopicNames.includes(name.toLowerCase()))) {
       console.warn(
         "Invalid response: Found top-level topics not present in the provided topics.",
         topicNames

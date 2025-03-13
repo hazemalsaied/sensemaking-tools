@@ -15,9 +15,9 @@
 // Simple utils.
 
 import pLimit from "p-limit";
-import { CommentRecord, Comment, SummaryContent } from "./types";
+import { CommentRecord, Comment, SummaryContent, Topic } from "./types";
+import { RETRY_DELAY_MS, MAX_RETRIES } from "./models/model_util";
 import { voteTallySummary } from "./tasks/utils/citation_utils";
-import { MAX_RETRIES, RETRY_DELAY_MS } from "./models/model_util";
 
 // Set default vertex parallelism based on similarly named environment variable, or defualt to 2
 const DEFAULT_VERTEX_PARALLELISM = parseInt(process.env["DEFAULT_VERTEX_PARALLELISM"] || "2");
@@ -204,6 +204,38 @@ export function groupCommentsBySubtopic(categorized: Comment[]): {
     }
   }
   return groupedComments;
+}
+
+/**
+ * Gets a set of unique topics and subtopics from a list of comments.
+ * @param comments the comments with topics and subtopics to consider
+ * @returns a set of unique topics and subtopics
+ */
+export function getUniqueTopics(comments: Comment[]): Topic[] {
+  const topicNameToTopic = new Map<string, Topic>();
+  for (const comment of comments) {
+    if (comment.topics) {
+      for (const topic of comment.topics) {
+        const existingTopic = topicNameToTopic.get(topic.name);
+        if (!existingTopic) {
+          topicNameToTopic.set(topic.name, topic);
+        } else {
+          const existingSubtopics =
+            "subtopics" in existingTopic
+              ? existingTopic.subtopics.map((subtopic) => subtopic.name)
+              : [];
+          const newSubtopics =
+            "subtopics" in topic ? topic.subtopics.map((subtopic) => subtopic.name) : [];
+          const uniqueSubtopics = new Set([...existingSubtopics, ...newSubtopics]);
+          topicNameToTopic.set(topic.name, {
+            name: topic.name,
+            subtopics: Array.from(uniqueSubtopics).map((subtopic) => ({ name: subtopic })),
+          });
+        }
+      }
+    }
+  }
+  return Array.from(topicNameToTopic.values());
 }
 
 /**
