@@ -17,14 +17,21 @@
 import { Comment, CommentWithVoteTallies, VoteTally } from "../types";
 
 /**
- * Compute the MAP probability estimate of an agree vote for a given vote tally entry.
+ * Compute the probability of an agree vote for a given vote tally entry.
+ * @param voteTally the votes to use for the calculation
+ * @param asProbabilityEstimate whether to as add +1 and +2 to the numerator and demonenator
+ * respectively as a psuedo-count prior so that probabilities tend to 1/2 in the absence of data,
+ * and to avoid division/multiplication by zero. This is technically a simple maxima a priori (MAP)
+ * probability estimate.
+ * @returns the actual or estimated agree probability
  */
-export function getAgreeProbability(voteTally: VoteTally): number {
+export function getAgreeRate(voteTally: VoteTally, asProbabilityEstimate: boolean = true): number {
   const totalCount = voteTally.agreeCount + voteTally.disagreeCount + (voteTally.passCount || 0);
-  // We add +1 and +2 to the numerator and demonenator respectively as a psuedo-count prior so that probabilities tend to 1/2 in the
-  // absence of data, and to avoid division/multiplication by zero in group informed consensus and risk ratio calculations. This is technically
-  // a simple maxima a priori (MAP) probability estimate.
-  return (voteTally.agreeCount + 1) / (totalCount + 2);
+  if (asProbabilityEstimate) {
+    return (voteTally.agreeCount + 1) / (totalCount + 2);
+  } else {
+    return voteTally.agreeCount / totalCount;
+  }
 }
 
 export function getStandardDeviation(numbers: number[]): number {
@@ -40,9 +47,18 @@ export function getStandardDeviation(numbers: number[]): number {
 }
 
 /**
- * Compute the MAP probability estimate of an agree vote for a given map of VoteTallies.
+ * Compute the probability of an agree vote for a given set of vote tallies.
+ * @param voteTalliesByGroup the votes to use for the calculation
+ * @param asProbabilityEstimate whether to as add +1 and +2 to the numerator and demonenator
+ * respectively as a psuedo-count prior so that probabilities tend to 1/2 in the absence of data,
+ * and to avoid division/multiplication by zero. This is technically a simple maxima a priori (MAP)
+ * probability estimate.
+ * @returns the actual or estimated agree probability
  */
-export function getTotalAgreeProbability(voteTalliesByGroup: { [key: string]: VoteTally }): number {
+export function getTotalAgreeRate(
+  voteTalliesByGroup: { [key: string]: VoteTally },
+  asProbabilityEstimate: boolean = true
+): number {
   const totalCount = Object.values(voteTalliesByGroup)
     .map(
       (voteTally: VoteTally) =>
@@ -52,16 +68,26 @@ export function getTotalAgreeProbability(voteTalliesByGroup: { [key: string]: Vo
   const totalAgreeCount = Object.values(voteTalliesByGroup)
     .map((voteTally: VoteTally) => voteTally.agreeCount)
     .reduce((a: number, b: number) => a + b, 0);
-  // We add +1 and +2 to the numerator and demonenator respectively as a psuedo-count prior so that probabilities tend to 1/2 in the
-  // absence of data, and to avoid division/multiplication by zero in group informed consensus and risk ratio calculations. This is technically
-  // a simple maxima a priori (MAP) probability estimate.
-  return (totalAgreeCount + 1) / (totalCount + 2);
+  if (asProbabilityEstimate) {
+    return (totalAgreeCount + 1) / (totalCount + 2);
+  } else {
+    return totalAgreeCount / totalCount;
+  }
 }
 
 /**
- * Compute the MAP probability estimate of an pass vote for a given map of VoteTallies.
+ * Compute the probability of an pass vote for a given set of vote tallies.
+ * @param voteTalliesByGroup the votes to use for the calculation
+ * @param asProbabilityEstimate whether to as add +1 and +2 to the numerator and demonenator
+ * respectively as a psuedo-count prior so that probabilities tend to 1/2 in the absence of data,
+ * and to avoid division/multiplication by zero. This is technically a simple maxima a priori (MAP)
+ * probability estimate.
+ * @returns the actual or estimated pass probability
  */
-export function getTotalPassProbability(voteTalliesByGroup: { [key: string]: VoteTally }): number {
+export function getTotalPassRate(
+  voteTalliesByGroup: { [key: string]: VoteTally },
+  asProbabilityEstimate: boolean = true
+): number {
   const totalCount = Object.values(voteTalliesByGroup)
     .map(
       (voteTally: VoteTally) =>
@@ -71,18 +97,28 @@ export function getTotalPassProbability(voteTalliesByGroup: { [key: string]: Vot
   const totalPassCount = Object.values(voteTalliesByGroup)
     .map((voteTally: VoteTally) => voteTally.passCount || 0)
     .reduce((a: number, b: number) => a + b, 0);
-  // We add +1 and +2 to the numerator and demonenator respectively as a psuedo-count prior so that probabilities tend to 1/2 in the
-  // absence of data, and to avoid division/multiplication by zero in group informed consensus and risk ratio calculations. This is technically
-  // a simple maxima a priori (MAP) probability estimate.
-  return (totalPassCount + 1) / (totalCount + 2);
+  if (asProbabilityEstimate) {
+    return (totalPassCount + 1) / (totalCount + 2);
+  } else {
+    return totalPassCount / totalCount;
+  }
 }
 
 /**
- * Compute the MAP probability estimate of an disagree vote for a given map of VoteTallies.
+ * Compute the probability of an disagree vote for a given set of vote tallies.
+ * @param voteTalliesByGroup the votes to use for the calculation
+ * @param asProbabilityEstimate whether to as add +1 and +2 to the numerator and demonenator
+ * respectively as a psuedo-count prior so that probabilities tend to 1/2 in the absence of data,
+ * and to avoid division/multiplication by zero. This is technically a simple maxima a priori (MAP)
+ * probability estimate.
+ * @returns the actual or estimated disagree probability
  */
-export function getTotalDisagreeProbability(voteTalliesByGroup: {
-  [key: string]: VoteTally;
-}): number {
+export function getTotalDisagreeRate(
+  voteTalliesByGroup: {
+    [key: string]: VoteTally;
+  },
+  asProbabilityEstimate: boolean = true
+): number {
   const totalCount = Object.values(voteTalliesByGroup)
     .map(
       (voteTally: VoteTally) =>
@@ -92,10 +128,11 @@ export function getTotalDisagreeProbability(voteTalliesByGroup: {
   const totalDisagreeCount = Object.values(voteTalliesByGroup)
     .map((voteTally: VoteTally) => voteTally.disagreeCount)
     .reduce((a: number, b: number) => a + b, 0);
-  // We add +1 and +2 to the numerator and demonenator respectively as a psuedo-count prior so that probabilities tend to 1/2 in the
-  // absence of data, and to avoid division/multiplication by zero in group informed consensus and risk ratio calculations. This is technically
-  // a simple maxima a priori (MAP) probability estimate.
-  return (totalDisagreeCount + 1) / (totalCount + 2);
+  if (asProbabilityEstimate) {
+    return (totalDisagreeCount + 1) / (totalCount + 2);
+  } else {
+    return totalDisagreeCount / totalCount;
+  }
 }
 
 /**
@@ -104,27 +141,50 @@ export function getTotalDisagreeProbability(voteTalliesByGroup: {
  */
 export function getGroupInformedConsensus(comment: CommentWithVoteTallies): number {
   return Object.values(comment.voteTalliesByGroup).reduce(
-    (product, voteTally) => product * getAgreeProbability(voteTally),
+    (product, voteTally) => product * getAgreeRate(voteTally, true),
     1
   );
 }
 
 /**
  * A function which returns the minimum aggree probability across groups
+ * @param comment the comment with vote tallies to get the agree probability for
+ * @param asProbabilityEstimate whether to as add +1 and +2 to the numerator and demonenator
+ * respectively as a psuedo-count prior so that probabilities tend to 1/2 in the absence of data,
+ * and to avoid division/multiplication by zero. This is technically a simple maxima a priori (MAP)
+ * probability estimate.
+ * @returns the minimum agree probability across all groups
  */
-export function getMinAgreeProb(comment: CommentWithVoteTallies): number {
-  return Math.min(...Object.values(comment.voteTalliesByGroup).map(getAgreeProbability));
+export function getMinAgreeProb(
+  comment: CommentWithVoteTallies,
+  asProbabilityEstimate: boolean = true
+): number {
+  return Math.min(
+    ...Object.values(comment.voteTalliesByGroup).map((voteTally) =>
+      getAgreeRate(voteTally, asProbabilityEstimate)
+    )
+  );
 }
 
 /**
- * Compute the MAP probability estimate of a disaggree vote for a given vote tally entry.
+ * Compute the probability of an disagree vote for a given vote tally entry.
+ * @param voteTally the votes to use for the calculation
+ * @param asProbabilityEstimate whether to as add +1 and +2 to the numerator and demonenator
+ * respectively as a psuedo-count prior so that probabilities tend to 1/2 in the absence of data,
+ * and to avoid division/multiplication by zero. This is technically a simple maxima a priori (MAP)
+ * probability estimate.
+ * @returns the actual or estimated disagree probability
  */
-export function getDisagreeProbability(voteTally: VoteTally): number {
+export function getDisagreeRate(
+  voteTally: VoteTally,
+  asProbabilityEstimate: boolean = true
+): number {
   const totalCount = voteTally.agreeCount + voteTally.disagreeCount + (voteTally.passCount || 0);
-  // We add +1 and +2 to the numerator and demonenator respectively as a psuedo-count prior so that probabilities tend to 1/2 in the
-  // absence of data, and to avoid division/multiplication by zero in group informed consensus and risk ratio calculations. This is technically
-  // a simple maxima a priori (MAP) probability estimate.
-  return (voteTally.disagreeCount + 1) / (totalCount + 2);
+  if (asProbabilityEstimate) {
+    return (voteTally.disagreeCount + 1) / (totalCount + 2);
+  } else {
+    return voteTally.disagreeCount / totalCount;
+  }
 }
 
 /**
@@ -133,16 +193,28 @@ export function getDisagreeProbability(voteTally: VoteTally): number {
  */
 export function getGroupInformedDisagreeConsensus(comment: CommentWithVoteTallies): number {
   return Object.values(comment.voteTalliesByGroup).reduce(
-    (product, voteTally) => product * getDisagreeProbability(voteTally),
+    (product, voteTally) => product * getDisagreeRate(voteTally, true),
     1
   );
 }
 
 /**
  * A function which returns the minimum disagree probability across groups
+ * @param comment the comment with associated votes to get the probability for
+ * @param asProbabilityEstimate whether to as add +1 and +2 to the numerator and demonenator
+ * respectively as a psuedo-count prior so that probabilities tend to 1/2 in the absence of data,
+ * and to avoid division/multiplication by zero. This is technically a simple maxima a priori (MAP)
+ * probability estimate.
  */
-export function getMinDisagreeProb(comment: CommentWithVoteTallies): number {
-  return Math.min(...Object.values(comment.voteTalliesByGroup).map(getDisagreeProbability));
+export function getMinDisagreeProb(
+  comment: CommentWithVoteTallies,
+  asProbabilityEstimate: boolean = true
+): number {
+  return Math.min(
+    ...Object.values(comment.voteTalliesByGroup).map((voteTally: VoteTally) =>
+      getDisagreeRate(voteTally, asProbabilityEstimate)
+    )
+  );
 }
 
 /**
@@ -155,7 +227,7 @@ export function getGroupAgreeProbDifference(
   comment: CommentWithVoteTallies,
   group: string
 ): number {
-  const groupAgreeProb = getAgreeProbability(comment.voteTalliesByGroup[group]);
+  const groupAgreeProb = getAgreeRate(comment.voteTalliesByGroup[group]);
   // compute the vote tally for the remainder of the conversation by reducing over and adding up all other group vote tallies
   const otherGroupsVoteTally = Object.entries(comment.voteTalliesByGroup)
     .filter(([g]) => g !== group)
@@ -172,7 +244,7 @@ export function getGroupAgreeProbDifference(
       },
       { agreeCount: 0, disagreeCount: 0, passCount: 0, totalCount: 0 }
     );
-  const otherGroupsAgreeProb = getAgreeProbability(otherGroupsVoteTally);
+  const otherGroupsAgreeProb = getAgreeRate(otherGroupsVoteTally);
   return groupAgreeProb - otherGroupsAgreeProb;
 }
 

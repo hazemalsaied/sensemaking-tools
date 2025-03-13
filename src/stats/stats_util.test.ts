@@ -13,10 +13,10 @@
 // limitations under the License.
 
 import {
-  getAgreeProbability,
+  getAgreeRate,
   getGroupInformedConsensus,
   getGroupAgreeProbDifference,
-  getDisagreeProbability,
+  getDisagreeRate,
   getGroupInformedDisagreeConsensus,
   getMinDisagreeProb,
   getMinAgreeProb,
@@ -25,20 +25,14 @@ import {
 describe("stats utility functions", () => {
   it("should get the agree probability for a given vote tally", () => {
     expect(
-      getAgreeProbability({ agreeCount: 10, disagreeCount: 5, passCount: 5, totalCount: 20 })
+      getAgreeRate({ agreeCount: 10, disagreeCount: 5, passCount: 5, totalCount: 20 })
     ).toBeCloseTo((10 + 1) / (20 + 2));
   });
 
   it("should handle vote tallies with zero counts", () => {
-    expect(getAgreeProbability({ agreeCount: 0, disagreeCount: 0, totalCount: 0 })).toBeCloseTo(
-      0.5
-    );
-    expect(getAgreeProbability({ agreeCount: 0, disagreeCount: 5, totalCount: 5 })).toBeCloseTo(
-      1 / 7
-    );
-    expect(getAgreeProbability({ agreeCount: 5, disagreeCount: 0, totalCount: 5 })).toBeCloseTo(
-      6 / 7
-    );
+    expect(getAgreeRate({ agreeCount: 0, disagreeCount: 0, totalCount: 0 })).toBeCloseTo(0.5);
+    expect(getAgreeRate({ agreeCount: 0, disagreeCount: 5, totalCount: 5 })).toBeCloseTo(1 / 7);
+    expect(getAgreeRate({ agreeCount: 5, disagreeCount: 0, totalCount: 5 })).toBeCloseTo(6 / 7);
   });
 
   it("should get the group informed consensus for a given comment", () => {
@@ -89,20 +83,14 @@ describe("stats utility functions", () => {
 
   it("should get the disagree probability for a given vote tally", () => {
     expect(
-      getDisagreeProbability({ agreeCount: 10, disagreeCount: 5, passCount: 5, totalCount: 20 })
+      getDisagreeRate({ agreeCount: 10, disagreeCount: 5, passCount: 5, totalCount: 20 })
     ).toBeCloseTo((5 + 1) / (20 + 2));
   });
 
   it("should handle vote tallies with zero counts", () => {
-    expect(getDisagreeProbability({ agreeCount: 0, disagreeCount: 0, totalCount: 0 })).toBeCloseTo(
-      0.5
-    );
-    expect(getDisagreeProbability({ agreeCount: 0, disagreeCount: 5, totalCount: 5 })).toBeCloseTo(
-      6 / 7
-    );
-    expect(getDisagreeProbability({ agreeCount: 5, disagreeCount: 0, totalCount: 5 })).toBeCloseTo(
-      1 / 7
-    );
+    expect(getDisagreeRate({ agreeCount: 0, disagreeCount: 0, totalCount: 0 })).toBeCloseTo(0.5);
+    expect(getDisagreeRate({ agreeCount: 0, disagreeCount: 5, totalCount: 5 })).toBeCloseTo(6 / 7);
+    expect(getDisagreeRate({ agreeCount: 5, disagreeCount: 0, totalCount: 5 })).toBeCloseTo(1 / 7);
   });
 
   it("should get the group informed consensus for a given comment", () => {

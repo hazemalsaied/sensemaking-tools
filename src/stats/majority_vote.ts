@@ -14,11 +14,7 @@
 
 import { decimalToPercent } from "../sensemaker_utils";
 import { Comment, CommentWithVoteTallies } from "../types";
-import {
-  getTotalAgreeProbability,
-  getTotalDisagreeProbability,
-  getTotalPassProbability,
-} from "./stats_util";
+import { getTotalAgreeRate, getTotalDisagreeRate, getTotalPassRate } from "./stats_util";
 import { SummaryStats } from "./summary_stats";
 
 // Stats basis for the summary that is based on majority vote algorithms. Does not use groups.
@@ -26,6 +22,9 @@ import { SummaryStats } from "./summary_stats";
 export class MajoritySummaryStats extends SummaryStats {
   minAgreeProb = 0.7;
   groupBasedSummarization = false;
+  // This outlier protection isn't needed since we already filter our comments without many votes.
+  asProbabilityEstimate = false;
+
   /**
    * An override of the SummaryStats static factory method,
    * to allow for MajoritySummaryStats specific initialization.
@@ -56,11 +55,12 @@ export class MajoritySummaryStats extends SummaryStats {
    */
   getCommonGroundComments(k: number = this.maxSampleSize) {
     return this.topK(
-      (comment) => getTotalAgreeProbability(comment.voteTalliesByGroup),
+      (comment) => getTotalAgreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate),
       k,
       // Before getting the top agreed comments, enforce a minimum level of agreement
       (comment: CommentWithVoteTallies) =>
-        getTotalAgreeProbability(comment.voteTalliesByGroup) >= this.minAgreeProb
+        getTotalAgreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) >=
+        this.minAgreeProb
     );
   }
 
@@ -86,16 +86,18 @@ export class MajoritySummaryStats extends SummaryStats {
       (comment) =>
         1 -
         Math.abs(
-          getTotalAgreeProbability(comment.voteTalliesByGroup) -
-            getTotalDisagreeProbability(comment.voteTalliesByGroup)
+          getTotalAgreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) -
+            getTotalDisagreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate)
         ) -
-        getTotalPassProbability(comment.voteTalliesByGroup),
+        getTotalPassRate(comment.voteTalliesByGroup, this.asProbabilityEstimate),
       k,
       // Before getting the top differences comments, enforce a minimum level of difference of
       // opinion.
       (comment: CommentWithVoteTallies) =>
-        getTotalAgreeProbability(comment.voteTalliesByGroup) <= this.minAgreeProb &&
-        getTotalDisagreeProbability(comment.voteTalliesByGroup) <= this.minAgreeProb
+        getTotalAgreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) <=
+          this.minAgreeProb &&
+        getTotalDisagreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) <=
+          this.minAgreeProb
     );
   }
 
