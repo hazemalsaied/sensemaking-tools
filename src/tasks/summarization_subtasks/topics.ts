@@ -227,7 +227,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
             ).getSummary()
       ) || [];
 
-    const subtopicSummaryContents = await resolvePromisesInParallel(subtopicSummaries);
+    const subtopicSummaryContents = await executeInParallel(subtopicSummaries);
 
     const nSubtopics: number = this.topicStat.subtopicStats?.length || 0;
     let topicSummary = "";
