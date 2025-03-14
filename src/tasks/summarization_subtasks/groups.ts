@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { getPrompt, resolvePromisesInParallel } from "../../sensemaker_utils";
+import { getPrompt, executeInParallel } from "../../sensemaker_utils";
 import { GroupStats, GroupedSummaryStats } from "../../stats/group_informed";
 import { RecursiveSummary } from "./recursive_summarization";
 import { Comment, SummaryContent } from "../../types";
@@ -48,7 +48,7 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
    * Describes what makes the groups similar and different.
    * @returns a two sentence description of similarities and differences.
    */
-  private getGroupComparison(groupNames: string[]): Promise<SummaryContent>[] {
+  private getGroupComparison(groupNames: string[]): (() => Promise<SummaryContent>)[] {
     const topAgreeCommentsAcrossGroups = this.input.getCommonGroundComments();
     const groupComparisonSimilar = this.model.generateText(
       getPrompt(
@@ -73,20 +73,22 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
 
     // Combine the descriptions and add the comments used for summarization as citations.
     return [
-      groupComparisonSimilar.then((result: string) => {
-        return {
-          // Hack to force these two sections to be on a new line.
-          title: "\n",
-          text: result,
-          citations: topAgreeCommentsAcrossGroups.map((comment) => comment.id),
-        };
-      }),
-      groupComparisonDifferent.then((result: string) => {
-        return {
-          text: result,
-          citations: topDisagreeCommentsAcrossGroups.map((comment) => comment.id),
-        };
-      }),
+      () =>
+        groupComparisonSimilar.then((result: string) => {
+          return {
+            // Hack to force these two sections to be on a new line.
+            title: "\n",
+            text: result,
+            citations: topAgreeCommentsAcrossGroups.map((comment) => comment.id),
+          };
+        }),
+      () =>
+        groupComparisonDifferent.then((result: string) => {
+          return {
+            text: result,
+            citations: topDisagreeCommentsAcrossGroups.map((comment) => comment.id),
+          };
+        }),
     ];
   }
 
@@ -96,10 +98,10 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
    * @returns text containing the description of each group and a compare and contrast section
    */
   private async getGroupDescriptions(groupNames: string[]): Promise<SummaryContent[]> {
-    const groupDescriptions = [];
+    const groupDescriptions: (() => Promise<SummaryContent>)[] = [];
     for (const groupName of groupNames) {
       const topCommentsForGroup = this.input.getGroupRepresentativeComments(groupName);
-      groupDescriptions.push(
+      groupDescriptions.push(() =>
         this.model
           .generateText(
             getPrompt(
@@ -124,10 +126,7 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
 
     // Join the individual group descriptions whenever they finish, and when that's done wait for
     // the group comparison to be created and combine them all together.
-    return resolvePromisesInParallel([
-      ...groupDescriptions,
-      ...this.getGroupComparison(groupNames),
-    ]);
+    return executeInParallel([...groupDescriptions, ...this.getGroupComparison(groupNames)]);
   }
 
   async getSummary(): Promise<SummaryContent> {

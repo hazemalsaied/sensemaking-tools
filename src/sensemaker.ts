@@ -27,12 +27,7 @@ import {
 } from "./types";
 import { categorizeWithRetry, generateCategorizationPrompt } from "./tasks/categorization";
 import { summarizeByType } from "./tasks/summarization";
-import {
-  getPrompt,
-  hydrateCommentRecord,
-  retryCall,
-  resolvePromisesInParallel,
-} from "./sensemaker_utils";
+import { getPrompt, hydrateCommentRecord, retryCall, executeInParallel } from "./sensemaker_utils";
 import { Type } from "@sinclair/typebox";
 import { ModelSettings, Model } from "./models/model";
 
@@ -211,7 +206,7 @@ export class Sensemaker {
     // TODO: Consider the effects of smaller batch sizes. 1 comment per batch was much faster, but
     // the distribution was significantly different from what we're currently seeing. More testing
     // is needed to determine the ideal size and distribution.
-    const batchesToCategorize: Promise<CommentRecord[]>[] = [];
+    const batchesToCategorize: (() => Promise<CommentRecord[]>)[] = []; // callbacks
     for (
       let i = 0;
       i < comments.length;
@@ -221,7 +216,9 @@ export class Sensemaker {
         i,
         i + this.modelSettings.defaultModel.categorizationBatchSize
       );
-      batchesToCategorize.push(
+
+      // Create a callback function for each batch and add it to the list, preparing them for parallel execution.
+      batchesToCategorize.push(() =>
         categorizeWithRetry(
           this.modelSettings.defaultModel,
           instructions,
@@ -233,10 +230,12 @@ export class Sensemaker {
       );
     }
 
+    // categorize comment batches in parallel
+    const CategorizedBatches: CommentRecord[][] = await executeInParallel(batchesToCategorize);
+
+    // flatten categorized batches
     const categorized: CommentRecord[] = [];
-    await resolvePromisesInParallel(batchesToCategorize).then((results: CommentRecord[][]) => {
-      results.forEach((batch) => categorized.push(...batch));
-    });
+    CategorizedBatches.forEach((batch) => categorized.push(...batch));
 
     const categorizedComments = hydrateCommentRecord(categorized, comments);
     console.log(`Categorization took ${(performance.now() - startTime) / (1000 * 60)} minutes.`);

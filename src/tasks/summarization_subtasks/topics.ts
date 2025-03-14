@@ -21,7 +21,7 @@ import {
   getAbstractPrompt,
   commentTableMarkdown,
   ColumnDefinition,
-  resolvePromisesInParallel,
+  executeInParallel,
 } from "../../sensemaker_utils";
 import { Comment, SummaryContent, isCommentType } from "../../types";
 import { Model } from "../../models/model";
@@ -154,13 +154,21 @@ export class TopicsSummary extends RecursiveSummary<SummaryStats> {
 
     // Now construct the individual Topic summaries
     const relativeContext = new RelativeContext(topicStats);
-    const topicSummaries: Array<Promise<SummaryContent>> = topicStats.map((topicStat) =>
-      new TopicSummary(topicStat, this.model, relativeContext, this.additionalContext).getSummary()
+    const topicSummaries: (() => Promise<SummaryContent>)[] = topicStats.map(
+      (topicStat) =>
+        // Create a callback function for each summary and add it to the list, preparing them for parallel execution.
+        () =>
+          new TopicSummary(
+            topicStat,
+            this.model,
+            relativeContext,
+            this.additionalContext
+          ).getSummary()
     );
     return {
       title: "## Topics",
       text: overviewText,
-      subContents: await resolvePromisesInParallel(topicSummaries),
+      subContents: await executeInParallel(topicSummaries),
     };
   }
 }
@@ -206,14 +214,17 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
    * @returns a promise of the summary string
    */
   async getSubtopicsSummary(): Promise<SummaryContent> {
-    const subtopicSummaries: Array<Promise<SummaryContent>> =
-      this.topicStat.subtopicStats?.map((subtopicStat) =>
-        new SubtopicSummary(
-          subtopicStat,
-          this.model,
-          this.relativeContext,
-          this.additionalContext
-        ).getSummary()
+    const subtopicSummaries: (() => Promise<SummaryContent>)[] =
+      this.topicStat.subtopicStats?.map(
+        (subtopicStat) =>
+          // Create a callback function for each summary and add it to the list, preparing them for parallel execution.
+          () =>
+            new SubtopicSummary(
+              subtopicStat,
+              this.model,
+              this.relativeContext,
+              this.additionalContext
+            ).getSummary()
       ) || [];
 
     const subtopicSummaryContents = await resolvePromisesInParallel(subtopicSummaries);
@@ -240,7 +251,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
     return {
       title: this.getSectionTitle(),
       text: topicSummary,
-      subContents: await resolvePromisesInParallel(subtopicSummaries),
+      subContents: await executeInParallel(subtopicSummaries),
     };
   }
 

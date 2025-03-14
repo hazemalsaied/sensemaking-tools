@@ -17,8 +17,11 @@ import {
   groupCommentsBySubtopic,
   formatCommentsWithVotes,
   decimalToPercent,
+  executeInParallel,
 } from "./sensemaker_utils";
+import { MAX_RETRIES } from "./models/vertex_model";
 import { Comment } from "./types";
+import pLimit from "p-limit";
 
 const TEST_COMMENTS = [
   {
@@ -162,5 +165,89 @@ describe("SensemakerUtilsTest", () => {
     it("should convert decimal to percent", () => expect(decimalToPercent(0.5)).toEqual("50%"));
     it("should convert decimal to percent with precision", () =>
       expect(decimalToPercent(0.55555, 2)).toEqual("55.56%"));
+  });
+});
+
+jest.mock("p-limit"); // Mock pLimit to control its behavior
+const mockedPLimit = pLimit as jest.MockedFunction<typeof pLimit>;
+
+describe("executeInParallel", () => {
+  let consoleErrorSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    // Reset the mock before each test
+    mockedPLimit.mockReset();
+    // By default, make the pLimit instance return a mock function that simply executes the wrapped function
+    const limitInstance = jest.fn((fn: () => Promise<never>) => fn());
+    mockedPLimit.mockReturnValue(limitInstance as never);
+    // Suppress console.error
+    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("should execute all callbacks and return their results in order", async () => {
+    const callbacks = [
+      () => Promise.resolve(1),
+      () => Promise.resolve(2),
+      () => Promise.resolve(3),
+    ];
+    const results = await executeInParallel(callbacks, 2);
+    expect(results).toEqual([1, 2, 3]);
+  });
+
+  it("should handle a mix of fast and slow promises with concurrency", async () => {
+    const callbacks = [
+      () => Promise.resolve(1),
+      () => new Promise((resolve) => setTimeout(() => resolve(2), 200)),
+      () => Promise.resolve(3),
+      () => new Promise((resolve) => setTimeout(() => resolve(4), 100)),
+      () => Promise.resolve(5),
+    ];
+    const results = await executeInParallel(callbacks, 2);
+    expect(results).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("should retry failed callbacks up to MAX_RETRIES times", async () => {
+    let retryCount1 = 0;
+    const callbacks = [
+      () =>
+        new Promise((_, reject) => {
+          retryCount1++;
+          reject(new Error("Retry 1 Failed"));
+        }),
+    ];
+
+    const limitInstance = jest.fn((fn: () => Promise<never>) => {
+      return new Promise((resolve, reject) => {
+        const result = fn();
+        result.then(resolve, reject); // Ensure errors are propagated
+      });
+    });
+    mockedPLimit.mockReturnValue(limitInstance as never);
+
+    await expect(executeInParallel(callbacks, 1)).rejects.toThrow("Retry 1 Failed");
+    expect(retryCount1).toBe(MAX_RETRIES);
+  });
+
+  it("should resolve if a retried callback eventually succeeds", async () => {
+    let retryCount = 0;
+    const callbacks = [
+      () =>
+        new Promise((resolve, reject) => {
+          if (retryCount < 2) {
+            retryCount++;
+            reject(new Error("Temporary failure"));
+          } else {
+            resolve("Success after retries");
+          }
+        }),
+    ];
+
+    const results = await executeInParallel(callbacks, 1);
+    expect(results).toEqual(["Success after retries"]);
+    expect(retryCount).toBe(2);
   });
 });

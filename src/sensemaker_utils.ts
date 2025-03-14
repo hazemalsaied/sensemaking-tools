@@ -14,6 +14,7 @@
 
 // Simple utils.
 
+import pLimit from "p-limit";
 import { CommentRecord, Comment } from "./types";
 import { RETRY_DELAY_MS, MAX_RETRIES } from "./models/vertex_model";
 import { voteTallySummary } from "./tasks/utils/citation_utils";
@@ -281,41 +282,43 @@ export function commentTableMarkdown(
 }
 
 /**
- * Resolves Promises sequentially, optionally using batching for limited parallelization.
- * Adds a one-second backoff for failed calls.
+ * Executes an array of asynchronous functions (callbacks) in parallel, with a limit on the number of
+ * concurrently executing functions, and includes a retry mechanism for failed executions.
  *
- * Batching can be used to execute multiple promises in parallel that will then be resolved in
- * order. The batchSize can be thought of as the maximum number of parallel threads.
- * @param promises the promises to resolve.
- * @param numParallelExecutions how many promises to resolve at once, the default is 2 based on the
- * current Gemini qps quotas, see: https://cloud.google.com/gemini/docs/quotas#per-second.
- * @returns A list of the resolved values of the promises.
+ * @param callbacks An array of functions, each of which returns a Promise<T>.
+ * @param numParallelExecutions The maximum number of functions to execute concurrently.
+ * Defaults to 2, based on current Gemini QPS quotas
+ * (see: https://cloud.google.com/gemini/docs/quotas#per-second).
+ * @returns A Promise that resolves to an array containing the resolved values of the
+ * promises returned by the callbacks, in the same order as the callbacks.
  */
-export async function resolvePromisesInParallel<T>(
-  promises: Promise<T>[],
+export async function executeInParallel<T>(
+  callbacks: (() => Promise<T>)[],
   numParallelExecutions: number = 2
 ): Promise<T[]> {
-  const results: T[] = [];
-
-  async function retryPromise(promise: Promise<T>, currentRetry: number = 0): Promise<T> {
+  // Recursive function to retry each batch MAX_RETRIES times
+  async function retry(callback: () => Promise<T>, currentRetry: number = 1): Promise<T> {
     try {
-      return await promise;
+      return await callback();
     } catch (error) {
       if (currentRetry >= MAX_RETRIES) {
         console.error(`Promise failed after ${MAX_RETRIES} retries:`, error);
         throw error;
       }
       console.error("Promise failed, retrying in 1 second:", error);
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // 1 second delay
-      return retryPromise(promise, currentRetry + 1);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return retry(callback, currentRetry + 1);
     }
   }
 
-  for (let i = 0; i < promises.length; i += numParallelExecutions) {
-    const batch = promises.slice(i, i + numParallelExecutions).map(retryPromise); // Apply retry to each promise in the batch
-    const batchResults = await Promise.all(batch);
-    results.push(...batchResults);
-  }
+  // use p-limit library to control concurrency while executing the callbacks
+  const limit = pLimit(numParallelExecutions);
+  const results: T[] = [];
 
+  // wrap each callback with the limiter and the retry logic
+  const limitedCallbacks = callbacks.map((callback) => limit(() => retry(callback)));
+
+  // execute the callback functions
+  results.push(...(await Promise.all(limitedCallbacks)));
   return results;
 }
