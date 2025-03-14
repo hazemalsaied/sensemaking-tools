@@ -320,7 +320,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
     // TODO: add some edge case handling in case there is only 1 comment, etc
     const text = await this.model.generateText(
       getPrompt(
-        `Please write a concise bulleted list identifying up to 5 prominent themes across all statements. These statements are all about {this.topicStat.name}.  Do not express any sense of agreement, disagreement, or alarm.  Do not refer to the input as comments but instead say statements`,
+        `Please write a concise bulleted list identifying up to 5 prominent themes across all statements. These statements are all about ${this.topicStat.name}.  Do not express any sense of agreement, disagreement, or alarm.  Do not refer to the input as comments but instead say statements`,
         allComments.map((comment: Comment): string => comment.text),
         this.additionalContext
       )
