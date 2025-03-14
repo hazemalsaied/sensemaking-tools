@@ -355,17 +355,21 @@ function getTopicDepth(comments: Comment[]): number {
     .reduce((minDepth, depth) => Math.min(minDepth, depth), Number.MAX_VALUE);
 }
 
+// Return a flat list of topics representing all the topics at a depth
 function getTopicsAtDepth(topics: Topic[], depth: number): Topic[] {
   if (depth === 1) {
     return topics;
-  } else if (depth === 2) {
-    return topics
-      .map((topic) => {
-        return "subtopics" in topic ? topic.subtopics : [];
-      })
-      .flat();
+  } else if (depth >= 2) {
+    return getTopicsAtDepth(
+      topics
+        .map((topic) => {
+          return "subtopics" in topic ? topic.subtopics : [];
+        })
+        .flat(),
+      depth - 1
+    );
   } else {
-    throw Error("Not yet implemented!!");
+    throw Error("Invalid depth value provided, depth: " + depth);
   }
 }
 
@@ -375,33 +379,176 @@ function getCommentsWithTopic(comments: Comment[], topicName: string) {
   );
 }
 
+/**
+ * Gets the comment texts and ids with a topic at a given level.
+ *
+ * Note the comment topics are from the given depth level and have been modified.
+ *
+ * @param comments the categorized comments to search
+ * @param topicName the name of the topic to match
+ * @param depth the depth to search at
+ * @returns the comments with the given topicName at the given depth
+ */
+function getCommentTextsWithTopicsAtDepth(
+  comments: Comment[],
+  topicName: string,
+  depth: number = 1
+): Comment[] {
+  if (depth === 1) {
+    return getCommentsWithTopic(comments, topicName);
+  } else if (depth >= 2) {
+    return getCommentTextsWithTopicsAtDepth(
+      comments
+        .filter((comment) => {
+          return comment.topics !== undefined;
+        })
+        .map((comment) => {
+          return {
+            id: comment.id,
+            text: comment.text,
+            topics: comment
+              .topics!.map((topic) => ("subtopics" in topic ? topic.subtopics : []))
+              .flat(),
+          };
+        }),
+      topicName,
+      depth - 1
+    );
+  } else {
+    throw Error("Invalid depth value provided, depth: " + depth);
+  }
+}
+
+/**
+ * Add subtopics to an existing topic
+ * @param topic the topic to add the subtopics to
+ * @param parentSubtopic the topic that is the parent of the new subtopics
+ * @param newSubtopics the new subtopics to add to topic
+ * @returns the topic with the new subtopics added at the right level
+ */
+function addNewLevelToTopic(topic: Topic, parentSubtopic: Topic, newSubtopics: Topic[]): Topic {
+  if ("subtopics" in topic) {
+    if (!("subtopics" in parentSubtopic)) {
+      throw Error("Expected parent topic to have subtopics");
+    }
+    for (let i = 0; i < topic.subtopics.length; i++) {
+      if (topic.subtopics[i].name === parentSubtopic.name) {
+        topic.subtopics[i] = addNewLevelToTopic(
+          topic.subtopics[i],
+          parentSubtopic.subtopics[0],
+          newSubtopics
+        );
+      }
+    }
+    return topic;
+  } else {
+    return { name: topic.name, subtopics: newSubtopics };
+  }
+}
+
+/**
+ * Combine full comments with newly categorized comments with one extra level of categorization
+ * @param comments the existing comments to merge into
+ * @param categorizedComments a subset of comments that have been newly categorized. The
+ * categorization is always topics only but should be merged at the topicDepth level
+ * @param topic the parent topic to the topics associated with categorizedComments
+ * @param topicDepth the depth of the newly categorizedComments on the comment object
+ * @returns all the comments with the one new level of categorization added
+ */
 function mergeCommentTopics(
   comments: Comment[],
   categorizedComments: Comment[],
-  topic: Topic
+  topic: Topic,
+  topicDepth: number
 ): Comment[] {
-  const commentsInTopic = getCommentsWithTopic(comments, topic.name);
+  const commentIdsInTopic = getCommentTextsWithTopicsAtDepth(comments, topic.name, topicDepth).map(
+    (comment) => comment.id
+  );
 
-  for (const comment of commentsInTopic) {
+  for (const commentId of commentIdsInTopic) {
     const matchingCategorized = categorizedComments.find(
-      (categorized) => categorized.id === comment.id
+      (categorized) => categorized.id === commentId
     );
-    if (!matchingCategorized || !matchingCategorized.topics || !comment.topics) {
+    if (!matchingCategorized || !matchingCategorized.topics) {
       continue;
     }
-    for (let i = 0; i < comment.topics.length; i++) {
-      const existingTopic = comment.topics[i];
-      if (existingTopic.name === topic.name) {
-        comment.topics[i] = { name: existingTopic.name, subtopics: matchingCategorized.topics };
+    // Iterate through comments using indices so that the value can be changed.
+    for (let i = 0; i < comments.length; i++) {
+      const currentComment = comments[i];
+      if (currentComment.id !== commentId || currentComment.topics === undefined) {
+        continue;
+      }
+
+      // Merge in matchingCategorized either as a new subtopic or a new subsubtopic.
+      for (let j = 0; j < currentComment.topics.length; j++) {
+        const existingTopic = currentComment.topics[j];
+        if (existingTopic.name === topic.name) {
+          currentComment.topics[j] = addNewLevelToTopic(
+            existingTopic,
+            topic,
+            matchingCategorized.topics
+          );
+        } else if ("subtopics" in existingTopic) {
+          for (let k = 0; k < existingTopic.subtopics.length; k++) {
+            const existingSubtopic = existingTopic.subtopics[k];
+            if (existingSubtopic.name === topic.name) {
+              if ("subtopics" in currentComment.topics[j]) {
+                currentComment.topics[j] = {
+                  name: existingTopic.name,
+                  subtopics: [
+                    ...existingTopic.subtopics.slice(0, k),
+                    addNewLevelToTopic(existingSubtopic, topic, matchingCategorized.topics),
+                    ...existingTopic.subtopics.slice(k + 1),
+                  ],
+                };
+              }
+            }
+          }
+        }
       }
     }
   }
   return comments;
 }
 
+/**
+ * Merge an existing topic with new subtopics into a list of all topics.
+ * @param topics the existing topics to merge into
+ * @param topicAndNewSubtopics the existing topic (must match a topic name from topics) with the
+ * new subtopics to add to it
+ * @returns the list of existing topics with the new subtopics added to the appropriate topic
+ */
+function mergeTopics(topics: Topic[], topicAndNewSubtopics: Topic): Topic[] {
+  if (!("subtopics" in topicAndNewSubtopics)) {
+    return topics;
+  }
+  for (let i = 0; i < topics.length; i++) {
+    if (topics[i].name === topicAndNewSubtopics.name) {
+      topics[i] = { name: topics[i].name, subtopics: topicAndNewSubtopics.subtopics };
+      return topics;
+    }
+  }
+  return topics;
+}
+
+/**
+ * Categorize comments one level at a time.
+ *
+ * For comments without topics, first all the topics are learned, then the comments are
+ * categorized into the topics, then for each topic the subset of relevant comments are selected
+ * and this is repeated recursively.
+ *
+ * @param comments the comments to categorize to the given depthLevel
+ * @param topicDepth the depth of categorization and topic learning, 1 is topic only; 2 is topics
+ * and subtopics; 3 is topics, subtopics, and subsubtopics
+ * @param model the model to use for topic learning and categorization
+ * @param topics a given set of topics to categorize the comments into
+ * @param additionalContext information to give the model
+ * @returns the comments categorized to the level specified by topicDepth
+ */
 export async function categorizeCommentsRecursive(
   comments: Comment[],
-  topicDepth: 1 | 2,
+  topicDepth: 1 | 2 | 3,
   model: Model,
   topics?: Topic[],
   additionalContext?: string
@@ -409,6 +556,7 @@ export async function categorizeCommentsRecursive(
   // The exit condition - if the requested topic depth matches the current depth of topics on the
   // comments then exit.
   const currentTopicDepth = getTopicDepth(comments);
+  console.log("Learning topics and categorizing statements at depth=", currentTopicDepth);
   if (currentTopicDepth >= topicDepth) {
     return comments;
   }
@@ -424,17 +572,29 @@ export async function categorizeCommentsRecursive(
     return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext);
   }
 
-  const parentTopics = getTopicsAtDepth(topics, currentTopicDepth);
+  let index = 0;
+  const parentTopics = getTopicsAtDepth(topics, currentTopicDepth).concat([{ name: "Other" }]);
   for (let topic of parentTopics) {
-    const commentsInTopic = structuredClone(getCommentsWithTopic(comments, topic.name));
-    if (!("subtopics" in topic)) {
-      // The subtopics are added to the existing topic, but so a list of length one is returned.
-      topic = (
-        await learnOneLevelOfTopics(commentsInTopic, model, topic, parentTopics, additionalContext)
-      )[0];
+    console.log(
+      "Categorizing statements into subtopics under: ",
+      topic.name,
+      ` (${++index}/${parentTopics.length} topics)`
+    );
+    const commentsInTopic = structuredClone(
+      getCommentTextsWithTopicsAtDepth(comments, topic.name, currentTopicDepth)
+    );
+    if (commentsInTopic.length === 0) {
+      continue;
     }
     if (!("subtopics" in topic)) {
-      throw Error("Badly formed LLM response - expected 'subtopics' to be in topics ");
+      // The subtopics are added to the existing topic, so a list of length one is returned.
+      const newTopicAndSubtopics = (
+        await learnOneLevelOfTopics(commentsInTopic, model, topic, parentTopics, additionalContext)
+      )[0];
+      if (!("subtopics" in newTopicAndSubtopics)) {
+        throw Error("Badly formed LLM response - expected 'subtopics' to be in topics ");
+      }
+      topic = { name: topic.name, subtopics: newTopicAndSubtopics.subtopics };
     }
 
     // Use the subtopics as high-level topics and merge them in later.
@@ -444,7 +604,8 @@ export async function categorizeCommentsRecursive(
       topic.subtopics,
       additionalContext
     );
-    comments = mergeCommentTopics(comments, categorizedComments, topic);
+    comments = mergeCommentTopics(comments, categorizedComments, topic, currentTopicDepth);
+    topics = mergeTopics(topics, topic);
   }
   return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext);
 }

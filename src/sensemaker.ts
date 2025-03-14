@@ -87,7 +87,7 @@ export class Sensemaker {
     const startTime = performance.now();
 
     // Categories are required for summarization, this is a no-op if they already have categories.
-    comments = await this.categorizeComments(comments, true, topics, additionalContext);
+    comments = await this.categorizeComments(comments, true, topics, additionalContext, 3);
 
     const summary = await retryCall(
       async function (
@@ -121,6 +121,7 @@ export class Sensemaker {
    * @param additionalContext Optional additional context to provide to the LLM for
    *  topic learning. The context will be appended verbatim to the prompt. This
    * should be 1-2 sentences on what the conversation is about and where it takes place.
+   * @param topicDepth how many levels of topics to learn, from topic to sub-sub-topic
    * @returns: Topics (optionally containing subtopics) representing what is discussed in the
    * comments.
    */
@@ -128,7 +129,8 @@ export class Sensemaker {
     comments: Comment[],
     includeSubtopics: boolean,
     topics?: Topic[],
-    additionalContext?: string
+    additionalContext?: string,
+    topicDepth?: 1 | 2 | 3,
   ): Promise<Topic[]> {
     const startTime = performance.now();
 
@@ -139,7 +141,8 @@ export class Sensemaker {
       comments,
       includeSubtopics,
       topics,
-      additionalContext
+      additionalContext,
+      topicDepth
     );
     const learnedTopics = getUniqueTopics(categorizedComments);
 
@@ -156,21 +159,26 @@ export class Sensemaker {
    * @param additionalContext Optional additional context to provide to the LLM for
    * categorization. The context will be appended verbatim to the prompt. This
    * should be 1-2 sentences on what the conversation is about and where it takes place.
+   * @param topicDepth how many levels of topics to learn, from topic to sub-sub-topic
    * @returns: The LLM's categorization.
    */
   public async categorizeComments(
     comments: Comment[],
     includeSubtopics: boolean,
     topics?: Topic[],
-    additionalContext?: string
+    additionalContext?: string,
+    topicDepth?: 1 | 2 | 3,
   ): Promise<Comment[]> {
     const startTime = performance.now();
+    if (!includeSubtopics && topicDepth && topicDepth > 1){
+      throw Error("topicDepth can only be set when includeSubtopics is true")
+    }
 
     // TODO: ensure the topics argument and the topics assigned to the passed in comments are in
     // sync.
     const categorizedComments = await categorizeCommentsRecursive(
       comments,
-      includeSubtopics ? 2 : 1,
+      includeSubtopics ? (topicDepth || 2) : 1,
       this.getModel("categorizationModel"),
       topics,
       additionalContext

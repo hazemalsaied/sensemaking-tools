@@ -164,17 +164,6 @@ export async function getSummary(
   );
 }
 
-// Gets existing topics from comments or learns them if not provided.
-export async function getTopics(comments: Comment[], vertexProject: string): Promise<Topic[]> {
-  if (comments.length > 0 && comments.some((comment) => comment.topics)) {
-    console.log("Comments already have topics. Skipping topic learning.");
-    return getTopicsFromComments(comments);
-  } else {
-    console.log("Learning topics from comments.");
-    return await getTopicsAndSubtopics(vertexProject, comments);
-  }
-}
-
 export function writeSummaryToHtml(summary: Summary, outputFile: string) {
   const markdownContent = summary.getText("MARKDOWN");
   const htmlContent = `
@@ -214,8 +203,8 @@ export function writeSummaryToHtml(summary: Summary, outputFile: string) {
 }
 
 /**
- * Parse a topics string from the categorization_runner.ts into a (possibly) nested topics and subtopics
- * array, omitting subtopics if not present in the labels.
+ * Parse a topics string from the categorization_runner.ts into a (possibly) nested topics
+ * array, omitting subtopics and subsubtopics if not present in the labels.
  * @param topicsString A string in the format Topic1:Subtopic1:A;Topic2:Subtopic2.A
  * @returns Nested Topic structure
  */
@@ -228,16 +217,37 @@ export function parseTopicsString(topicsString: string): Topic[] {
         topicMapping: { [key: string]: Topic[] },
         topicString: string
       ): { [key: string]: Topic[] } => {
-        const [topicName, subtopicName] = topicString.split(":");
+        const [topicName, subtopicName, subsubtopicName] = topicString.split(":");
         // if we already have a mapping for this topic, add, otherwise create a new one
         topicMapping[topicName] = topicMapping[topicName] || [];
         if (subtopicName) {
-          topicMapping[topicName].push({ name: subtopicName });
+          let subsubtopic: Topic[] = [];
+          let subtopicUpdated = false;
+          // Check for an existing subtopic and add subsubtopics there if possible.
+          for (const subtopic of topicMapping[topicName]) {
+            if (subtopic.name === subtopicName) {
+              subsubtopic = "subtopics" in subtopic ? subtopic.subtopics : [];
+              if (subsubtopicName) {
+                subsubtopic.push({ name: subsubtopicName });
+                subtopicUpdated = true;
+                break;
+              }
+            }
+          }
+
+          if (subsubtopicName) {
+            subsubtopic = [{ name: subsubtopicName }];
+          }
+          if (!subtopicUpdated) {
+            topicMapping[topicName].push({ name: subtopicName, subtopics: subsubtopic });
+          }
         }
+
         return topicMapping;
       },
       {}
     );
+
   // map key/value pairs from subtopicMappings to Topic objects
   return Object.entries(subtopicMappings).map(([topicName, subtopics]) => {
     if (subtopics.length === 0) {

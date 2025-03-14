@@ -18,15 +18,17 @@ import { parseTopicsString } from "./runner_utils";
 describe("parseTopicsString", () => {
   it("should parse a single topic string", () => {
     const topicsString = "Topic A:Subtopic A.1";
-    const expectedTopics = [{ name: "Topic A", subtopics: [{ name: "Subtopic A.1" }] }];
+    const expectedTopics = [
+      { name: "Topic A", subtopics: [{ name: "Subtopic A.1", subtopics: [] }] },
+    ];
     expect(parseTopicsString(topicsString)).toEqual(expectedTopics);
   });
 
   it("should parse multiple topic strings", () => {
     const topicsString = "Topic A:Subtopic A.1;Topic B:Subtopic B.1;Topic C";
     const expectedTopics = [
-      { name: "Topic A", subtopics: [{ name: "Subtopic A.1" }] },
-      { name: "Topic B", subtopics: [{ name: "Subtopic B.1" }] },
+      { name: "Topic A", subtopics: [{ name: "Subtopic A.1", subtopics: [] }] },
+      { name: "Topic B", subtopics: [{ name: "Subtopic B.1", subtopics: [] }] },
       { name: "Topic C" },
     ];
     expect(parseTopicsString(topicsString)).toEqual(expectedTopics);
@@ -47,8 +49,8 @@ describe("parseTopicsString", () => {
   it("should handle topic strings with only subtopic names", () => {
     const topicsString = "Topic A:Subtopic A.1;Topic B:Subtopic B.1";
     const expectedTopics = [
-      { name: "Topic A", subtopics: [{ name: "Subtopic A.1" }] },
-      { name: "Topic B", subtopics: [{ name: "Subtopic B.1" }] },
+      { name: "Topic A", subtopics: [{ name: "Subtopic A.1", subtopics: [] }] },
+      { name: "Topic B", subtopics: [{ name: "Subtopic B.1", subtopics: [] }] },
     ];
     expect(parseTopicsString(topicsString)).toEqual(expectedTopics);
   });
@@ -57,9 +59,33 @@ describe("parseTopicsString", () => {
     const topicsString =
       "Topic A:Subtopic A.1;Topic A:Subtopic A.2;Topic B:Subtopic B.1;Topic B:Subtopic B.2";
     const expectedTopics = [
-      { name: "Topic A", subtopics: [{ name: "Subtopic A.1" }, { name: "Subtopic A.2" }] },
-      { name: "Topic B", subtopics: [{ name: "Subtopic B.1" }, { name: "Subtopic B.2" }] },
+      {
+        name: "Topic A",
+        subtopics: [
+          { name: "Subtopic A.1", subtopics: [] },
+          { name: "Subtopic A.2", subtopics: [] },
+        ],
+      },
+      {
+        name: "Topic B",
+        subtopics: [
+          { name: "Subtopic B.1", subtopics: [] },
+          { name: "Subtopic B.2", subtopics: [] },
+        ],
+      },
     ];
+    expect(parseTopicsString(topicsString)).toEqual(expectedTopics);
+  });
+
+  it("should handle topic strings with themes", () => {
+    const topicsString = "Topic A:Subtopic A:Theme A;Topic A:Subtopic A:Theme B";
+    const expectedTopics = [
+      {
+        name: "Topic A",
+        subtopics: [{ name: "Subtopic A", subtopics: [{ name: "Theme A" }, { name: "Theme B" }] }],
+      },
+    ];
+
     expect(parseTopicsString(topicsString)).toEqual(expectedTopics);
   });
 });

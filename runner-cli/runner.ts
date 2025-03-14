@@ -19,7 +19,6 @@ import { Command } from "commander";
 import {
   getCommentsFromCsv,
   getSummary,
-  getTopics,
   writeSummaryToGroundedCSV,
   writeSummaryToHtml,
 } from "./runner_utils";
@@ -43,12 +42,11 @@ async function main(): Promise<void> {
   const options = program.opts();
 
   const comments = await getCommentsFromCsv(options.inputFile);
-  const topics = await getTopics(comments, options.vertexProject);
 
   let summary = await getSummary(
     options.vertexProject,
     comments,
-    topics,
+    undefined,
     options.additionalContext
   );
 

@@ -20,7 +20,7 @@
 
 import { VertexModel } from "../src/models/vertex_model";
 import { Sensemaker } from "../src/sensemaker";
-import { type Comment, type Topic } from "../src/types";
+import { Comment, Topic } from "../src/types";
 import { Command } from "commander";
 import { parse } from "csv-parse";
 import { createObjectCsvWriter } from "csv-writer";
@@ -41,8 +41,9 @@ async function main(): Promise<void> {
     .option("-i, --inputFile <file>", "The input file name.")
     .option("-t, --topics <comma separated list>", "Optional list of top-level topics.")
     .option(
-      "-s, --skip-subtopics",
-      "If set, will skip subtopics, and only learn and categorize top level topics."
+      "-t, --topicDepth",
+      "If set, will learn only topics (1), topics and subtopics (2), or topics, subtopics, and subsubtopics (3). The default is 2.",
+      "2"
     )
     .option(
       "-a, --additionalContext <instructions>",
@@ -59,13 +60,13 @@ async function main(): Promise<void> {
   const sensemaker = new Sensemaker({
     defaultModel: new VertexModel(options.vertexProject, "us-central1"),
   });
-  const topLevelTopics = options.topics ? getTopics(options.topics) : undefined;
-  const topics = await sensemaker.learnTopics(comments, !options.skipSubtopics, topLevelTopics);
+  const topics = options.topics ? getTopics(options.topics) : undefined;
   const categorizedComments = await sensemaker.categorizeComments(
     comments,
-    !options.skipSubtopics,
+    options.topicDepth >= 2 ? true : false,
     topics,
-    options.additionalContext
+    options.additionalContext,
+    options.topicDepth
   );
 
   const csvRowsWithTopics = setTopics(csvRows, categorizedComments);
@@ -135,7 +136,15 @@ function concatTopics(comment: Comment): string {
   for (const topic of comment.topics || []) {
     if ("subtopics" in topic) {
       for (const subtopic of topic.subtopics || []) {
-        pairsArray.push(`${topic.name}:${subtopic.name}`);
+        if ("subtopics" in subtopic) {
+          if ("subtopics" in (subtopic as Topic)) {
+            for (const subsubtopic of subtopic.subtopics as Topic[]) {
+              pairsArray.push(`${topic.name}:${subtopic.name}:${subsubtopic.name}`);
+            }
+          }
+        } else {
+          pairsArray.push(`${topic.name}:${subtopic.name}`);
+        }
       }
     } else {
       // handle case where no subtopics available
