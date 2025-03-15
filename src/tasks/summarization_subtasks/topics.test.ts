@@ -82,7 +82,7 @@ describe("TopicsSummaryTest", () => {
     // Mock the LLM calls
     mockThemesSummary.mockReturnValue(
       Promise.resolve({
-        text: "Themes were..."
+        text: "Themes were...",
       })
     );
     mockCommonGroundSummary.mockReturnValue(
@@ -109,8 +109,12 @@ describe("TopicsSummaryTest", () => {
       subContents: [
         {
           title: "### Topic A (3 statements)",
-          text: "This topic included 2 subtopics, comprising a total of 3 statements.\n\nA recursive summary...",
+          text: "This topic included 2 subtopics, comprising a total of 3 statements.",
           subContents: [
+            {
+              text: "A recursive summary...",
+              type: "TopicSummary",
+            },
             {
               text: "This subtopic had high agreement and high engagement compared to the other subtopics.",
               title: "#### Subtopic A.1 (2 statements)",
@@ -149,8 +153,12 @@ describe("TopicsSummaryTest", () => {
         },
         {
           title: "### Topic B (1 statements)",
-          text: "This topic included 1 subtopic, comprising a total of 1 statement.\n\nA recursive summary...",
+          text: "This topic included 1 subtopic, comprising a total of 1 statement.",
           subContents: [
+            {
+              text: "A recursive summary...",
+              type: "TopicSummary",
+            },
             {
               text: "This subtopic had high agreement and moderately low engagement compared to the other subtopics.",
               title: "#### Subtopic B.1 (1 statements)",

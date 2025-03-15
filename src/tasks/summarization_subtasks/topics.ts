@@ -236,7 +236,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
     if (nSubtopics > 0) {
       topicSummary =
         `This topic included ${nSubtopics} subtopic${nSubtopics === 1 ? "" : "s"}, comprising a ` +
-        `total of ${this.topicStat.commentCount} statement${this.topicStat.commentCount === 1 ? "" : "s"}.\n\n`;
+        `total of ${this.topicStat.commentCount} statement${this.topicStat.commentCount === 1 ? "" : "s"}.`;
       const subtopicSummaryPrompt = getAbstractPrompt(
         getRecursiveTopicSummaryInstructions(this.topicStat),
         subtopicSummaryContents,
@@ -247,13 +247,16 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
           `    </text>\n  </subtopicSummary>`,
         this.additionalContext
       );
-      topicSummary += await this.model.generateText(subtopicSummaryPrompt);
+      subtopicSummaryContents.unshift({
+        type: "TopicSummary",
+        text: await this.model.generateText(subtopicSummaryPrompt),
+      });
     }
 
     return {
       title: this.getSectionTitle(),
       text: topicSummary,
-      subContents: await executeInParallel(subtopicSummaries),
+      subContents: subtopicSummaryContents,
     };
   }
 

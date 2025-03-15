@@ -20,6 +20,7 @@
 import { Type, TSchema, type Static } from "@sinclair/typebox";
 import { TypeCheck, TypeCompiler } from "@sinclair/typebox/compiler";
 import { formatCitations } from "./tasks/utils/citation_utils";
+import { filterSummaryContent } from "./sensemaker_utils";
 
 /**
  * TypeBox JSON Schema representation of a single topic record as a name, with no subtopics.
@@ -108,6 +109,11 @@ export enum SummarizationType {
  */
 export interface SummaryContent {
   /**
+   * Optional data type, for filtering (etc.) operations based on non-displayed data
+   */
+  type?: string;
+
+  /**
    * The name of the section
    */
   title?: string;
@@ -181,6 +187,18 @@ export class Summary {
     return this.contents
       .map((content: SummaryContent) => this.getContentText(content, format))
       .join("\n");
+  }
+
+  /**
+   * Filter the contents according to removeFn, using sensemaker utils filterSummaryContent
+   * @param removeFn Decides whether SummaryContent object should be removed or not
+   * @returns boolean
+   */
+  withoutContents(removeFn: (sc: SummaryContent) => boolean) {
+    return new Summary(
+      this.contents.map((sc) => filterSummaryContent(sc, (sc_) => !removeFn(sc_))),
+      this.comments
+    );
   }
 
   private getContentText(content: SummaryContent, format: CitationFormat): string {

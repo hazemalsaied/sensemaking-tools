@@ -44,11 +44,20 @@ async function main(): Promise<void> {
   const comments = await getCommentsFromCsv(options.inputFile);
   const topics = await getTopics(comments, options.vertexProject);
 
-  const summary = await getSummary(
+  let summary = await getSummary(
     options.vertexProject,
     comments,
     topics,
     options.additionalContext
+  );
+
+  // For now, remove all Common Ground, Difference of Opinion, or TopicSummary sections
+  summary = summary.withoutContents(
+    (sc) =>
+      sc.type == "TopicSummary" ||
+      sc.title?.includes("Common ground:") ||
+      sc.title?.includes("Differences of opinion:") ||
+      false
   );
 
   writeSummaryToHtml(summary, options.outputBasename + "-summary.html");
