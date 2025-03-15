@@ -122,7 +122,9 @@ function getRecursiveTopicSummaryInstructions(topicStat: TopicStats): string {
     `informative. However, do not provide any meta-commentary ` +
     `about your task, or the fact that your summary is being based on other summaries. Also do not ` +
     `include specific numbers about how many comments were included in each subtopic, as these will be ` +
-    `included later in the final report output. You also do not need to recap the context of the conversation, ` +
+    `included later in the final report output. ` +
+    `Also refrain from describing specific areas of agreement or disagreement, and instead focus on themes discussed. ` +
+    `You also do not need to recap the context of the conversation, ` +
     `as this will have already been stated earlier in the report. Remember: this is just one paragraph in a larger ` +
     `summary, and you should compose this paragraph so that it will flow naturally in the context of the rest of the report. ` +
     `${COMMON_INSTRUCTIONS}`

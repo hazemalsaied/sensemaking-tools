@@ -15,7 +15,7 @@
 // Simple utils.
 
 import pLimit from "p-limit";
-import { CommentRecord, Comment } from "./types";
+import { CommentRecord, Comment, SummaryContent } from "./types";
 import { RETRY_DELAY_MS, MAX_RETRIES } from "./models/vertex_model";
 import { voteTallySummary } from "./tasks/utils/citation_utils";
 
@@ -321,4 +321,25 @@ export async function executeInParallel<T>(
   // execute the callback functions
   results.push(...(await Promise.all(limitedCallbacks)));
   return results;
+}
+
+/**
+ * This function creates a copy of the input summaryContent object, filtering out
+ * any subContents according to filterFn, as appropriate
+ * @param summaryContent Input summary content
+ * @returns the resulting summary conten, as a new data structure
+ */
+export function filterSummaryContent(
+  summaryContent: SummaryContent,
+  filterFn: (s: SummaryContent) => boolean
+): SummaryContent {
+  const filteredTopicSummary: SummaryContent = {
+    title: summaryContent.title,
+    text: summaryContent.text,
+    citations: summaryContent.citations,
+    subContents: summaryContent.subContents
+      ?.filter(filterFn)
+      .map((s: SummaryContent) => filterSummaryContent(s, filterFn)),
+  };
+  return filteredTopicSummary;
 }
