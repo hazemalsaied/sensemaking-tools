@@ -19,6 +19,9 @@ import { CommentRecord, Comment, SummaryContent } from "./types";
 import { RETRY_DELAY_MS, MAX_RETRIES } from "./models/vertex_model";
 import { voteTallySummary } from "./tasks/utils/citation_utils";
 
+// Set default vertex parallelism based on similarly named environment variable, or defualt to 2
+const DEFAULT_VERTEX_PARALLELISM = parseInt(process.env["DEFAULT_VERTEX_PARALLELISM"] || "2");
+
 /**
  * Rerun a function multiple times.
  * @param func the function to attempt
@@ -294,7 +297,7 @@ export function commentTableMarkdown(
  */
 export async function executeInParallel<T>(
   callbacks: (() => Promise<T>)[],
-  numParallelExecutions: number = 2
+  numParallelExecutions: number = DEFAULT_VERTEX_PARALLELISM
 ): Promise<T[]> {
   // Recursive function to retry each batch MAX_RETRIES times
   async function retry(callback: () => Promise<T>, currentRetry: number = 1): Promise<T> {
