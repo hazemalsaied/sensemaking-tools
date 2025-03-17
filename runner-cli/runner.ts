@@ -23,6 +23,7 @@ import {
   writeSummaryToGroundedCSV,
   writeSummaryToHtml,
 } from "./runner_utils";
+import { writeFileSync } from "fs";
 
 async function main(): Promise<void> {
   // Parse command line arguments.
@@ -60,6 +61,8 @@ async function main(): Promise<void> {
       false
   );
 
+  const markdownContent = summary.getText("MARKDOWN");
+  writeFileSync(options.outputBasename + "-summary.md", markdownContent);
   writeSummaryToHtml(summary, options.outputBasename + "-summary.html");
   writeSummaryToGroundedCSV(summary, options.outputBasename + "-summaryClaimsAndComments.csv");
 }
