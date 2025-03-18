@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import { Type } from "@sinclair/typebox";
-import { generateJSON, VertexModel } from "./vertex_model";
+import { VertexModel } from "./vertex_model";
 
 // Mock the VertexAI module - this mock will be used when the module is imported within a test run.
 jest.mock("@google-cloud/vertexai", () => {
@@ -67,7 +67,9 @@ describe("VertexAI test", () => {
       // Mock the second call to return the expected JSON
       mockSingleModelResponse(generateContentStreamMock, JSON.stringify(expectedJSON));
 
-      const result = await generateJSON("Some instructions", model.getGenerativeModel());
+      const result = JSON.parse(
+        await model.callLLM("Some instructions", model.getGenerativeModel())
+      );
 
       // Assert that the mock was called twice (initial call + retry)
       expect(generateContentStreamMock).toHaveBeenCalledTimes(2);
