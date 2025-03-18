@@ -216,22 +216,22 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
    * @returns a promise of the summary string
    */
   async getSubtopicsSummary(): Promise<SummaryContent> {
-    const subtopicSummaries: (() => Promise<SummaryContent>)[] =
-      this.topicStat.subtopicStats?.map(
-        (subtopicStat) =>
-          // Create a callback function for each summary and add it to the list, preparing them for parallel execution.
-          () =>
-            new SubtopicSummary(
-              subtopicStat,
-              this.model,
-              this.relativeContext,
-              this.additionalContext
-            ).getSummary()
-      ) || [];
+    // Create subtopic summaries for all subtopics with > 1 statement.
+    const subtopicSummaries: (() => Promise<SummaryContent>)[] = (this.topicStat.subtopicStats || []).filter((subtopicStat) => subtopicStat.commentCount > 1).map(
+      // Create a callback function for each summary and add it to the list, preparing them for parallel execution.
+      (subtopicStat) =>
+        () =>
+          new SubtopicSummary(
+            subtopicStat,
+            this.model,
+            this.relativeContext,
+            this.additionalContext
+          ).getSummary()
+    );
 
     const subtopicSummaryContents = await executeInParallel(subtopicSummaries);
 
-    const nSubtopics: number = this.topicStat.subtopicStats?.length || 0;
+    const nSubtopics: number = subtopicSummaries.length;
     let topicSummary = "";
     if (nSubtopics > 0) {
       topicSummary =

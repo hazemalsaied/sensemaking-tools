@@ -60,6 +60,15 @@ const TEST_COMMENTS: CommentWithVoteTallies[] = [
     },
     topics: [{ name: "Topic B", subtopics: [{ name: "Subtopic B.1" }] }],
   },
+  {
+    id: "5",
+    text: "comment 5",
+    voteTalliesByGroup: {
+      "0": { agreeCount: 10, disagreeCount: 5, passCount: 0, totalCount: 15 },
+      "1": { agreeCount: 5, disagreeCount: 10, passCount: 5, totalCount: 20 },
+    },
+    topics: [{ name: "Topic B", subtopics: [{ name: "Subtopic B.1" }] }],
+  },
 ];
 
 describe("TopicsSummaryTest", () => {
@@ -109,32 +118,15 @@ describe("TopicsSummaryTest", () => {
       subContents: [
         {
           title: "### Topic A (3 statements)",
-          text: "This topic included 2 subtopics, comprising a total of 3 statements.",
+          text: "This topic included 1 subtopic, comprising a total of 3 statements.",
           subContents: [
             {
               text: "A recursive summary...",
               type: "TopicSummary",
             },
             {
-              text: "This subtopic had high agreement and high engagement compared to the other subtopics.",
+              text: "This subtopic had high agreement and moderately high engagement compared to the other subtopics.",
               title: "#### Subtopic A.1 (2 statements)",
-              subContents: [
-                {
-                  text: "Themes were...",
-                },
-                {
-                  text: "Some points of common ground...",
-                  title: "Common ground between groups: ",
-                },
-                {
-                  text: "Areas of disagreement between groups...",
-                  title: "Differences of opinion: ",
-                },
-              ],
-            },
-            {
-              title: "#### Subtopic A.2 (1 statements)",
-              text: "This subtopic had high agreement and moderately low engagement compared to the other subtopics.",
               subContents: [
                 {
                   text: "Themes were...",
@@ -152,16 +144,16 @@ describe("TopicsSummaryTest", () => {
           ],
         },
         {
-          title: "### Topic B (1 statements)",
-          text: "This topic included 1 subtopic, comprising a total of 1 statement.",
+          title: "### Topic B (2 statements)",
+          text: "This topic included 1 subtopic, comprising a total of 2 statements.",
           subContents: [
             {
               text: "A recursive summary...",
               type: "TopicSummary",
             },
             {
-              text: "This subtopic had high agreement and moderately low engagement compared to the other subtopics.",
-              title: "#### Subtopic B.1 (1 statements)",
+              text: "This subtopic had high agreement and moderately high engagement compared to the other subtopics.",
+              title: "#### Subtopic B.1 (2 statements)",
               subContents: [
                 {
                   text: "Themes were...",
