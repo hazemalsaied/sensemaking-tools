@@ -88,7 +88,7 @@ ${JSON.stringify(topics)}
 
 Important Considerations:
 - Ensure the assigned topic accurately reflects the meaning of the comment.
-- A comment can be assigned to multiple topics if relevant.
+- A comment can be assigned to multiple topics if necessary but prefer to assign only one topic 
 - Prioritize using the existing topics whenever possible.
 - All comments must be assigned at least one existing topic.
 - If no existing topic fits a comment well, assign it to the "Other" topic.
