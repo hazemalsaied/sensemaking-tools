@@ -19,11 +19,11 @@ import { Comment, SummarizationType, Summary, SummaryContent } from "../types";
 import { IntroSummary } from "./summarization_subtasks/intro";
 import { KeyFindingsSummary } from "./summarization_subtasks/key_findings";
 import { GroupsSummary } from "./summarization_subtasks/groups";
-import { TopicsSummary } from "./summarization_subtasks/topics";
 import { GroupedSummaryStats } from "../stats/group_informed";
 import { MajoritySummaryStats } from "../stats/majority_vote";
 import { SummaryStats, TopicStats } from "../stats/summary_stats";
 import { TopSubtopicsSummary } from "./summarization_subtasks/top_subtopics";
+import { AllTopicsSummary } from "./summarization_subtasks/topics";
 
 /**
  * Summarizes comments based on the specified summarization type.
@@ -68,7 +68,7 @@ export class MultiStepSummary {
   }
 
   async getSummary(): Promise<Summary> {
-    const topicsSummary = await new TopicsSummary(
+    const topicsSummary = await new AllTopicsSummary(
       this.summaryStats,
       this.model,
       this.additionalContext

@@ -136,7 +136,7 @@ function getRecursiveTopicSummaryInstructions(topicStat: TopicStats): string {
  * calling out to the separate TopicSummary and SubtopicSummary classes to generate
  * content for individual subsections corresponding to specific topics and subtopics.
  */
-export class TopicsSummary extends RecursiveSummary<SummaryStats> {
+export class AllTopicsSummary extends RecursiveSummary<SummaryStats> {
   async getSummary(): Promise<SummaryContent> {
     // First construct the introductory description for the entire section
     const topicStats: TopicStats[] = this.input.getStatsByTopic(true);
@@ -200,7 +200,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
     if (nSubtopics == 0) {
       return this.getCommentSummary();
     } else {
-      return this.getSubtopicsSummary();
+      return this.getAllSubTopicSummaries();
     }
   }
 
@@ -215,19 +215,22 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
    * When subtopics are present, compiles the individual summaries for those subtopics
    * @returns a promise of the summary string
    */
-  async getSubtopicsSummary(): Promise<SummaryContent> {
+  async getAllSubTopicSummaries(): Promise<SummaryContent> {
     // Create subtopic summaries for all subtopics with > 1 statement.
-    const subtopicSummaries: (() => Promise<SummaryContent>)[] = (this.topicStat.subtopicStats || []).filter((subtopicStat) => subtopicStat.commentCount > 1).map(
-      // Create a callback function for each summary and add it to the list, preparing them for parallel execution.
-      (subtopicStat) =>
-        () =>
+    const subtopicSummaries: (() => Promise<SummaryContent>)[] = (
+      this.topicStat.subtopicStats || []
+    )
+      .filter((subtopicStat) => subtopicStat.commentCount > 1)
+      .map(
+        // Create a callback function for each summary and add it to the list, preparing them for parallel execution.
+        (subtopicStat) => () =>
           new SubtopicSummary(
             subtopicStat,
             this.model,
             this.relativeContext,
             this.additionalContext
           ).getSummary()
-    );
+      );
 
     const subtopicSummaryContents = await executeInParallel(subtopicSummaries);
 
@@ -325,7 +328,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
     // TODO: add some edge case handling in case there is only 1 comment, etc
     const text = await this.model.generateText(
       getPrompt(
-      `Please write a concise bulleted list identifying up to 5 prominent themes across all statements. These statements are all about ${this.topicStat.name}. For each theme, begin with a short theme description written in bold text, followed by a colon, then followed by a SINGLE sentence explaining the theme. Your list should meet the below Criteria and STRICTLY follow the Output Format.
+        `Please write a concise bulleted list identifying up to 5 prominent themes across all statements. These statements are all about ${this.topicStat.name}. For each theme, begin with a short theme description written in bold text, followed by a colon, then followed by a SINGLE sentence explaining the theme. Your list should meet the below Criteria and STRICTLY follow the Output Format.
 
       <criteria format="markdown">
       * Impartiality: Do not express your own opinion or pass normative judgments on the statements, like agreement, disagreement, or alarm.

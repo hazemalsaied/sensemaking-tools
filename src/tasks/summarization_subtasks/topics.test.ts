@@ -15,7 +15,7 @@
 import { VertexModel } from "../../models/vertex_model";
 import { GroupedSummaryStats } from "../../stats/group_informed";
 import { CommentWithVoteTallies } from "../../types";
-import { TopicsSummary, TopicSummary } from "./topics";
+import { AllTopicsSummary, TopicSummary } from "./topics";
 
 // Mock the model response. This mock needs to be set up to return response specific for each test.
 let mockThemesSummary: jest.SpyInstance;
@@ -71,7 +71,7 @@ const TEST_COMMENTS: CommentWithVoteTallies[] = [
   },
 ];
 
-describe("TopicsSummaryTest", () => {
+describe("AllTopicsSummaryTest", () => {
   beforeEach(() => {
     mockThemesSummary = jest.spyOn(TopicSummary.prototype, "getThemesSummary");
     mockCommonGroundSummary = jest.spyOn(TopicSummary.prototype, "getCommonGroundSummary");
@@ -108,7 +108,7 @@ describe("TopicsSummaryTest", () => {
     );
 
     expect(
-      await new TopicsSummary(
+      await new AllTopicsSummary(
         new GroupedSummaryStats(TEST_COMMENTS),
         new VertexModel("project123", "usa")
       ).getSummary()
