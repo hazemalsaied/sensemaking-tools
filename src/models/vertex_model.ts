@@ -15,6 +15,7 @@
 // Module to interact with models available on Google Cloud's Model Garden, including Gemini and
 // Gemma models. All available models are listed here: https://cloud.google.com/model-garden?hl=en
 
+import pLimit from "p-limit";
 import {
   GenerativeModel,
   HarmBlockThreshold,
@@ -27,6 +28,7 @@ import { Model } from "./model";
 import { checkDataSchema } from "../types";
 import { Static, TSchema } from "@sinclair/typebox";
 import { retryCall } from "../sensemaker_utils";
+import { MAX_RETRIES, RETRY_DELAY_MS } from "./model_util";
 
 /**
  * Class to interact with models available through Google Cloud's Model Garden.
@@ -34,6 +36,7 @@ import { retryCall } from "../sensemaker_utils";
 export class VertexModel extends Model {
   private vertexAI: VertexAI;
   private modelName: string;
+  private limit: pLimit.Limit; // controls model calls concurrency on model's instance level
 
   /**
    * Create a model object.
@@ -49,6 +52,7 @@ export class VertexModel extends Model {
       location: location,
     });
     this.modelName = modelName;
+    this.limit = pLimit(1); // limit to 1 concurrent call
   }
 
   /**
@@ -83,7 +87,7 @@ export class VertexModel extends Model {
   }
 
   /**
-   * Calls an LLM to generate text based on a given prompt and handles retries and response validation.
+   * Calls an LLM to generate text based on a given prompt and handles rate limiting, response validation and retries.
    *
    * @param prompt - The text prompt to send to the language model.
    * @param model - The specific language model that will be called.
@@ -92,32 +96,39 @@ export class VertexModel extends Model {
   async callLLM(prompt: string, model: GenerativeModel): Promise<string> {
     const req = getRequest(prompt);
 
-    const response = await retryCall(
-      // call LLM
-      async function () {
-        return (await model.generateContentStream(req)).response;
-      },
-      // Check if the response exists and contains a text field.
-      function (response): boolean {
-        if (!response) {
-          console.error("Failed to get a model response.");
-          return false;
-        }
-        if (!response.candidates![0].content.parts[0].text) {
-          console.error(`Model returned a malformed response: ${response}`);
-          return false;
-        }
-        console.log(`Input token count: ${response.usageMetadata?.promptTokenCount}`);
-        console.log(`Output token count: ${response.usageMetadata?.candidatesTokenCount}`);
-        return true;
-      },
-      MAX_RETRIES,
-      "Failed to get a valid model response.",
-      RETRY_DELAY_MS,
-      [], // Arguments for the LLM call
-      [] // Arguments for the validator function
-    );
+    // Wrap the entire retryCall sequence with the `p-limit` limiter,
+    // so we don't let other calls to start until we're done with the current one
+    // (in case it's failing with rate limits error and needs to be waited on and retried first)
+    const rateLimitedCall = () =>
+      this.limit(async () => {
+        return await retryCall(
+          // call LLM
+          async function () {
+            return (await model.generateContentStream(req)).response;
+          },
+          // Check if the response exists and contains a text field.
+          function (response): boolean {
+            if (!response) {
+              console.error("Failed to get a model response.");
+              return false;
+            }
+            if (!response.candidates![0].content.parts[0].text) {
+              console.error(`Model returned a malformed response: ${response}`);
+              return false;
+            }
+            console.log(`Input token count: ${response.usageMetadata?.promptTokenCount}`);
+            console.log(`Output token count: ${response.usageMetadata?.candidatesTokenCount}`);
+            return true;
+          },
+          MAX_RETRIES,
+          "Failed to get a valid model response.",
+          RETRY_DELAY_MS,
+          [], // Arguments for the LLM call
+          [] // Arguments for the validator function
+        );
+      });
 
+    const response = await rateLimitedCall();
     return response.candidates![0].content.parts[0].text!;
   }
 }
@@ -169,11 +180,6 @@ function getModelParams(modelName: string, schema?: Schema): ModelParams {
   }
   return modelParams;
 }
-
-// The maximum number of times an API call should be retried.
-export const MAX_RETRIES = 3;
-// How long in miliseconds to wait between API calls.
-export const RETRY_DELAY_MS = 2000; // 2 seconds. TODO: figure out how to set it to zero for tests
 
 type Request = {
   contents: {

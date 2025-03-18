@@ -21,10 +21,10 @@ import {
   TopicCategorizedComment,
   SubtopicCategorizedComment,
 } from "../types";
-import { MAX_RETRIES, RETRY_DELAY_MS } from "../models/vertex_model";
 import { Model } from "../models/model";
 import { getPrompt, hydrateCommentRecord } from "../sensemaker_utils";
 import { TSchema, Type } from "@sinclair/typebox";
+import { MAX_RETRIES, RETRY_DELAY_MS } from "../models/model_util";
 
 /**
  * @fileoverview Helper functions for performing comments categorization.

@@ -19,9 +19,19 @@ import {
   decimalToPercent,
   executeInParallel,
 } from "./sensemaker_utils";
-import { MAX_RETRIES } from "./models/vertex_model";
 import { Comment } from "./types";
 import pLimit from "p-limit";
+import { MAX_RETRIES } from "./models/model_util";
+
+// mock retry timeout
+jest.mock("./models/model_util", () => {
+  const originalModule = jest.requireActual("./models/model_util");
+  return {
+    __esModule: true,
+    ...originalModule,
+    RETRY_DELAY_MS: 0,
+  };
+});
 
 const TEST_COMMENTS = [
   {

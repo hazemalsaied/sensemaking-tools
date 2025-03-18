@@ -15,6 +15,16 @@
 import { Type } from "@sinclair/typebox";
 import { VertexModel } from "./vertex_model";
 
+// mock retry timeout
+jest.mock("./model_util", () => {
+  const originalModule = jest.requireActual("./model_util");
+  return {
+    __esModule: true,
+    ...originalModule,
+    RETRY_DELAY_MS: 0,
+  };
+});
+
 // Mock the VertexAI module - this mock will be used when the module is imported within a test run.
 jest.mock("@google-cloud/vertexai", () => {
   // Mock the model response. This mock needs to be set up to return response specific for each test.
@@ -76,7 +86,7 @@ describe("VertexAI test", () => {
 
       // Assert that the result is the expected JSON
       expect(result).toEqual(expectedJSON);
-    });
+    }, 15000); // no luck mocking retry timeout for this test - so letting it run longer for now
 
     it("should generate valid text", async () => {
       const expectedText = "This is some text.";

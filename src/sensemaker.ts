@@ -15,7 +15,7 @@
 // Module to interact with sensemaking tools.
 
 import { generateTopicModelingPrompt, learnedTopicsValid } from "./tasks/topic_modeling";
-import { MAX_RETRIES } from "./models/vertex_model";
+import { MAX_RETRIES } from "./models/model_util";
 import {
   CommentRecord,
   Comment,

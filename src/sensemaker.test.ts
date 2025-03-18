@@ -17,6 +17,16 @@ import { Comment } from "./types";
 import { VertexModel } from "./models/vertex_model";
 import { ModelSettings } from "./models/model";
 
+// mock retry timeout
+jest.mock("./models/model_util", () => {
+  const originalModule = jest.requireActual("./models/model_util");
+  return {
+    __esModule: true,
+    ...originalModule,
+    RETRY_DELAY_MS: 0,
+  };
+});
+
 const TEST_MODEL_SETTINGS: ModelSettings = {
   defaultModel: new VertexModel("project", "location", "Gemma1234"),
 };

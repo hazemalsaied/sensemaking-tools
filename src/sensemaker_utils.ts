@@ -16,8 +16,8 @@
 
 import pLimit from "p-limit";
 import { CommentRecord, Comment, SummaryContent } from "./types";
-import { RETRY_DELAY_MS, MAX_RETRIES } from "./models/vertex_model";
 import { voteTallySummary } from "./tasks/utils/citation_utils";
+import { MAX_RETRIES, RETRY_DELAY_MS } from "./models/model_util";
 
 // Set default vertex parallelism based on similarly named environment variable, or defualt to 2
 const DEFAULT_VERTEX_PARALLELISM = parseInt(process.env["DEFAULT_VERTEX_PARALLELISM"] || "2");
@@ -51,12 +51,24 @@ export async function retryCall<T>(
         return response;
       }
       console.error(`Attempt ${attempt} failed. Invalid response:`, response);
-    } catch (error) {
-      console.error(`Attempt ${attempt} failed:`, error);
+      /* eslint-disable  @typescript-eslint/no-explicit-any */
+    } catch (error: any) {
+      if (
+        error.message?.includes("Too Many Requests") ||
+        error.code === 429 ||
+        error.status === "RESOURCE_EXHAUSTED"
+      ) {
+        // log error message only to avoid spamming the logs with stacktraces
+        console.error(`Attempt ${attempt} failed: ${error.message}`);
+      } else {
+        console.error(`Attempt ${attempt} failed:`, error);
+      }
     }
 
-    console.log(`Retrying in ${retryDelayMS / 1000} seconds`);
-    await new Promise((resolve) => setTimeout(resolve, retryDelayMS));
+    // Exponential backoff calculation
+    const delay = retryDelayMS * Math.pow(2, attempt - 1);
+    console.log(`Retrying in ${delay / 1000} seconds (attempt ${attempt})`);
+    await new Promise((resolve) => setTimeout(resolve, delay));
   }
   throw new Error(`Failed after ${maxRetries} attempts: ${errorMsg}`);
 }
@@ -212,7 +224,6 @@ export function decimalToPercent(decimal: number, precision: number = 0): string
  */
 export interface ColumnDefinition {
   columnName: string;
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   getValue: (comment: Comment) => any;
 }
 
@@ -308,8 +319,8 @@ export async function executeInParallel<T>(
         console.error(`Promise failed after ${MAX_RETRIES} retries:`, error);
         throw error;
       }
-      console.error("Promise failed, retrying in 1 second:", error);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.error(`Promise failed, retrying in ${RETRY_DELAY_MS / 1000} seconds:`, error);
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
       return retry(callback, currentRetry + 1);
     }
   }

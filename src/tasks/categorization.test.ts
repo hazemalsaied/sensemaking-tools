@@ -21,6 +21,16 @@ import {
 import { CommentRecord, Comment, Topic } from "../types";
 import { VertexModel } from "../models/vertex_model";
 
+// mock retry timeout
+jest.mock("../models/model_util", () => {
+  const originalModule = jest.requireActual("../models/model_util");
+  return {
+    __esModule: true,
+    ...originalModule,
+    RETRY_DELAY_MS: 0,
+  };
+});
+
 // Mock the model response. This mock needs to be set up to return response specific for each test.
 let mockGenerateData: jest.SpyInstance;
 
