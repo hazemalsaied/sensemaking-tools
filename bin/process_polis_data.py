@@ -9,16 +9,16 @@ print("Starting process_polis_data.py program")
 
 # argparse setup with arguments for two input files
 def getargs():
-    parser = arg.ArgumentParser(description="Process Polis data from the openData export data.")
-    parser.add_argument("export_directory", help="Path to export directory.")
-    parser.add_argument("--participants-votes", help="Participants votes file (override).")
-    parser.add_argument("--comments", help="Path to the comments file (override).")
-    parser.add_argument("-o", "--output_file", help="Path to the output CSV file.", required=True)
-    parser.add_argument("--exclude-ungrouped-participants", help="Whether to include ungrouped participants in the output.", action="store_true")
-    args = parser.parse_args()
-    args.participants_votes = args.participants_votes or f"{args.export_directory}/participants-votes.csv"
-    args.comments = args.comments or f"{args.export_directory}/comments.csv"
-    return args
+  parser = arg.ArgumentParser(description="Process Polis data from the openData export data.")
+  parser.add_argument("export_directory", help="Path to export directory.")
+  parser.add_argument("--participants-votes", help="Participants votes file (override).")
+  parser.add_argument("--comments", help="Path to the comments file (override).")
+  parser.add_argument("-o", "--output_file", help="Path to the output CSV file.", required=True)
+  parser.add_argument("--exclude-ungrouped-participants", help="Whether to include ungrouped participants in the output.", action="store_true")
+  args = parser.parse_args()
+  args.participants_votes = args.participants_votes or f"{args.export_directory}/participants-votes.csv"
+  args.comments = args.comments or f"{args.export_directory}/comments.csv"
+  return args
 
 
 print("Processing args")
@@ -26,17 +26,17 @@ args = getargs()
 
 # Read the CSV files into pandas DataFrames
 try:
-    votes = pd.read_csv(args.participants_votes)
-    comments = pd.read_csv(args.comments)
+  votes = pd.read_csv(args.participants_votes)
+  comments = pd.read_csv(args.comments)
 except FileNotFoundError as e:
-    print(f"Error: One or both input files not found: {e}")
-    exit(1)
+  print(f"Error: One or both input files not found: {e}")
+  exit(1)
 except pd.errors.EmptyDataError as e:
-    print(f"Error: One or both input files are empty: {e}")
-    exit(1)
+  print(f"Error: One or both input files are empty: {e}")
+  exit(1)
 except pd.errors.ParserError as e:
-    print(f"Error parsing CSV file: {e}")
-    exit(1)
+  print(f"Error parsing CSV file: {e}")
+  exit(1)
 
 print("Args processed")
 
@@ -46,14 +46,14 @@ comments['comment-id'] = comments['comment-id'].astype(int)
 
 # their votes on everything.
 if args.exclude_ungrouped_participants:
-   # filter out votes rows where group-id is nan, and make ints
-   print("Filtering out ungrouped participants")
-   votes = votes[votes['group-id'].notna()]
+  # filter out votes rows where group-id is nan, and make ints
+  print("Filtering out ungrouped participants")
+  votes = votes[votes['group-id'].notna()]
 else:
-   # We fill the ungrouped participant records with -1 for group, which when
-   # processed below will reserve group-0 for the "ungrouped", which we can
-   # manually filter into the columns
-   votes['group-id'] = votes['group-id'].fillna(-1)
+  # We fill the ungrouped participant records with -1 for group, which when
+  # processed below will reserve group-0 for the "ungrouped", which we can
+  # manually filter into the columns
+  votes['group-id'] = votes['group-id'].fillna(-1)
 
 # Increment group ids so they are 1 based instead of 0 (noting that, as described above,
 # the "ungrouped" psuedo-group gets bumped here from -1 to 0, to be dealt with later)
@@ -70,7 +70,7 @@ comment_ids = [col for col in votes.columns if re.match(r'^\d+$', col)]
 # the votes table, for later verification
 comment_vote_counts = {}
 for comment_id in comment_ids:
-    comment_vote_counts[int(comment_id)] = votes[comment_id].value_counts().sum()
+  comment_vote_counts[int(comment_id)] = votes[comment_id].value_counts().sum()
 
 # Melt the DataFrame
 melted_votes = votes.melt(id_vars=["group-id"], value_vars=comment_ids, var_name='comment-id', value_name='value')
@@ -152,5 +152,5 @@ moderated_comments.to_csv(args.output_file, index=False)
 
 # Exit with non-zero error code if any validations failed
 if failed_validations > 0:
-   exit(1)
+  exit(1)
 
