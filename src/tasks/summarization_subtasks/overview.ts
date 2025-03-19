@@ -57,10 +57,10 @@ function perTopicInstructions(topicName: string) {
 }
 
 /**
- * The interface is the input structure for the KeyFindingsSummary class, and controls
+ * The interface is the input structure for the OverviewSummary class, and controls
  * which specific method is used to generate this part of the summary.
  */
-export interface KeyFindingsInput {
+export interface OverviewInput {
   summaryStats: SummaryStats;
   topicsSummary: SummaryContent;
   method?: "one-shot" | "per-topic";
@@ -70,11 +70,11 @@ export interface KeyFindingsInput {
  * Generates a summary of the key findings in the conversation, in terms of the top-level
  * topics.
  */
-export class KeyFindingsSummary extends RecursiveSummary<KeyFindingsInput> {
+export class OverviewSummary extends RecursiveSummary<OverviewInput> {
   async getSummary(): Promise<SummaryContent> {
     const method = this.input.method || "one-shot";
     const result = await (method == "one-shot" ? this.oneShotSummary() : this.perTopicSummary());
-    return { title: "## Key Findings", text: result };
+    return { title: "## Overview", text: result };
   }
 
   /**
@@ -86,7 +86,7 @@ export class KeyFindingsSummary extends RecursiveSummary<KeyFindingsInput> {
     const topicNames = this.topicNames();
     const prompt = getAbstractPrompt(
       oneShotInstructions(topicNames),
-      [filterSectionsForKeyFindings(this.input.topicsSummary)],
+      [filterSectionsForOverview(this.input.topicsSummary)],
       (summary: SummaryContent) =>
         `<topicsSummary>\n` +
         `${new Summary([summary], []).getText("XML")}\n` +
@@ -97,7 +97,7 @@ export class KeyFindingsSummary extends RecursiveSummary<KeyFindingsInput> {
     // Check to make sure that every single topicName in topicNames is in the list, and raise an error if not
     for (const topicName of topicNames) {
       if (!result.includes(topicName)) {
-        throw new Error(`Key findings summary is missing topic name: ${topicName}`);
+        throw new Error(`Overview summary is missing topic name: ${topicName}`);
       }
     }
     return removeEmptyLines(result);
@@ -113,7 +113,7 @@ export class KeyFindingsSummary extends RecursiveSummary<KeyFindingsInput> {
       text += `* __${this.getTopicNameAndCommentPercentage(topicStats)}__: `;
       const prompt = getAbstractPrompt(
         perTopicInstructions(topicStats.name),
-        [filterSectionsForKeyFindings(this.input.topicsSummary)],
+        [filterSectionsForOverview(this.input.topicsSummary)],
         (summary: SummaryContent) =>
           `<topicsSummary>\n` +
           `${new Summary([summary], []).getText("XML")}\n` +
@@ -148,7 +148,7 @@ export class KeyFindingsSummary extends RecursiveSummary<KeyFindingsInput> {
  * @param topicSummary The result of the TopicsSummary component
  * @returns the resulting summary, as a new data structure
  */
-function filterSectionsForKeyFindings(topicSummary: SummaryContent): SummaryContent {
+function filterSectionsForOverview(topicSummary: SummaryContent): SummaryContent {
   return filterSummaryContent(
     topicSummary,
     (subtopicSummary: SummaryContent) =>

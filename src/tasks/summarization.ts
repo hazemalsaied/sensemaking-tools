@@ -17,7 +17,7 @@
 import { Model } from "../models/model";
 import { Comment, SummarizationType, Summary, SummaryContent } from "../types";
 import { IntroSummary } from "./summarization_subtasks/intro";
-import { KeyFindingsSummary } from "./summarization_subtasks/key_findings";
+import { OverviewSummary } from "./summarization_subtasks/overview";
 import { GroupsSummary } from "./summarization_subtasks/groups";
 import { GroupedSummaryStats } from "../stats/group_informed";
 import { MajoritySummaryStats } from "../stats/majority_vote";
@@ -78,7 +78,7 @@ export class MultiStepSummary {
       await new IntroSummary(this.summaryStats, this.model, this.additionalContext).getSummary()
     );
     summarySections.push(
-      await new KeyFindingsSummary(
+      await new OverviewSummary(
         { summaryStats: this.summaryStats, topicsSummary: topicsSummary, method: "one-shot" },
         this.model,
         this.additionalContext

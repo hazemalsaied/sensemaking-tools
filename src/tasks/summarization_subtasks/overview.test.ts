@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { removeEmptyLines } from "./key_findings";
+import { removeEmptyLines } from "./overview";
 
 describe("IntroTest", () => {
   it("should remove empty lines", async () => {
