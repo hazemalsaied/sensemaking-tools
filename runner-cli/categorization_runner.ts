@@ -41,7 +41,7 @@ async function main(): Promise<void> {
     .option("-i, --inputFile <file>", "The input file name.")
     .option("-t, --topics <comma separated list>", "Optional list of top-level topics.")
     .option(
-      "-t, --topicDepth",
+      "-d, --topicDepth",
       "If set, will learn only topics (1), topics and subtopics (2), or topics, subtopics, and subsubtopics (3). The default is 2.",
       "2"
     )

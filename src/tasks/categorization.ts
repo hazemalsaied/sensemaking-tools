@@ -339,8 +339,13 @@ function assignDefaultCategory(uncategorized: Comment[]): CommentRecord[] {
 }
 
 function getTopicDepthFromTopics(topics: Topic[], currentDepth: number = 1): number {
-  return topics.every((topic) => "subtopics" in topic)
-    ? getTopicDepthFromTopics(topics.map((topic) => topic.subtopics).flat(), currentDepth + 1)
+  return topics.every((topic) => {
+    return "subtopics" in topic && topic.subtopics.length > 0;
+  })
+    ? getTopicDepthFromTopics(
+        topics.map((topic) => ("subtopics" in topic ? topic.subtopics : [])).flat(),
+        currentDepth + 1
+      )
     : currentDepth;
 }
 

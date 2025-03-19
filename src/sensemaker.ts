@@ -87,8 +87,7 @@ export class Sensemaker {
     const startTime = performance.now();
 
     // Categories are required for summarization, this is a no-op if they already have categories.
-    comments = await this.categorizeComments(comments, true, topics, additionalContext, 3);
-
+    comments = await this.categorizeComments(comments, true, topics, additionalContext, 2);
     const summary = await retryCall(
       async function (
         model: Model,
@@ -130,7 +129,7 @@ export class Sensemaker {
     includeSubtopics: boolean,
     topics?: Topic[],
     additionalContext?: string,
-    topicDepth?: 1 | 2 | 3,
+    topicDepth?: 1 | 2 | 3
   ): Promise<Topic[]> {
     const startTime = performance.now();
 
@@ -167,18 +166,18 @@ export class Sensemaker {
     includeSubtopics: boolean,
     topics?: Topic[],
     additionalContext?: string,
-    topicDepth?: 1 | 2 | 3,
+    topicDepth?: 1 | 2 | 3
   ): Promise<Comment[]> {
     const startTime = performance.now();
-    if (!includeSubtopics && topicDepth && topicDepth > 1){
-      throw Error("topicDepth can only be set when includeSubtopics is true")
+    if (!includeSubtopics && topicDepth && topicDepth > 1) {
+      throw Error("topicDepth can only be set when includeSubtopics is true");
     }
 
     // TODO: ensure the topics argument and the topics assigned to the passed in comments are in
     // sync.
     const categorizedComments = await categorizeCommentsRecursive(
       comments,
-      includeSubtopics ? (topicDepth || 2) : 1,
+      includeSubtopics ? topicDepth || 2 : 1,
       this.getModel("categorizationModel"),
       topics,
       additionalContext
