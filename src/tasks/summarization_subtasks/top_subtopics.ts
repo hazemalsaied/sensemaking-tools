@@ -21,7 +21,7 @@ import { getPrompt } from "../../sensemaker_utils";
 
 export class TopSubtopicsSummary extends RecursiveSummary<SummaryStats> {
   async getSummary(): Promise<SummaryContent> {
-    const allSubtopics = getFlattenedSubtopics(this.input.getStatsByTopic(true));
+    const allSubtopics = getFlattenedSubtopics(this.input.getStatsByTopic());
     const topSubtopics = getTopSubtopics(allSubtopics);
 
     const subtopicSummaryContents: SummaryContent[] = [];
