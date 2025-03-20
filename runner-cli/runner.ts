@@ -51,13 +51,7 @@ async function main(): Promise<void> {
   );
 
   // For now, remove all Common Ground, Difference of Opinion, or TopicSummary sections
-  summary = summary.withoutContents(
-    (sc) =>
-      sc.type == "TopicSummary" ||
-      sc.title?.includes("Common ground:") ||
-      sc.title?.includes("Differences of opinion:") ||
-      false
-  );
+  summary = summary.withoutContents((sc) => sc.type === "TopicSummary");
 
   const markdownContent = summary.getText("MARKDOWN");
   writeFileSync(options.outputBasename + "-summary.md", markdownContent);

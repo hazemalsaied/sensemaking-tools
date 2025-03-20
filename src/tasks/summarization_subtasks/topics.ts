@@ -272,16 +272,14 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
       this.topicStat.summaryStats
     );
     const agreementDescription = `This subtopic had ${relativeAgreement} compared to the other subtopics.`;
-    const commonGroundSummary = await this.getCommonGroundSummary();
-    const result: SummaryContent = {
-      title: this.getSectionTitle(),
-      text: agreementDescription,
-      subContents: [
-        await this.getThemesSummary(),
-        commonGroundSummary,
-        await this.getDifferencesOfOpinionSummary(commonGroundSummary),
-      ],
-    };
+    const subContents = [await this.getThemesSummary()];
+    // check env variable to decide whether to compute common ground and difference of opinion summaries
+    if (process.env["SKIP_COMMON_GROUND_AND_DIFFERENCES_OF_OPINION"] !== "true") {
+      const commonGroundSummary = await this.getCommonGroundSummary();
+      const differencesOfOpinionSummary =
+        await this.getDifferencesOfOpinionSummary(commonGroundSummary);
+      subContents.push(commonGroundSummary, differencesOfOpinionSummary);
+    }
 
     if (process.env["DEBUG_MODE"] === "true") {
       // Based on the common ground and differences of opinion comments,
@@ -309,10 +307,14 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
         title: `**Other statements** (${otherComments.length} statements`,
         text: otherCommentsTable,
       };
-      result.subContents?.push(otherCommentsSummary);
+      subContents.push(otherCommentsSummary);
     }
 
-    return Promise.resolve(result);
+    return {
+      title: this.getSectionTitle(),
+      text: agreementDescription,
+      subContents: subContents,
+    };
   }
 
   /**
