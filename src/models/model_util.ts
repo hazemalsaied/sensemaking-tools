@@ -18,3 +18,10 @@
 export const MAX_RETRIES = 3;
 // How long in milliseconds to wait between API calls.
 export const RETRY_DELAY_MS = 10000; // 10 seconds
+// Set vertex parallelism based on environment variables or default values
+export const CATEGORIZATION_VERTEX_PARALLELISM = parseInt(
+  process.env["CATEGORIZATION_VERTEX_PARALLELISM"] || "2"
+);
+export const SUMMARIZATION_VERTEX_PARALLELISM = parseInt(
+  process.env["SUMMARIZATION_VERTEX_PARALLELISM"] || "1"
+);

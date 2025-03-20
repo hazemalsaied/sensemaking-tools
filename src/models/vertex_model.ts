@@ -28,7 +28,7 @@ import { Model } from "./model";
 import { checkDataSchema } from "../types";
 import { Static, TSchema } from "@sinclair/typebox";
 import { retryCall } from "../sensemaker_utils";
-import { MAX_RETRIES, RETRY_DELAY_MS } from "./model_util";
+import { MAX_RETRIES, RETRY_DELAY_MS, SUMMARIZATION_VERTEX_PARALLELISM } from "./model_util";
 
 /**
  * Class to interact with models available through Google Cloud's Model Garden.
@@ -52,7 +52,13 @@ export class VertexModel extends Model {
       location: location,
     });
     this.modelName = modelName;
-    this.limit = pLimit(1); // limit to 1 concurrent call
+
+    console.log(
+      "Creating VertexModel with ",
+      SUMMARIZATION_VERTEX_PARALLELISM,
+      " parallel workers..."
+    );
+    this.limit = pLimit(SUMMARIZATION_VERTEX_PARALLELISM);
   }
 
   /**
@@ -104,6 +110,7 @@ export class VertexModel extends Model {
         return await retryCall(
           // call LLM
           async function () {
+            console.log("Calling LLM...");
             return (await model.generateContentStream(req)).response;
           },
           // Check if the response exists and contains a text field.

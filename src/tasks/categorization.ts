@@ -17,7 +17,11 @@ import { Model } from "../models/model";
 import { executeInParallel, getPrompt, hydrateCommentRecord } from "../sensemaker_utils";
 import { TSchema, Type } from "@sinclair/typebox";
 import { learnOneLevelOfTopics } from "./topic_modeling";
-import { MAX_RETRIES, RETRY_DELAY_MS } from "../models/model_util";
+import {
+  CATEGORIZATION_VERTEX_PARALLELISM,
+  MAX_RETRIES,
+  RETRY_DELAY_MS,
+} from "../models/model_util";
 
 /**
  * @fileoverview Helper functions for performing comments categorization.
@@ -639,7 +643,10 @@ export async function oneLevelCategorization(
   }
 
   // categorize comment batches in parallel
-  const CategorizedBatches: CommentRecord[][] = await executeInParallel(batchesToCategorize);
+  const CategorizedBatches: CommentRecord[][] = await executeInParallel(
+    batchesToCategorize,
+    CATEGORIZATION_VERTEX_PARALLELISM
+  );
 
   // flatten categorized batches
   const categorized: CommentRecord[] = [];
