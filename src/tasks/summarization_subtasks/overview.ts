@@ -74,7 +74,11 @@ export class OverviewSummary extends RecursiveSummary<OverviewInput> {
   async getSummary(): Promise<SummaryContent> {
     const method = this.input.method || "one-shot";
     const result = await (method == "one-shot" ? this.oneShotSummary() : this.perTopicSummary());
-    return { title: "## Overview", text: result };
+
+    const preamble =
+      `Below is a high level overview of the topics discussed in the conversation, as well as the percentage of statements categorized under each topic. ` +
+      `Note that the percentages may add up to greater than 100% when statements fall under more than one topic.\n\n`;
+    return { title: "## Overview", text: preamble + result };
   }
 
   /**
