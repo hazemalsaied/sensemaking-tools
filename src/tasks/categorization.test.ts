@@ -17,8 +17,9 @@ import {
   validateCommentRecords,
   categorizeWithRetry,
   categorizeCommentsRecursive,
+  getTopicDepthFromTopics,
 } from "./categorization";
-import { CommentRecord, Comment, Topic } from "../types";
+import { CommentRecord, Comment, Topic, NestedTopic } from "../types";
 import { VertexModel } from "../models/vertex_model";
 import { Model } from "../models/model";
 
@@ -433,5 +434,46 @@ describe("findMissingComments", () => {
       { id: "1", text: "Comment 1" },
       { id: "2", text: "Comment 2" },
     ]);
+  });
+});
+
+describe("getTopicDepthFromTopics", () => {
+  it("should return 0 for empty topics array", () => {
+    const topics: Topic[] = [];
+    const depth = getTopicDepthFromTopics(topics);
+    expect(depth).toBe(0);
+  });
+
+  it("should return 1 for topics with no subtopics", () => {
+    const topics: Topic[] = [{ name: "Topic A" }, { name: "Topic B" }];
+    const depth = getTopicDepthFromTopics(topics);
+    expect(depth).toBe(1);
+  });
+
+  it("should return 2 for topics with one level of subtopics", () => {
+    const topics: NestedTopic[] = [
+      {
+        name: "Topic A",
+        subtopics: [{ name: "Subtopic A1" }, { name: "Subtopic A2" }],
+      },
+    ];
+    const depth = getTopicDepthFromTopics(topics);
+    expect(depth).toBe(2);
+  });
+
+  it("should return 3 for topics with two levels of subtopics", () => {
+    const topics: NestedTopic[] = [
+      {
+        name: "Topic A",
+        subtopics: [
+          {
+            name: "Subtopic A1",
+            subtopics: [{ name: "SubSubtopic A1.1" }, { name: "SubSubtopic A1.2" }],
+          } as NestedTopic,
+        ],
+      },
+    ];
+    const depth = getTopicDepthFromTopics(topics);
+    expect(depth).toBe(3);
   });
 });

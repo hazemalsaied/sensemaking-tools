@@ -338,7 +338,10 @@ function assignDefaultCategory(uncategorized: Comment[]): CommentRecord[] {
   });
 }
 
-function getTopicDepthFromTopics(topics: Topic[], currentDepth: number = 1): number {
+export function getTopicDepthFromTopics(topics: Topic[], currentDepth: number = 1): number {
+  if (!topics || topics.length === 0) {
+    return currentDepth - 1; // avoid infinite recursion for empty topics
+  }
   return topics.every((topic) => {
     return "subtopics" in topic && topic.subtopics.length > 0;
   })
