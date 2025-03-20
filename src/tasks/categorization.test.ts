@@ -12,9 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { findMissingComments, validateCommentRecords, categorizeWithRetry } from "./categorization";
+import {
+  findMissingComments,
+  validateCommentRecords,
+  categorizeWithRetry,
+  categorizeCommentsRecursive,
+} from "./categorization";
 import { CommentRecord, Comment, Topic } from "../types";
 import { VertexModel } from "../models/vertex_model";
+import { Model } from "../models/model";
 
 // mock retry timeout
 jest.mock("../models/model_util", () => {
@@ -166,48 +172,24 @@ describe("CategorizationTest", () => {
     expect(commentRecords).toEqual(expected);
   });
 
-  it('should assign "Other" topic to comments that failed categorization after max retries', async () => {
+  it("should not categorize comments if they already have topics", async () => {
     const comments: Comment[] = [
-      { id: "1", text: "Comment 1" },
-      { id: "2", text: "Comment 2" },
-      { id: "3", text: "Comment 3" },
+      { id: "1", text: "Comment 1", topics: [{ name: "Topic A" }] },
+      { id: "2", text: "Comment 2", topics: [{ name: "Topic B" }] },
     ];
-    const topics = '[{"name": "Topic 1", "subtopics": []}]';
-    const instructions = "Categorize the comments based on these topics: " + topics;
-    const topicsJson = [{ name: "Topic 1", subtopics: [] }];
+    const topicDepth = 1;
+    // Mock the Model class and its methods
+    const mockModel = {
+      categorizationBatchSize: 5,
+      generateData: jest.fn(),
+      generateText: jest.fn(),
+    } as Model;
 
-    // Mock the model to always return an empty response. This simulates a
-    // categorization failure.
-    mockGenerateData.mockReturnValue(Promise.resolve([]));
+    const categorizedComments = await categorizeCommentsRecursive(comments, topicDepth, mockModel);
 
-    const commentRecords = await categorizeWithRetry(
-      new VertexModel("project", "location", "gemini-1000"),
-      instructions,
-      comments,
-      topicsJson
-    );
-
-    expect(mockGenerateData).toHaveBeenCalledTimes(3);
-
-    const expected = [
-      {
-        id: "1",
-        text: "Comment 1",
-        topics: [{ name: "Other" }],
-      },
-      {
-        id: "2",
-        text: "Comment 2",
-        topics: [{ name: "Other" }],
-      },
-      {
-        id: "3",
-        text: "Comment 3",
-        topics: [{ name: "Other" }],
-      },
-    ];
-
-    expect(commentRecords).toEqual(expected);
+    // we expect to return the comments as they were passed, no extra calls to the model
+    expect(categorizedComments).toEqual(comments);
+    expect(mockGenerateData).not.toHaveBeenCalled();
   });
 });
 

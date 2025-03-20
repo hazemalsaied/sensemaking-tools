@@ -88,6 +88,7 @@ export class Sensemaker {
 
     // Categories are required for summarization, this is a no-op if they already have categories.
     comments = await this.categorizeComments(comments, true, topics, additionalContext, 2);
+
     const summary = await retryCall(
       async function (
         model: Model,
