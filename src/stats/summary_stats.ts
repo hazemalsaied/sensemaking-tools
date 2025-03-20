@@ -160,28 +160,26 @@ export abstract class SummaryStats {
     for (const topicName in commentsByTopic) {
       const subtopics = commentsByTopic[topicName];
       const subtopicStats: TopicStats[] = [];
-      let totalTopicComments: number = 0;
-      const topicComments: Comment[] = [];
+      const topicComments = new Set<Comment>();
 
       for (const subtopicName in subtopics) {
         // get corresonding comments, and update counts
-        const comments: Comment[] = Object.values(subtopics[subtopicName]);
-        const commentCount = comments.length;
-        totalTopicComments += commentCount;
+        const comments = new Set<Comment>(Object.values(subtopics[subtopicName]));
+        const commentCount = comments.size;
         // aggregate comment objects
-        topicComments.push(...comments);
+        comments.forEach((comment) => topicComments.add(comment));
         subtopicStats.push({
           name: subtopicName,
           commentCount,
-          summaryStats: (this.constructor as typeof SummaryStats).create(comments),
+          summaryStats: (this.constructor as typeof SummaryStats).create([...comments]),
         });
       }
 
       topicStats.push({
         name: topicName,
-        commentCount: totalTopicComments,
+        commentCount: topicComments.size,
         subtopicStats: subtopicStats,
-        summaryStats: (this.constructor as typeof SummaryStats).create(topicComments),
+        summaryStats: (this.constructor as typeof SummaryStats).create([...topicComments]),
       });
     }
 
