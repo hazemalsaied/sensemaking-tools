@@ -271,11 +271,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
     const relativeAgreement = this.relativeContext.getRelativeAgreement(
       this.topicStat.summaryStats
     );
-    const relativeEngagement = this.relativeContext.getRelativeEngagement(
-      this.topicStat.summaryStats
-    );
-
-    const agreementDescription = `This subtopic had ${relativeAgreement} and ${relativeEngagement} compared to the other subtopics.`;
+    const agreementDescription = `This subtopic had ${relativeAgreement} compared to the other subtopics.`;
     const commonGroundSummary = await this.getCommonGroundSummary();
     const result: SummaryContent = {
       title: this.getSectionTitle(),
