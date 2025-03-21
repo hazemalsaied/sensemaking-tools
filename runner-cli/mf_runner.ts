@@ -21,7 +21,7 @@
 
 import { Command } from "commander";
 import { createObjectCsvWriter } from "csv-writer";
-import { communityNotesMatrixFactorization, Rating } from "../src/stats_util/matrix_factorization";
+import { communityNotesMatrixFactorization, Rating } from "../src/stats/matrix_factorization";
 
 import * as fs from "fs";
 import * as csv from "csv-parse";
