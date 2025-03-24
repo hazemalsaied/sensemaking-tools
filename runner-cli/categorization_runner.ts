@@ -41,7 +41,7 @@ async function main(): Promise<void> {
     .option("-i, --inputFile <file>", "The input file name.")
     .option("-t, --topics <comma separated list>", "Optional list of top-level topics.")
     .option(
-      "-d, --topicDepth",
+      "-d, --topicDepth [number]",
       "If set, will learn only topics (1), topics and subtopics (2), or topics, subtopics, and subsubtopics (3). The default is 2.",
       "2"
     )
@@ -52,6 +52,10 @@ async function main(): Promise<void> {
     .option("-v, --vertexProject <project>", "The Vertex Project name.");
   program.parse(process.argv);
   const options = program.opts();
+  options.topicDepth = parseInt(options.topicDepth);
+  if (![1, 2, 3].includes(options.topicDepth)) {
+    throw Error("topicDepth must be one of 1, 2, or 3");
+  }
 
   const csvRows = await readCsv(options.inputFile);
   const comments = convertCsvRowsToComments(csvRows);
