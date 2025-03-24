@@ -20,7 +20,12 @@ import { SummaryStats } from "./summary_stats";
 // Stats basis for the summary that is based on majority vote algorithms. Does not use groups.
 
 export class MajoritySummaryStats extends SummaryStats {
-  minAgreeProb = 0.7;
+  // Must be above this threshold to be considered high agreement.
+  minCommonGroundProb = 0.7;
+  // Agreement and Disagreement must be between these values to be difference of opinion.
+  minDifferecenProb = 0.4;
+  maxDifferenceProb = 0.6;
+
   groupBasedSummarization = false;
   // This outlier protection isn't needed since we already filter our comments without many votes.
   asProbabilityEstimate = false;
@@ -60,7 +65,7 @@ export class MajoritySummaryStats extends SummaryStats {
       // Before getting the top agreed comments, enforce a minimum level of agreement
       (comment: CommentWithVoteTallies) =>
         getTotalAgreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) >=
-        this.minAgreeProb
+        this.minCommonGroundProb
     );
   }
 
@@ -68,7 +73,7 @@ export class MajoritySummaryStats extends SummaryStats {
     return (
       `No statements met the thresholds necessary to be considered as a point of common ` +
       `ground (at least ${this.minVoteCount} votes, and at least ` +
-      `${decimalToPercent(this.minAgreeProb)} agreement).`
+      `${decimalToPercent(this.minCommonGroundProb)} agreement).`
     );
   }
 
@@ -94,19 +99,24 @@ export class MajoritySummaryStats extends SummaryStats {
       // Before getting the top differences comments, enforce a minimum level of difference of
       // opinion.
       (comment: CommentWithVoteTallies) =>
+        getTotalAgreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) >=
+          this.minDifferecenProb &&
         getTotalAgreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) <=
-          this.minAgreeProb &&
+          this.maxDifferenceProb &&
         getTotalDisagreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) <=
-          this.minAgreeProb
+          this.minDifferecenProb &&
+        getTotalDisagreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) <=
+          this.maxDifferenceProb
     );
   }
 
   getDifferencesOfOpinionNoCommentsMessage(): string {
-    const threshold = decimalToPercent(this.minAgreeProbDifference);
+    const minThreshold = decimalToPercent(this.minDifferecenProb);
+    const maxThreshold = decimalToPercent(this.maxDifferenceProb);
     return (
       `No statements met the thresholds necessary to be considered as a significant ` +
-      `difference of opinion (at least ${this.minVoteCount} votes, and less than ` +
-      `${threshold} agreement rate and disagree rate).`
+      `difference of opinion (at least ${this.minVoteCount} votes, and both an agreement rate ` +
+      `and disagree rate between ${minThreshold}% and ${maxThreshold}%).`
     );
   }
 }
