@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { removeEmptyLines } from "./overview";
+import { isMdListValid, removeEmptyLines } from "./overview";
 
 describe("IntroTest", () => {
   it("should remove empty lines", async () => {
@@ -87,5 +87,44 @@ describe("IntroTest", () => {
 * Item 3
 `)
     ).toEqual("* Item 1\n* Item 2\n* Item 3");
+  });
+});
+
+describe("isMdListValid", () => {
+  it("should return false if a line does not match the expected format", async () => {
+    expect(
+      isMdListValid("* **Topic 1**: Summary\n* **Topic 2**: Summary\nTopic 3: Summary", [
+        "Topic 1",
+        "Topic 2",
+        "Topic 3",
+      ])
+    ).toEqual(false);
+  });
+
+  it("should return false if some topic names don't match the expected order", async () => {
+    expect(
+      isMdListValid("* **Topic 1**: Summary\n* **Topic 3**: Summary\n* **Topic 2**: Summary", [
+        "Topic 1",
+        "Topic 2",
+        "Topic 3",
+      ])
+    ).toEqual(false);
+  });
+
+  it("should return true if all lines match the expected format and topic order", async () => {
+    expect(
+      isMdListValid("* **Topic 1**: Summary\n* **Topic 2**: Summary\n* **Topic 3**: Summary", [
+        "Topic 1",
+        "Topic 2",
+        "Topic 3",
+      ])
+    ).toEqual(true);
+    expect(
+      isMdListValid("* **Topic 1:** Summary\n* **Topic 2:** Summary\n* **Topic 3:** Summary", [
+        "Topic 1",
+        "Topic 2",
+        "Topic 3",
+      ])
+    ).toEqual(true);
   });
 });

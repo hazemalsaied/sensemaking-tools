@@ -18,7 +18,12 @@
 import { SummaryStats, TopicStats } from "../../stats/summary_stats";
 import { SummaryContent, Summary } from "../../types";
 import { RecursiveSummary } from "./recursive_summarization";
-import { getAbstractPrompt, decimalToPercent, filterSummaryContent } from "../../sensemaker_utils";
+import {
+  getAbstractPrompt,
+  decimalToPercent,
+  filterSummaryContent,
+  retryCall,
+} from "../../sensemaker_utils";
 
 function oneShotInstructions(topicNames: string[]) {
   return (
@@ -97,14 +102,23 @@ export class OverviewSummary extends RecursiveSummary<OverviewInput> {
         `  </topicsSummary>`,
       this.additionalContext
     );
-    const result = await this.model.generateText(prompt);
-    // Check to make sure that every single topicName in topicNames is in the list, and raise an error if not
-    for (const topicName of topicNames) {
-      if (!result.includes(topicName)) {
-        throw new Error(`Overview summary is missing topic name: ${topicName}`);
-      }
-    }
-    return removeEmptyLines(result);
+    return await retryCall(
+      async function (model, prompt) {
+        let result = await model.generateText(prompt);
+        result = removeEmptyLines(result);
+        if (!result) {
+          throw new Error(`Overview summary failed to conform to markdown list format.`);
+        } else {
+          return result;
+        }
+      },
+      (result) => isMdListValid(result, topicNames),
+      3,
+      "Overview summary failed to conform to markdown list format, or did not include all topic descriptions exactly as intended.",
+      undefined,
+      [this.model, prompt],
+      []
+    );
   }
 
   /**
@@ -170,4 +184,26 @@ function filterSectionsForOverview(topicSummary: SummaryContent): SummaryContent
  */
 export function removeEmptyLines(mdList: string): string {
   return mdList.replace(/\s*[\r\n]+\s*/g, "\n").trim();
+}
+
+/**
+ * This function processes the input markdown list string, ensuring that it matches
+ * the expected format, normalizing it with `removeEmptyLines`, and ensuring that each
+ * lines matches the expected format (* **bold topic**: summary...)
+ */
+export function isMdListValid(mdList: string, topicNames: string[]): boolean {
+  const lines = mdList.split("\n");
+  for (const [index, line] of lines.entries()) {
+    // Check to make sure that every single topicName in topicNames is in the list, and in the right order
+    if (!line.includes(topicNames[index])) {
+      console.log("Topic name not found in list:", topicNames[index]);
+      return false;
+    }
+    // Check to make sure that every line matches the expected format
+    if (!line.match(/^[\*\-]\s\*\*.*:?\*\*:?\s/) && !line.match(/^[\*\-]\s\_\_.*:?\_\_:?\s/)) {
+      console.log("Line does not match expected format:", line);
+      return false;
+    }
+  }
+  return true;
 }
