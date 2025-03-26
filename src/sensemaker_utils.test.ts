@@ -17,11 +17,10 @@ import {
   groupCommentsBySubtopic,
   formatCommentsWithVotes,
   decimalToPercent,
-  executeInParallel,
+  executeBatchWithRetry,
   getUniqueTopics,
 } from "./sensemaker_utils";
 import { Comment } from "./types";
-import pLimit from "p-limit";
 import { MAX_RETRIES } from "./models/model_util";
 
 // mock retry timeout
@@ -200,18 +199,10 @@ describe("SensemakerUtilsTest", () => {
   });
 });
 
-jest.mock("p-limit"); // Mock pLimit to control its behavior
-const mockedPLimit = pLimit as jest.MockedFunction<typeof pLimit>;
-
-describe("executeInParallel", () => {
+describe("executeBatchWithRetry", () => {
   let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    // Reset the mock before each test
-    mockedPLimit.mockReset();
-    // By default, make the pLimit instance return a mock function that simply executes the wrapped function
-    const limitInstance = jest.fn((fn: () => Promise<never>) => fn());
-    mockedPLimit.mockReturnValue(limitInstance as never);
     // Suppress console.error
     consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -226,20 +217,8 @@ describe("executeInParallel", () => {
       () => Promise.resolve(2),
       () => Promise.resolve(3),
     ];
-    const results = await executeInParallel(callbacks, 2);
+    const results = await executeBatchWithRetry(callbacks);
     expect(results).toEqual([1, 2, 3]);
-  });
-
-  it("should handle a mix of fast and slow promises with concurrency", async () => {
-    const callbacks = [
-      () => Promise.resolve(1),
-      () => new Promise((resolve) => setTimeout(() => resolve(2), 200)),
-      () => Promise.resolve(3),
-      () => new Promise((resolve) => setTimeout(() => resolve(4), 100)),
-      () => Promise.resolve(5),
-    ];
-    const results = await executeInParallel(callbacks, 2);
-    expect(results).toEqual([1, 2, 3, 4, 5]);
   });
 
   it("should retry failed callbacks up to MAX_RETRIES times", async () => {
@@ -252,15 +231,7 @@ describe("executeInParallel", () => {
         }),
     ];
 
-    const limitInstance = jest.fn((fn: () => Promise<never>) => {
-      return new Promise((resolve, reject) => {
-        const result = fn();
-        result.then(resolve, reject); // Ensure errors are propagated
-      });
-    });
-    mockedPLimit.mockReturnValue(limitInstance as never);
-
-    await expect(executeInParallel(callbacks, 1)).rejects.toThrow("Retry 1 Failed");
+    await expect(executeBatchWithRetry(callbacks)).rejects.toThrow("Retry 1 Failed");
     expect(retryCount1).toBe(MAX_RETRIES);
   });
 
@@ -278,7 +249,7 @@ describe("executeInParallel", () => {
         }),
     ];
 
-    const results = await executeInParallel(callbacks, 1);
+    const results = await executeBatchWithRetry(callbacks);
     expect(results).toEqual(["Success after retries"]);
     expect(retryCount).toBe(2);
   });

@@ -28,7 +28,7 @@ import { Model } from "./model";
 import { checkDataSchema } from "../types";
 import { Static, TSchema } from "@sinclair/typebox";
 import { retryCall } from "../sensemaker_utils";
-import { MAX_RETRIES, RETRY_DELAY_MS, SUMMARIZATION_VERTEX_PARALLELISM } from "./model_util";
+import { MAX_RETRIES, RETRY_DELAY_MS, DEFAULT_VERTEX_PARALLELISM } from "./model_util";
 
 /**
  * Class to interact with models available through Google Cloud's Model Garden.
@@ -53,12 +53,8 @@ export class VertexModel extends Model {
     });
     this.modelName = modelName;
 
-    console.log(
-      "Creating VertexModel with ",
-      SUMMARIZATION_VERTEX_PARALLELISM,
-      " parallel workers..."
-    );
-    this.limit = pLimit(SUMMARIZATION_VERTEX_PARALLELISM);
+    console.log("Creating VertexModel with ", DEFAULT_VERTEX_PARALLELISM, " parallel workers...");
+    this.limit = pLimit(DEFAULT_VERTEX_PARALLELISM);
   }
 
   /**
@@ -94,6 +90,10 @@ export class VertexModel extends Model {
 
   /**
    * Calls an LLM to generate text based on a given prompt and handles rate limiting, response validation and retries.
+   *
+   * Concurrency: To take advantage of concurrent execution, invoke this function as a batch of callbacks,
+   * and pass it to the `executeBatchWithRetry` function. It will run multiple `callLLM` functions concurrently,
+   * up to the limit set by `p-limit` in `VertexModel`'s constructor.
    *
    * @param prompt - The text prompt to send to the language model.
    * @param model - The specific language model that will be called.

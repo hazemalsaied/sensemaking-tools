@@ -14,9 +14,8 @@
 
 // Simple utils.
 
-import pLimit from "p-limit";
 import { CommentRecord, Comment, SummaryContent, Topic } from "./types";
-import { RETRY_DELAY_MS, MAX_RETRIES, SUMMARIZATION_VERTEX_PARALLELISM } from "./models/model_util";
+import { RETRY_DELAY_MS, MAX_RETRIES } from "./models/model_util";
 import { voteTallySummary } from "./tasks/utils/citation_utils";
 
 /**
@@ -63,7 +62,8 @@ export async function retryCall<T>(
     }
 
     // Exponential backoff calculation
-    const delay = retryDelayMS * Math.pow(2, attempt - 1);
+    const backoffGrowthRate = 2.5; // controls how quickly delay increases b/w retries (higher value = faster increase)
+    const delay = retryDelayMS * Math.pow(backoffGrowthRate, attempt - 1);
     console.log(`Retrying in ${delay / 1000} seconds (attempt ${attempt})`);
     await new Promise((resolve) => setTimeout(resolve, delay));
   }
@@ -325,20 +325,14 @@ export function commentTableMarkdown(
 }
 
 /**
- * Executes an array of asynchronous functions (callbacks) in parallel, with a limit on the number of
- * concurrently executing functions, and includes a retry mechanism for failed executions.
+ * Executes a batch of asynchronous functions (callbacks) concurrently and retries failed executions.
+ * This is essential for running multiple LLM calls in parallel, as it submits requests downstream as a batch.
  *
- * @param callbacks An array of functions, each of which returns a Promise<T>.
- * @param numParallelExecutions The maximum number of functions to execute concurrently.
- * Defaults to 2, based on current Gemini QPS quotas
- * (see: https://cloud.google.com/gemini/docs/quotas#per-second).
+ * @param callbacks A batch of functions, each of which returns a Promise<T>.
  * @returns A Promise that resolves to an array containing the resolved values of the
  * promises returned by the callbacks, in the same order as the callbacks.
  */
-export async function executeInParallel<T>(
-  callbacks: (() => Promise<T>)[],
-  numParallelExecutions: number = SUMMARIZATION_VERTEX_PARALLELISM
-): Promise<T[]> {
+export async function executeBatchWithRetry<T>(callbacks: (() => Promise<T>)[]): Promise<T[]> {
   // Recursive function to retry each batch MAX_RETRIES times
   async function retry(callback: () => Promise<T>, currentRetry: number = 1): Promise<T> {
     try {
@@ -354,15 +348,12 @@ export async function executeInParallel<T>(
     }
   }
 
-  // use p-limit library to control concurrency while executing the callbacks
-  const limit = pLimit(numParallelExecutions);
+  // wrap each callback with the retry logic
+  const retriableCallbacks = callbacks.map((callback) => retry(callback));
+
   const results: T[] = [];
-
-  // wrap each callback with the limiter and the retry logic
-  const limitedCallbacks = callbacks.map((callback) => limit(() => retry(callback)));
-
   // execute the callback functions
-  results.push(...(await Promise.all(limitedCallbacks)));
+  results.push(...(await Promise.all(retriableCallbacks)));
   return results;
 }
 

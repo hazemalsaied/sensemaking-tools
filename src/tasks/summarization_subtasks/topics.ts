@@ -21,7 +21,7 @@ import {
   getAbstractPrompt,
   commentTableMarkdown,
   ColumnDefinition,
-  executeInParallel,
+  executeBatchWithRetry,
 } from "../../sensemaker_utils";
 import { Comment, SummaryContent, isCommentType } from "../../types";
 import { Model } from "../../models/model";
@@ -170,7 +170,7 @@ export class AllTopicsSummary extends RecursiveSummary<SummaryStats> {
     return {
       title: "## Topics",
       text: overviewText,
-      subContents: await executeInParallel(topicSummaries),
+      subContents: await executeBatchWithRetry(topicSummaries),
     };
   }
 }
@@ -232,7 +232,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
           ).getSummary()
       );
 
-    const subtopicSummaryContents = await executeInParallel(subtopicSummaries);
+    const subtopicSummaryContents = await executeBatchWithRetry(subtopicSummaries);
 
     const nSubtopics: number = subtopicSummaries.length;
     let topicSummary = "";
