@@ -14,8 +14,10 @@
 
 // Util class for models
 
-// The maximum number of times an API call should be retried.
+// The maximum number of times a task should be retried.
 export const MAX_RETRIES = 3;
+// The maximum number of times an LLM call should be retried (it's higher to avoid rate limits).
+export const MAX_LLM_RETRIES = 9;
 // How long in milliseconds to wait between API calls.
 export const RETRY_DELAY_MS = 10000; // 10 seconds
 // Set default vertex parallelism based on similarly named environment variable, or default to 2

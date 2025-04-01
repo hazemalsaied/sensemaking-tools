@@ -17,11 +17,10 @@ import {
   groupCommentsBySubtopic,
   formatCommentsWithVotes,
   decimalToPercent,
-  executeBatchWithRetry,
+  executeConcurrently,
   getUniqueTopics,
 } from "./sensemaker_utils";
 import { Comment } from "./types";
-import { MAX_RETRIES } from "./models/model_util";
 
 // mock retry timeout
 jest.mock("./models/model_util", () => {
@@ -199,7 +198,7 @@ describe("SensemakerUtilsTest", () => {
   });
 });
 
-describe("executeBatchWithRetry", () => {
+describe("executeConcurrently", () => {
   let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
@@ -217,40 +216,7 @@ describe("executeBatchWithRetry", () => {
       () => Promise.resolve(2),
       () => Promise.resolve(3),
     ];
-    const results = await executeBatchWithRetry(callbacks);
+    const results = await executeConcurrently(callbacks);
     expect(results).toEqual([1, 2, 3]);
-  });
-
-  it("should retry failed callbacks up to MAX_RETRIES times", async () => {
-    let retryCount1 = 0;
-    const callbacks = [
-      () =>
-        new Promise((_, reject) => {
-          retryCount1++;
-          reject(new Error("Retry 1 Failed"));
-        }),
-    ];
-
-    await expect(executeBatchWithRetry(callbacks)).rejects.toThrow("Retry 1 Failed");
-    expect(retryCount1).toBe(MAX_RETRIES);
-  });
-
-  it("should resolve if a retried callback eventually succeeds", async () => {
-    let retryCount = 0;
-    const callbacks = [
-      () =>
-        new Promise((resolve, reject) => {
-          if (retryCount < 2) {
-            retryCount++;
-            reject(new Error("Temporary failure"));
-          } else {
-            resolve("Success after retries");
-          }
-        }),
-    ];
-
-    const results = await executeBatchWithRetry(callbacks);
-    expect(results).toEqual(["Success after retries"]);
-    expect(retryCount).toBe(2);
   });
 });

@@ -14,12 +14,11 @@
 
 // Module to interact with sensemaking tools.
 
-import { MAX_RETRIES } from "./models/model_util";
 import { Comment, SummarizationType, Summary, Topic } from "./types";
 import { categorizeCommentsRecursive } from "./tasks/categorization";
 import { summarizeByType } from "./tasks/summarization";
 import { ModelSettings, Model } from "./models/model";
-import { retryCall, getUniqueTopics } from "./sensemaker_utils";
+import { getUniqueTopics } from "./sensemaker_utils";
 
 // Class to make sense of conversation data. Uses LLMs to learn what topics were discussed and
 // categorize comments. Then these categorized comments can be used with optional Vote data to
@@ -89,23 +88,11 @@ export class Sensemaker {
     // Categories are required for summarization, this is a no-op if they already have categories.
     comments = await this.categorizeComments(comments, true, topics, additionalContext, 2);
 
-    const summary = await retryCall(
-      async function (
-        model: Model,
-        comments: Comment[],
-        summarizationType: SummarizationType
-      ): Promise<Summary> {
-        return summarizeByType(model, comments, summarizationType, additionalContext);
-      },
-      // TODO: Consider if the Summary needs any final checks.
-      function (): boolean {
-        return true;
-      },
-      MAX_RETRIES,
-      "The statistics don't match what's in the summary.",
-      undefined,
-      [this.getModel("summarizationModel"), comments, summarizationType],
-      []
+    const summary = await summarizeByType(
+      this.getModel("summarizationModel"),
+      comments,
+      summarizationType,
+      additionalContext
     );
 
     console.log(`Summarization took ${(performance.now() - startTime) / (1000 * 60)} minutes.`);

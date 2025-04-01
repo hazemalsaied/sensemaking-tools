@@ -14,8 +14,8 @@
 
 // Simple utils.
 
-import { CommentRecord, Comment, SummaryContent, Topic } from "./types";
-import { RETRY_DELAY_MS, MAX_RETRIES } from "./models/model_util";
+import { Comment, CommentRecord, SummaryContent, Topic } from "./types";
+import { RETRY_DELAY_MS } from "./models/model_util";
 import { voteInfoToString } from "./tasks/utils/citation_utils";
 
 /**
@@ -325,36 +325,18 @@ export function commentTableMarkdown(
 }
 
 /**
- * Executes a batch of asynchronous functions (callbacks) concurrently and retries failed executions.
+ * Executes a batch of asynchronous functions (callbacks) concurrently.
  * This is essential for running multiple LLM calls in parallel, as it submits requests downstream as a batch.
  *
  * @param callbacks A batch of functions, each of which returns a Promise<T>.
  * @returns A Promise that resolves to an array containing the resolved values of the
  * promises returned by the callbacks, in the same order as the callbacks.
  */
-export async function executeBatchWithRetry<T>(callbacks: (() => Promise<T>)[]): Promise<T[]> {
-  // Recursive function to retry each batch MAX_RETRIES times
-  async function retry(callback: () => Promise<T>, currentRetry: number = 1): Promise<T> {
-    try {
-      return await callback();
-    } catch (error) {
-      if (currentRetry >= MAX_RETRIES) {
-        console.error(`Promise failed after ${MAX_RETRIES} retries:`, error);
-        throw error;
-      }
-      console.error(`Promise failed, retrying in ${RETRY_DELAY_MS / 1000} seconds:`, error);
-      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-      return retry(callback, currentRetry + 1);
-    }
-  }
-
-  // wrap each callback with the retry logic
-  const retriableCallbacks = callbacks.map((callback) => retry(callback));
-
-  const results: T[] = [];
-  // execute the callback functions
-  results.push(...(await Promise.all(retriableCallbacks)));
-  return results;
+export async function executeConcurrently<T>(callbacks: (() => Promise<T>)[]): Promise<T[]> {
+  // NOTE: if a least one callback fails, the entire batch fails.
+  // Because of that, we should aim to retry any failed callbacks down the call stack,
+  // and avoid retries higher up the stack, as it will retry entire batch from scratch, including completed callbacks.
+  return await Promise.all(callbacks.map((callback) => callback()));
 }
 
 /**

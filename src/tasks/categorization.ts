@@ -14,7 +14,7 @@
 
 import { CommentRecord, Comment, Topic, FlatTopic, TopicCategorizedComment } from "../types";
 import { Model } from "../models/model";
-import { executeBatchWithRetry, getPrompt, hydrateCommentRecord } from "../sensemaker_utils";
+import { executeConcurrently, getPrompt, hydrateCommentRecord } from "../sensemaker_utils";
 import { TSchema, Type } from "@sinclair/typebox";
 import { learnOneLevelOfTopics } from "./topic_modeling";
 import { MAX_RETRIES, RETRY_DELAY_MS } from "../models/model_util";
@@ -639,7 +639,7 @@ export async function oneLevelCategorization(
   }
 
   // categorize comment batches, potentially in parallel
-  const CategorizedBatches: CommentRecord[][] = await executeBatchWithRetry(batchesToCategorize);
+  const CategorizedBatches: CommentRecord[][] = await executeConcurrently(batchesToCategorize);
 
   // flatten categorized batches
   const categorized: CommentRecord[] = [];

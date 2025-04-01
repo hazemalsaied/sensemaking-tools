@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { getPrompt, executeBatchWithRetry } from "../../sensemaker_utils";
+import { getPrompt, executeConcurrently } from "../../sensemaker_utils";
 import { GroupStats, GroupedSummaryStats } from "../../stats/group_informed";
 import { RecursiveSummary } from "./recursive_summarization";
 import { Comment, SummaryContent } from "../../types";
@@ -126,7 +126,7 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
 
     // Join the individual group descriptions whenever they finish, and when that's done wait for
     // the group comparison to be created and combine them all together.
-    return executeBatchWithRetry([...groupDescriptions, ...this.getGroupComparison(groupNames)]);
+    return executeConcurrently([...groupDescriptions, ...this.getGroupComparison(groupNames)]);
   }
 
   async getSummary(): Promise<SummaryContent> {
