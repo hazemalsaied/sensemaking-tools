@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "TFJS_NODE_GPU=false jest",
+    "test": "NODE_NO_WARNINGS=1 TFJS_NODE_GPU=false jest",
     "test-gpu": "TFJS_NODE_GPU=true jest",
     "test-silent": "TFJS_NODE_GPU=false jest --silent",
     "test-watch": "TFJS_NODE_GPU=false nodemon --watch src --watch runner-cli --ext 'ts,json' -x 'npm run test-silent --onlyChanged'",
