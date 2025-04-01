@@ -33,12 +33,13 @@ function oneShotInstructions(topicNames: string[]) {
     `Do not pretend that you hold any of these opinions. You are not a participant in this discussion. ` +
     `Do not include specific numbers about how many comments were included in each topic or subtopic, as these will be included later in the final report output. ` +
     `You also do not need to recap the context of the conversation, as this will have already been stated earlier in the report. ` +
-    `Where possible, prefer descriging the results in terms of the "statements" submitted or the overall "conversation", rather than in terms of the participants' perspectives (Note: "comments" and "statements" are the same thing, but for the sake of this portion of the summary, only use the term "statements"). ` +
+    `Where possible, prefer describing the results in terms of the "statements" submitted or the overall "conversation", rather than in terms of the participants' perspectives (Note: "comments" and "statements" are the same thing, but for the sake of this portion of the summary, only use the term "statements"). ` +
     `Remember: this is just one component of a larger report, and you should compose this so that it will flow naturally in the context of the rest of the report. ` +
     `Be clear and concise in your writing, and do not use the passive voice, or ambiguous pronouns.` +
     `\n\n` +
     `The structure of the list you output should be in terms of the topic names, in the order that follows. ` +
     `Each list item should start in bold with topic name name (including percentage, exactly as listed below), then a colon, and then a short one or two sentence summary for the corresponding topic.` +
+    `The complete response should be only the markdown list, and no other text. ` +
     `Here are the topics:
     ${topicNames.map((s) => "* " + s).join("\n")}`
   );
@@ -194,14 +195,14 @@ export function removeEmptyLines(mdList: string): string {
 export function isMdListValid(mdList: string, topicNames: string[]): boolean {
   const lines = mdList.split("\n");
   for (const [index, line] of lines.entries()) {
-    // Check to make sure that every single topicName in topicNames is in the list, and in the right order
-    if (!line.includes(topicNames[index])) {
-      console.log("Topic name not found in list:", topicNames[index]);
-      return false;
-    }
     // Check to make sure that every line matches the expected format
     if (!line.match(/^[\*\-]\s\*\*.*:?\*\*:?\s/) && !line.match(/^[\*\-]\s\_\_.*:?\_\_:?\s/)) {
       console.log("Line does not match expected format:", line);
+      return false;
+    }
+    // Check to make sure that every single topicName in topicNames is in the list, and in the right order
+    if (!line.includes(topicNames[index])) {
+      console.log(`Topic "${topicNames[index]}" not found at line:\n`, line);
       return false;
     }
   }
