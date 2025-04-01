@@ -110,7 +110,6 @@ export class VertexModel extends Model {
         return await retryCall(
           // call LLM
           async function () {
-            console.log("Calling LLM...");
             return (await model.generateContentStream(req)).response;
           },
           // Check if the response exists and contains a text field.
@@ -123,8 +122,9 @@ export class VertexModel extends Model {
               console.error(`Model returned a malformed response: ${response}`);
               return false;
             }
-            console.log(`Input token count: ${response.usageMetadata?.promptTokenCount}`);
-            console.log(`Output token count: ${response.usageMetadata?.candidatesTokenCount}`);
+            console.log(
+              `✓ Completed LLM call (input: ${response.usageMetadata?.promptTokenCount} tokens, output: ${response.usageMetadata?.candidatesTokenCount} tokens)`
+            );
             return true;
           },
           MAX_LLM_RETRIES,

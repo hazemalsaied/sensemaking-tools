@@ -250,6 +250,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
           `    </text>\n  </subtopicSummary>`,
         this.additionalContext
       );
+      console.log(`Generating TOPIC SUMMARY for: "${this.topicStat.name}"`);
       subtopicSummaryContents.unshift({
         type: "TopicSummary",
         text: await this.model.generateText(subtopicSummaryPrompt),
@@ -275,9 +276,11 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
     const subContents = [await this.getThemesSummary()];
     // check env variable to decide whether to compute common ground and difference of opinion summaries
     if (process.env["SKIP_COMMON_GROUND_AND_DIFFERENCES_OF_OPINION"] !== "true") {
-      const commonGroundSummary = await this.getCommonGroundSummary();
-      const differencesOfOpinionSummary =
-        await this.getDifferencesOfOpinionSummary(commonGroundSummary);
+      const commonGroundSummary = await this.getCommonGroundSummary(this.topicStat.name);
+      const differencesOfOpinionSummary = await this.getDifferencesOfOpinionSummary(
+        commonGroundSummary,
+        this.topicStat.name
+      );
       subContents.push(commonGroundSummary, differencesOfOpinionSummary);
     }
 
@@ -324,6 +327,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
   async getThemesSummary(): Promise<SummaryContent> {
     const allComments = this.input.comments;
     // TODO: add some edge case handling in case there is only 1 comment, etc
+    console.log(`Generating PROMINENT THEMES for subtopic: "${this.topicStat.name}"`);
     const text = await this.model.generateText(
       getPrompt(
         `Please write a concise bulleted list identifying up to 5 prominent themes across all statements. These statements are all about ${this.topicStat.name}. For each theme, begin with a short theme description written in bold text, followed by a colon, then followed by a SINGLE sentence explaining the theme. Your list should meet the below Criteria and STRICTLY follow the Output Format.
@@ -357,13 +361,14 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
    * Summarizes the comments on which there was the strongest agreement.
    * @returns a short paragraph describing the similarities, including comment citations.
    */
-  async getCommonGroundSummary(): Promise<SummaryContent> {
+  async getCommonGroundSummary(topic: string): Promise<SummaryContent> {
     const commonGroundComments = this.input.getCommonGroundComments();
     const nComments = commonGroundComments.length;
     let text = "";
     if (nComments === 0) {
       text = this.input.getCommonGroundNoCommentsMessage();
     } else {
+      console.log(`Generating COMMON GROUND for "${topic}"`);
       const summary = this.model.generateText(
         getPrompt(
           nComments === 1
@@ -389,7 +394,8 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
    * @returns a short paragraph describing the differences, including comment citations.
    */
   async getDifferencesOfOpinionSummary(
-    commonGroundSummary: SummaryContent
+    commonGroundSummary: SummaryContent,
+    topic: string
   ): Promise<SummaryContent> {
     const topDisagreeCommentsAcrossGroups = this.input.getDifferenceOfOpinionComments();
     const nComments = topDisagreeCommentsAcrossGroups.length;
@@ -405,6 +411,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
         formatDifferenceOfOpinionData,
         this.additionalContext
       );
+      console.log(`Generating DIFFERENCES OF OPINION for "${topic}"`);
       const summary = this.model.generateText(prompt);
       text = await summary;
     }

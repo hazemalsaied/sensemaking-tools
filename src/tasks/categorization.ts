@@ -564,7 +564,7 @@ export async function categorizeCommentsRecursive(
   // The exit condition - if the requested topic depth matches the current depth of topics on the
   // comments then exit.
   const currentTopicDepth = getTopicDepth(comments);
-  console.log("Learning topics and categorizing statements at depth=", currentTopicDepth);
+  console.log("Identifying topics and categorizing statements at depth=", currentTopicDepth);
   if (currentTopicDepth >= topicDepth) {
     return comments;
   }
@@ -639,6 +639,10 @@ export async function oneLevelCategorization(
   }
 
   // categorize comment batches, potentially in parallel
+  const totalBatches = Math.ceil(comments.length / model.categorizationBatchSize);
+  console.log(
+    `Categorizing ${comments.length} statements in batches (${totalBatches} batches of ${model.categorizationBatchSize} statements)`
+  );
   const CategorizedBatches: CommentRecord[][] = await executeConcurrently(batchesToCategorize);
 
   // flatten categorized batches

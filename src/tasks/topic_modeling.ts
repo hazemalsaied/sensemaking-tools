@@ -101,6 +101,7 @@ export function learnOneLevelOfTopics(
 
   return retryCall(
     async function (model: Model): Promise<Topic[]> {
+      console.log(`Identifying topics for ${comments.length} statements`);
       return (await model.generateData(
         getPrompt(
           instructions,
@@ -114,7 +115,7 @@ export function learnOneLevelOfTopics(
       return learnedTopicsValid(response, topic);
     },
     MAX_RETRIES,
-    "Topic modeling failed.",
+    "Topic identification failed.",
     undefined,
     [model],
     []

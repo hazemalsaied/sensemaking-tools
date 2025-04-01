@@ -37,6 +37,7 @@ export class TopSubtopicsSummary extends RecursiveSummary<SummaryStats> {
 
   async getSubtopicSummary(st: TopicStats, index: number): Promise<SummaryContent> {
     const subtopicComments = st.summaryStats.comments;
+    console.log(`Generating PROMINENT THEMES for top 5 subtopics: "${st.name}"`);
     const text = await this.model.generateText(
       getPrompt(
         `Please generate a concise bulleted list identifying up to 5 prominent themes across all statements. Each theme should be less than 10 words long.  Do not use bold text.  These statements are all about ${st.name}`,

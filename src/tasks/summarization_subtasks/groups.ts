@@ -126,6 +126,9 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
 
     // Join the individual group descriptions whenever they finish, and when that's done wait for
     // the group comparison to be created and combine them all together.
+    console.log(
+      `Generating group DESCRIPTION, SIMILARITY and DIFFERENCE comparison for ${groupNames.length} groups`
+    );
     return executeConcurrently([...groupDescriptions, ...this.getGroupComparison(groupNames)]);
   }
 

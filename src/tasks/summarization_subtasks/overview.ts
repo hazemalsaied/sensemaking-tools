@@ -107,6 +107,7 @@ export class OverviewSummary extends RecursiveSummary<OverviewInput> {
     );
     return await retryCall(
       async function (model, prompt) {
+        console.log(`Generating OVERVIEW SUMMARY in one shot`);
         let result = await model.generateText(prompt);
         result = removeEmptyLines(result);
         if (!result) {
@@ -141,6 +142,7 @@ export class OverviewSummary extends RecursiveSummary<OverviewInput> {
           `  </topicsSummary>`,
         this.additionalContext
       );
+      console.log(`Generating OVERVIEW SUMMARY for topic: "${topicStats.name}"`);
       text += (await this.model.generateText(prompt)).trim() + "\n";
     }
     return text;
