@@ -37,7 +37,7 @@ const TEST_COMMENTS = [
   {
     id: "1",
     text: "comment1",
-    voteTalliesByGroup: {
+    voteInfo: {
       "0": {
         agreeCount: 10,
         disagreeCount: 5,
@@ -55,7 +55,7 @@ const TEST_COMMENTS = [
   {
     id: "2",
     text: "comment2",
-    voteTalliesByGroup: {
+    voteInfo: {
       "0": {
         agreeCount: 2,
         disagreeCount: 5,

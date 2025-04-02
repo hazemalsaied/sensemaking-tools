@@ -14,7 +14,7 @@
 
 // Functions for formatting citations.
 
-import { Comment } from "../../types";
+import { Comment, isVoteTallyType, VoteTally } from "../../types";
 
 /**
  * Create citations for comments in the format of "[12, 43, 56]"
@@ -35,8 +35,8 @@ export function getCommentCitations(comments: Comment[]): string {
  */
 export function commentCitationHoverOver(comment: Comment) {
   const hoverText = `${comment.text.replace(/"/g, '\\"').replace(/\n/g, " ")}`;
-  if (comment.voteTalliesByGroup) {
-    return hoverText + `\n${voteTallySummary(comment)}`;
+  if (comment.voteInfo) {
+    return hoverText + `\n${voteInfoToString(comment)}`;
   } else {
     return hoverText;
   }
@@ -63,21 +63,28 @@ export function commentCitationHtml(comment: Comment): string {
 }
 /**
  * Utility function for displaying a concise textual summary of the vote tally patterns for a given comment
- * @param comment
+ * @param comment the comment with the VoteInfo to display
  * @returns the summary as a string
  */
-export function voteTallySummary(comment: Comment): string {
-  // Map k,v pairs from comment vote tallies to string representations, and combine into a single string.
-  if (comment.voteTalliesByGroup) {
-    return Object.entries(comment.voteTalliesByGroup as object).reduce((acc, [key, value]) => {
-      return (
-        acc +
-        ` ${key}(Agree=${value.agreeCount}, Disagree=${value.disagreeCount}, Pass=${value.passCount || 0})`
-      );
-    }, "Votes:");
-  } else {
+export function voteInfoToString(comment: Comment): string {
+  if (!comment.voteInfo) {
     return "";
   }
+  if (isVoteTallyType(comment.voteInfo)) {
+    return `Votes: (${voteTallyToString(comment.voteInfo)})`;
+  } else {
+    return Object.entries(comment.voteInfo as object).reduce((acc, [key, value]) => {
+      return acc + ` ${key}(${voteTallyToString(value as VoteTally)})`;
+    }, "Votes:");
+  }
+}
+
+function voteTallyToString(voteTally: VoteTally): string {
+  let text = `Agree=${voteTally.agreeCount}, Disagree=${voteTally.disagreeCount}`;
+  if (voteTally.passCount) {
+    text += `, Pass=${voteTally.passCount}`;
+  }
+  return text;
 }
 
 /**

@@ -32,6 +32,7 @@ describe("Types Test", () => {
   it("Valid VoteTallies should pass isVoteTallyType", () => {
     expect(isVoteTallyType({ agreeCount: 2, disagreeCount: 12 })).toBeTruthy();
     expect(isVoteTallyType({ agreeCount: 2, disagreeCount: 12, passCount: 0 })).toBeTruthy();
+    expect(isVoteTallyType(new VoteTally(10, 5))).toBeTruthy();
   });
 
   it("Invalid VoteTallies should fail isVoteTallyType", () => {
@@ -45,7 +46,14 @@ describe("Types Test", () => {
       isCommentType({
         id: "2",
         text: "hello",
-        voteTalliesByGroup: { "group 1": { agreeCount: 1, disagreeCount: 2 } },
+        voteInfo: { "group 1": { agreeCount: 1, disagreeCount: 2 } },
+      })
+    ).toBeTruthy();
+    expect(
+      isCommentType({
+        id: "2",
+        text: "hello",
+        voteInfo: { agreeCount: 1, disagreeCount: 2, passCount: 3 },
       })
     ).toBeTruthy();
   });
@@ -57,7 +65,7 @@ describe("Types Test", () => {
       isCommentType({
         id: "2",
         text: "hello",
-        voteTalliesByGroup: { "group 1": { agreeCount: "1", disagreeCount: "2" } },
+        voteInfo: { "group 1": { agreeCount: "1", disagreeCount: "2" } },
       })
     ).toBeFalsy();
   });

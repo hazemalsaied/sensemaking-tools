@@ -14,7 +14,14 @@
 
 // Utils to get statistical information from a conversation
 
-import { Comment, CommentWithVoteTallies, VoteTally } from "../types";
+import {
+  Comment,
+  CommentWithVoteInfo,
+  VoteTally,
+  GroupVoteTallies,
+  VoteInfo,
+  isVoteTallyType,
+} from "../types";
 
 /**
  * Compute the probability of an agree vote for a given vote tally entry.
@@ -26,11 +33,29 @@ import { Comment, CommentWithVoteTallies, VoteTally } from "../types";
  * @returns the actual or estimated agree probability
  */
 export function getAgreeRate(voteTally: VoteTally, asProbabilityEstimate: boolean = true): number {
-  const totalCount = voteTally.agreeCount + voteTally.disagreeCount + (voteTally.passCount || 0);
+  const totalCount = voteTally.totalCount;
   if (asProbabilityEstimate) {
     return (voteTally.agreeCount + 1) / (totalCount + 2);
   } else {
     return voteTally.agreeCount / totalCount;
+  }
+}
+
+/**
+ * Compute the probability of an pass vote for a given vote tally entry.
+ * @param voteTally the votes to use for the calculation
+ * @param asProbabilityEstimate whether to as add +1 and +2 to the numerator and demonenator
+ * respectively as a psuedo-count prior so that probabilities tend to 1/2 in the absence of data,
+ * and to avoid division/multiplication by zero. This is technically a simple maxima a priori (MAP)
+ * probability estimate.
+ * @returns the actual or estimated pass probability
+ */
+export function getPassRate(voteTally: VoteTally, asProbabilityEstimate: boolean = true): number {
+  const totalCount = voteTally.totalCount;
+  if (asProbabilityEstimate) {
+    return ((voteTally.passCount || 0) + 1) / (totalCount + 2);
+  } else {
+    return (voteTally.passCount || 0) / totalCount;
   }
 }
 
@@ -46,9 +71,16 @@ export function getStandardDeviation(numbers: number[]): number {
   return Math.sqrt(variance);
 }
 
+// Gets the total number of votes from groupVoteTallies.
+function getTotalVoteCount(groupVoteTallies: GroupVoteTallies): number {
+  return Object.values(groupVoteTallies)
+    .map((voteTally: VoteTally) => voteTally.totalCount)
+    .reduce((a: number, b: number) => a + b, 0);
+}
+
 /**
  * Compute the probability of an agree vote for a given set of vote tallies.
- * @param voteTalliesByGroup the votes to use for the calculation
+ * @param voteInfo the votes to use for the calculation
  * @param asProbabilityEstimate whether to as add +1 and +2 to the numerator and demonenator
  * respectively as a psuedo-count prior so that probabilities tend to 1/2 in the absence of data,
  * and to avoid division/multiplication by zero. This is technically a simple maxima a priori (MAP)
@@ -56,16 +88,14 @@ export function getStandardDeviation(numbers: number[]): number {
  * @returns the actual or estimated agree probability
  */
 export function getTotalAgreeRate(
-  voteTalliesByGroup: { [key: string]: VoteTally },
+  voteInfo: VoteInfo,
   asProbabilityEstimate: boolean = true
 ): number {
-  const totalCount = Object.values(voteTalliesByGroup)
-    .map(
-      (voteTally: VoteTally) =>
-        voteTally.agreeCount + voteTally.disagreeCount + (voteTally.passCount || 0)
-    )
-    .reduce((a: number, b: number) => a + b, 0);
-  const totalAgreeCount = Object.values(voteTalliesByGroup)
+  if (isVoteTallyType(voteInfo)) {
+    return getAgreeRate(voteInfo, asProbabilityEstimate);
+  }
+  const totalCount = getTotalVoteCount(voteInfo);
+  const totalAgreeCount = Object.values(voteInfo)
     .map((voteTally: VoteTally) => voteTally.agreeCount)
     .reduce((a: number, b: number) => a + b, 0);
   if (asProbabilityEstimate) {
@@ -77,7 +107,7 @@ export function getTotalAgreeRate(
 
 /**
  * Compute the probability of an pass vote for a given set of vote tallies.
- * @param voteTalliesByGroup the votes to use for the calculation
+ * @param voteInfo the votes to use for the calculation
  * @param asProbabilityEstimate whether to as add +1 and +2 to the numerator and demonenator
  * respectively as a psuedo-count prior so that probabilities tend to 1/2 in the absence of data,
  * and to avoid division/multiplication by zero. This is technically a simple maxima a priori (MAP)
@@ -85,16 +115,14 @@ export function getTotalAgreeRate(
  * @returns the actual or estimated pass probability
  */
 export function getTotalPassRate(
-  voteTalliesByGroup: { [key: string]: VoteTally },
+  voteInfo: VoteInfo,
   asProbabilityEstimate: boolean = true
 ): number {
-  const totalCount = Object.values(voteTalliesByGroup)
-    .map(
-      (voteTally: VoteTally) =>
-        voteTally.agreeCount + voteTally.disagreeCount + (voteTally.passCount || 0)
-    )
-    .reduce((a: number, b: number) => a + b, 0);
-  const totalPassCount = Object.values(voteTalliesByGroup)
+  if (isVoteTallyType(voteInfo)) {
+    return getPassRate(voteInfo, asProbabilityEstimate);
+  }
+  const totalCount = getTotalVoteCount(voteInfo);
+  const totalPassCount = Object.values(voteInfo)
     .map((voteTally: VoteTally) => voteTally.passCount || 0)
     .reduce((a: number, b: number) => a + b, 0);
   if (asProbabilityEstimate) {
@@ -106,7 +134,7 @@ export function getTotalPassRate(
 
 /**
  * Compute the probability of an disagree vote for a given set of vote tallies.
- * @param voteTalliesByGroup the votes to use for the calculation
+ * @param voteInfo the votes to use for the calculation
  * @param asProbabilityEstimate whether to as add +1 and +2 to the numerator and demonenator
  * respectively as a psuedo-count prior so that probabilities tend to 1/2 in the absence of data,
  * and to avoid division/multiplication by zero. This is technically a simple maxima a priori (MAP)
@@ -114,18 +142,14 @@ export function getTotalPassRate(
  * @returns the actual or estimated disagree probability
  */
 export function getTotalDisagreeRate(
-  voteTalliesByGroup: {
-    [key: string]: VoteTally;
-  },
+  voteInfo: VoteInfo,
   asProbabilityEstimate: boolean = true
 ): number {
-  const totalCount = Object.values(voteTalliesByGroup)
-    .map(
-      (voteTally: VoteTally) =>
-        voteTally.agreeCount + voteTally.disagreeCount + (voteTally.passCount || 0)
-    )
-    .reduce((a: number, b: number) => a + b, 0);
-  const totalDisagreeCount = Object.values(voteTalliesByGroup)
+  if (isVoteTallyType(voteInfo)) {
+    return getDisagreeRate(voteInfo, asProbabilityEstimate);
+  }
+  const totalCount = getTotalVoteCount(voteInfo);
+  const totalDisagreeCount = Object.values(voteInfo)
     .map((voteTally: VoteTally) => voteTally.disagreeCount)
     .reduce((a: number, b: number) => a + b, 0);
   if (asProbabilityEstimate) {
@@ -139,8 +163,11 @@ export function getTotalDisagreeRate(
  * Computes group informed (agree) consensus for a comment's vote tallies,
  * computed as the product of the aggree probabilities across groups.
  */
-export function getGroupInformedConsensus(comment: CommentWithVoteTallies): number {
-  return Object.values(comment.voteTalliesByGroup).reduce(
+export function getGroupInformedConsensus(comment: CommentWithVoteInfo): number {
+  if (isVoteTallyType(comment.voteInfo)) {
+    throw TypeError("Group information is required for calculating group informed consensus.");
+  }
+  return Object.values(comment.voteInfo).reduce(
     (product, voteTally) => product * getAgreeRate(voteTally, true),
     1
   );
@@ -156,11 +183,14 @@ export function getGroupInformedConsensus(comment: CommentWithVoteTallies): numb
  * @returns the minimum agree probability across all groups
  */
 export function getMinAgreeProb(
-  comment: CommentWithVoteTallies,
+  comment: CommentWithVoteInfo,
   asProbabilityEstimate: boolean = true
 ): number {
+  if (isVoteTallyType(comment.voteInfo)) {
+    throw TypeError("Group information is required for calculating minimum agree probability.");
+  }
   return Math.min(
-    ...Object.values(comment.voteTalliesByGroup).map((voteTally) =>
+    ...Object.values(comment.voteInfo).map((voteTally) =>
       getAgreeRate(voteTally, asProbabilityEstimate)
     )
   );
@@ -179,7 +209,7 @@ export function getDisagreeRate(
   voteTally: VoteTally,
   asProbabilityEstimate: boolean = true
 ): number {
-  const totalCount = voteTally.agreeCount + voteTally.disagreeCount + (voteTally.passCount || 0);
+  const totalCount = voteTally.totalCount;
   if (asProbabilityEstimate) {
     return (voteTally.disagreeCount + 1) / (totalCount + 2);
   } else {
@@ -191,8 +221,13 @@ export function getDisagreeRate(
  * Computes group informed (disagree) consensus for a comment's vote tallies
  * computed as the product of disaggree probabilities across groups.
  */
-export function getGroupInformedDisagreeConsensus(comment: CommentWithVoteTallies): number {
-  return Object.values(comment.voteTalliesByGroup).reduce(
+export function getGroupInformedDisagreeConsensus(comment: CommentWithVoteInfo): number {
+  if (isVoteTallyType(comment.voteInfo)) {
+    throw TypeError(
+      "Group information is required for calculating group informed disagree consensus."
+    );
+  }
+  return Object.values(comment.voteInfo).reduce(
     (product, voteTally) => product * getDisagreeRate(voteTally, true),
     1
   );
@@ -207,11 +242,16 @@ export function getGroupInformedDisagreeConsensus(comment: CommentWithVoteTallie
  * probability estimate.
  */
 export function getMinDisagreeProb(
-  comment: CommentWithVoteTallies,
+  comment: CommentWithVoteInfo,
   asProbabilityEstimate: boolean = true
 ): number {
+  if (isVoteTallyType(comment.voteInfo)) {
+    throw TypeError(
+      "Group information is required for calculating the minimum disagree probability."
+    );
+  }
   return Math.min(
-    ...Object.values(comment.voteTalliesByGroup).map((voteTally: VoteTally) =>
+    ...Object.values(comment.voteInfo).map((voteTally: VoteTally) =>
       getDisagreeRate(voteTally, asProbabilityEstimate)
     )
   );
@@ -223,13 +263,15 @@ export function getMinDisagreeProb(
  * @param comment A comment with vote tally data, broken down by opinion group
  * @returns the numeric difference in estimated agree probabilities
  */
-export function getGroupAgreeProbDifference(
-  comment: CommentWithVoteTallies,
-  group: string
-): number {
-  const groupAgreeProb = getAgreeRate(comment.voteTalliesByGroup[group]);
+export function getGroupAgreeProbDifference(comment: CommentWithVoteInfo, group: string): number {
+  if (isVoteTallyType(comment.voteInfo)) {
+    throw TypeError(
+      "Group information is required for calculating group agreement probability difference."
+    );
+  }
+  const groupAgreeProb = getAgreeRate(comment.voteInfo[group]);
   // compute the vote tally for the remainder of the conversation by reducing over and adding up all other group vote tallies
-  const otherGroupsVoteTally = Object.entries(comment.voteTalliesByGroup)
+  const otherGroupsVoteTally = Object.entries(comment.voteInfo)
     .filter(([g]) => g !== group)
     // build up the new VoteTally object as a reduction of the vote counts for the remaining groups
     .map(([_, voteTally]) => voteTally) // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -254,8 +296,13 @@ export function getGroupAgreeProbDifference(
  * @param comment A Comment with vote tally data, broken down by opinion group
  * @returns the maximal difference in estimated agree probabilities
  */
-export function getMaxGroupAgreeProbDifference(comment: CommentWithVoteTallies) {
-  const groupNames = Object.keys(comment.voteTalliesByGroup);
+export function getMaxGroupAgreeProbDifference(comment: CommentWithVoteInfo) {
+  if (isVoteTallyType(comment.voteInfo)) {
+    throw TypeError(
+      "Group information is required for calculating maximum group agreement probability difference."
+    );
+  }
+  const groupNames = Object.keys(comment.voteInfo);
   return Math.max(
     ...groupNames.map((name: string) => {
       return Math.abs(getGroupAgreeProbDifference(comment, name));
@@ -267,16 +314,16 @@ export function getMaxGroupAgreeProbDifference(comment: CommentWithVoteTallies) 
  * Computes the total vote count across opinion groups. Note that this
  * consequently doesn't include any votes for participants not represented
  * in the opinion groups.
- * @param comment A Comment with vote tally data, broken down by opinion group
+ * @param comment A Comment with vote data
  * @returns the total number of votes
  */
 export function getCommentVoteCount(comment: Comment): number {
-  let count = 0;
-  for (const groupName in comment.voteTalliesByGroup) {
-    const groupCount = comment.voteTalliesByGroup[groupName].totalCount;
-    if (groupCount > 0) {
-      count += groupCount;
-    }
+  if (!comment.voteInfo) {
+    return 0;
   }
-  return count;
+  if (isVoteTallyType(comment.voteInfo)) {
+    return comment.voteInfo.totalCount;
+  } else {
+    return getTotalVoteCount(comment.voteInfo as GroupVoteTallies);
+  }
 }

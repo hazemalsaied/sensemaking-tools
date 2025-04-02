@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import { groupCommentsBySubtopic } from "../sensemaker_utils";
-import { Comment, CommentWithVoteTallies, isCommentWithVoteTalliesType } from "../types";
+import { Comment, CommentWithVoteInfo, isCommentWithVoteInfoType } from "../types";
 import { getCommentVoteCount } from "./stats_util";
 
 // Base class for statistical basis for summaries
@@ -26,7 +26,7 @@ import { getCommentVoteCount } from "./stats_util";
 export abstract class SummaryStats {
   comments: Comment[];
   // Comments with at least minVoteCount votes.
-  filteredComments: CommentWithVoteTallies[];
+  filteredComments: CommentWithVoteInfo[];
   minCommonGroundProb = 0.6;
   minAgreeProbDifference = 0.3;
   maxSampleSize = 12;
@@ -36,7 +36,7 @@ export abstract class SummaryStats {
 
   constructor(comments: Comment[]) {
     this.comments = comments;
-    this.filteredComments = comments.filter(isCommentWithVoteTalliesType).filter((comment) => {
+    this.filteredComments = comments.filter(isCommentWithVoteInfoType).filter((comment) => {
       return getCommentVoteCount(comment) >= this.minVoteCount;
     });
   }

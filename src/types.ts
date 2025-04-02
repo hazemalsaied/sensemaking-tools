@@ -274,7 +274,7 @@ export function isVoteTallyType(data: any): data is VoteTally {
     typeof data.agreeCount === "number" &&
     "disagreeCount" in data &&
     typeof data.disagreeCount === "number" &&
-    (!("passCount" in data) || typeof data.passCount === "number")
+    (!("passCount" in data && data.passCount !== undefined) || typeof data.passCount === "number")
   );
 }
 
@@ -284,26 +284,30 @@ export function isVoteTallyType(data: any): data is VoteTally {
 export interface Comment {
   id: string;
   text: string;
-  voteTalliesByGroup?: { [key: string]: VoteTally };
+  voteInfo?: VoteInfo;
   topics?: Topic[];
 }
 
-export interface CommentWithVoteTallies extends Comment {
-  voteTalliesByGroup: { [key: string]: VoteTally };
+export type VoteInfo = GroupVoteTallies | VoteTally;
+
+export interface CommentWithVoteInfo extends Comment {
+  voteInfo: GroupVoteTallies | VoteTally;
 }
 
+export type GroupVoteTallies = { [key: string]: VoteTally };
+
 /**
- * Checks if the given data is a CommentWithVoteTallies object (that is, a Comment object that includes VoteTallies), and sets the type as such if it passes.
+ * Checks if the given data is a CommentWithVoteInfo object (that is, a Comment object that includes VoteTallies), and sets the type as such if it passes.
  * @param data the object to check
- * @returns true if the object is a CommentWithVoteTallies, and false otherwise.
+ * @returns true if the object is a CommentWithVoteInfo, and false otherwise.
  */
 // eslint-disable-next-line  @typescript-eslint/no-explicit-any
-export function isCommentWithVoteTalliesType(data: any): data is CommentWithVoteTallies {
+export function isCommentWithVoteInfoType(data: any): data is CommentWithVoteInfo {
   return (
     typeof data === "object" &&
     data !== null &&
-    "voteTalliesByGroup" in data &&
-    isVoteTallyByGroup(data.voteTalliesByGroup) &&
+    "voteInfo" in data &&
+    (isVoteTallyType(data.voteInfo) || isGroupVoteTalliesType(data.voteInfo)) &&
     isCommentType(data)
   );
 }
@@ -314,7 +318,7 @@ export function isCommentWithVoteTalliesType(data: any): data is CommentWithVote
  * @returns true if the object is a dictionary of groups to VoteTallys.
  */
 // eslint-disable-next-line  @typescript-eslint/no-explicit-any
-function isVoteTallyByGroup(data: any): boolean {
+export function isGroupVoteTalliesType(data: any): data is GroupVoteTallies {
   return (
     Object.keys(data).every((groupName: string) => typeof groupName === "string") &&
     Array.isArray(Object.values(data)) &&
@@ -340,9 +344,10 @@ export function isCommentType(data: any): data is Comment {
     typeof data.id === "string" &&
     "text" in data &&
     typeof data.text === "string" &&
-    // Check that if voteTalliesByGroup dictionary exists all the keys are strings and values
-    // are VoteTally objects.
-    (!("voteTalliesByGroup" in data) || isVoteTallyByGroup(data.voteTalliesByGroup)) &&
+    // Check that if VoteInfo exists it is one of two accepted types.
+    (!("voteInfo" in data) ||
+      isGroupVoteTalliesType(data.voteInfo) ||
+      isVoteTallyType(data.voteInfo)) &&
     (!("topics" in data) || data.topics.every((topic: Topic) => isTopicType(topic)))
   );
 }

@@ -14,7 +14,7 @@
 
 import { VertexModel } from "../../models/vertex_model";
 import { GroupedSummaryStats } from "../../stats/group_informed";
-import { CommentWithVoteTallies } from "../../types";
+import { CommentWithVoteInfo } from "../../types";
 import { AllTopicsSummary, TopicSummary } from "./topics";
 
 // Mock the model response. This mock needs to be set up to return response specific for each test.
@@ -23,11 +23,11 @@ let mockCommonGroundSummary: jest.SpyInstance;
 let mockDifferencesSummary: jest.SpyInstance;
 let mockGenerateText: jest.SpyInstance;
 
-const TEST_COMMENTS: CommentWithVoteTallies[] = [
+const TEST_COMMENTS: CommentWithVoteInfo[] = [
   {
     id: "1",
     text: "comment 1",
-    voteTalliesByGroup: {
+    voteInfo: {
       "0": { agreeCount: 10, disagreeCount: 5, passCount: 0, totalCount: 15 },
       "1": { agreeCount: 5, disagreeCount: 10, passCount: 5, totalCount: 20 },
     },
@@ -36,7 +36,7 @@ const TEST_COMMENTS: CommentWithVoteTallies[] = [
   {
     id: "2",
     text: "comment 2",
-    voteTalliesByGroup: {
+    voteInfo: {
       "0": { agreeCount: 10, disagreeCount: 5, passCount: 0, totalCount: 15 },
       "1": { agreeCount: 5, disagreeCount: 10, passCount: 5, totalCount: 20 },
     },
@@ -45,7 +45,7 @@ const TEST_COMMENTS: CommentWithVoteTallies[] = [
   {
     id: "3",
     text: "comment 3",
-    voteTalliesByGroup: {
+    voteInfo: {
       "0": { agreeCount: 10, disagreeCount: 5, passCount: 0, totalCount: 15 },
       "1": { agreeCount: 5, disagreeCount: 10, passCount: 5, totalCount: 20 },
     },
@@ -54,7 +54,7 @@ const TEST_COMMENTS: CommentWithVoteTallies[] = [
   {
     id: "4",
     text: "comment 4",
-    voteTalliesByGroup: {
+    voteInfo: {
       "0": { agreeCount: 10, disagreeCount: 5, passCount: 0, totalCount: 15 },
       "1": { agreeCount: 5, disagreeCount: 10, passCount: 5, totalCount: 20 },
     },
@@ -63,7 +63,7 @@ const TEST_COMMENTS: CommentWithVoteTallies[] = [
   {
     id: "5",
     text: "comment 5",
-    voteTalliesByGroup: {
+    voteInfo: {
       "0": { agreeCount: 10, disagreeCount: 5, passCount: 0, totalCount: 15 },
       "1": { agreeCount: 5, disagreeCount: 10, passCount: 5, totalCount: 20 },
     },

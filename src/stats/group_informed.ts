@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import { decimalToPercent } from "../sensemaker_utils";
-import { Comment, CommentWithVoteTallies } from "../types";
+import { Comment, CommentWithVoteInfo, GroupVoteTallies, isGroupVoteTalliesType } from "../types";
 import {
   getGroupAgreeProbDifference,
   getGroupInformedConsensus,
@@ -44,9 +44,9 @@ export class GroupedSummaryStats extends SummaryStats {
    * Returns the top k comments according to the given metric.
    */
   override topK(
-    sortBy: (comment: CommentWithVoteTallies) => number,
+    sortBy: (comment: CommentWithVoteInfo) => number,
     k: number = this.maxSampleSize,
-    filterFn: (comment: CommentWithVoteTallies) => boolean = () => true
+    filterFn: (comment: CommentWithVoteInfo) => boolean = () => true
   ): Comment[] {
     return this.filteredComments
       .filter(filterFn)
@@ -67,7 +67,7 @@ export class GroupedSummaryStats extends SummaryStats {
       (comment) => getGroupInformedConsensus(comment),
       k,
       // Before using Group Informed Consensus a minimum bar of agreement between groups is enforced
-      (comment: CommentWithVoteTallies) => getMinAgreeProb(comment) >= this.minCommonGroundProb
+      (comment: CommentWithVoteInfo) => getMinAgreeProb(comment) >= this.minCommonGroundProb
     );
   }
 
@@ -92,7 +92,7 @@ export class GroupedSummaryStats extends SummaryStats {
       (comment) => getGroupInformedDisagreeConsensus(comment),
       k,
       // Before using Group Informed Consensus a minimum bar of agreement between groups is enforced
-      (comment: CommentWithVoteTallies) => getMinDisagreeProb(comment) >= this.minCommonGroundProb
+      (comment: CommentWithVoteInfo) => getMinDisagreeProb(comment) >= this.minCommonGroundProb
     );
   }
 
@@ -106,9 +106,9 @@ export class GroupedSummaryStats extends SummaryStats {
    */
   getGroupRepresentativeComments(group: string, k: number = this.maxSampleSize): Comment[] {
     return this.topK(
-      (comment: CommentWithVoteTallies) => getGroupAgreeProbDifference(comment, group),
+      (comment: CommentWithVoteInfo) => getGroupAgreeProbDifference(comment, group),
       k,
-      (comment: CommentWithVoteTallies) =>
+      (comment: CommentWithVoteInfo) =>
         getMinAgreeProb(comment) < this.minCommonGroundProb &&
         getGroupAgreeProbDifference(comment, group) > this.minAgreeProbDifference
     );
@@ -129,7 +129,7 @@ export class GroupedSummaryStats extends SummaryStats {
       // Get the maximum absolute group agree difference for any group.
       getMaxGroupAgreeProbDifference,
       k,
-      (comment: CommentWithVoteTallies) =>
+      (comment: CommentWithVoteInfo) =>
         // Some group must agree with the comment less than the minAgreeProbCommonGround
         // threshold, so that this comment doesn't also qualify as a common ground comment.
         getMinAgreeProb(comment) < this.minCommonGroundProb &&
@@ -150,8 +150,11 @@ export class GroupedSummaryStats extends SummaryStats {
   getStatsByGroup(): GroupStats[] {
     const groupNameToStats: { [key: string]: GroupStats } = {};
     for (const comment of this.comments) {
-      for (const groupName in comment.voteTalliesByGroup) {
-        const commentVoteCount = comment.voteTalliesByGroup[groupName].totalCount;
+      // Check that the voteInfo contains group data and update the type.
+      isGroupVoteTalliesType(comment.voteInfo);
+      const voteInfo = comment.voteInfo as GroupVoteTallies;
+      for (const groupName in voteInfo) {
+        const commentVoteCount = voteInfo[groupName].totalCount;
         if (groupName in groupNameToStats) {
           groupNameToStats[groupName].voteCount += commentVoteCount;
         } else {

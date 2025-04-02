@@ -12,30 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 import { Comment, VoteTally } from "../../types";
-import { commentCitation, voteTallySummary } from "./citation_utils";
+import { commentCitation, voteInfoToString } from "./citation_utils";
 
 describe("Citation Utils Test", () => {
-  describe("voteTallySummary", () => {
-    it("should return an empty string if voteTalliesByGroup is undefined", () => {
+  describe("voteInfoToString", () => {
+    it("should return an empty string if voteInfo is undefined", () => {
       const comment: Comment = {
         id: "123",
         text: "test comment",
       };
-      expect(voteTallySummary(comment)).toBe("");
+      expect(voteInfoToString(comment)).toBe("");
     });
 
-    it("should return a formatted string with vote tallies when voteTalliesByGroup is defined", () => {
+    it("should return a formatted string with vote tallies when voteInfo is defined with groups", () => {
       const comment: Comment = {
         id: "123",
         text: "test comment",
-        voteTalliesByGroup: {
+        voteInfo: {
           group1: new VoteTally(10, 5),
           group2: new VoteTally(15, 2, 3),
         },
       };
-      expect(voteTallySummary(comment)).toBe(
-        "Votes: group1(Agree=10, Disagree=5, Pass=0) group2(Agree=15, Disagree=2, Pass=3)"
+      expect(voteInfoToString(comment)).toBe(
+        "Votes: group1(Agree=10, Disagree=5) group2(Agree=15, Disagree=2, Pass=3)"
       );
+    });
+
+    it("should return a formatted string with vote tallies when voteInfo is defined without groups", () => {
+      const comment: Comment = {
+        id: "123",
+        text: "test comment",
+        voteInfo: new VoteTally(10, 5),
+      };
+      expect(voteInfoToString(comment)).toBe("Votes: (Agree=10, Disagree=5)");
     });
   });
 });
@@ -53,7 +62,7 @@ describe("commentCitation", () => {
     const comment: Comment = {
       id: "123",
       text: "This is a test comment.",
-      voteTalliesByGroup: {
+      voteInfo: {
         group1: {
           agreeCount: 10,
           disagreeCount: 5,

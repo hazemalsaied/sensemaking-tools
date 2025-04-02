@@ -16,7 +16,7 @@
 
 import { CommentRecord, Comment, SummaryContent, Topic } from "./types";
 import { RETRY_DELAY_MS, MAX_RETRIES } from "./models/model_util";
-import { voteTallySummary } from "./tasks/utils/citation_utils";
+import { voteInfoToString } from "./tasks/utils/citation_utils";
 
 /**
  * Rerun a function multiple times.
@@ -122,7 +122,7 @@ export function getPrompt(
 export function formatCommentsWithVotes(commentData: Comment[]): string[] {
   return commentData.map(
     (comment: Comment) =>
-      comment.text + "\n      vote info per group: " + JSON.stringify(comment.voteTalliesByGroup)
+      comment.text + "\n      vote info per group: " + JSON.stringify(comment.voteInfo)
   );
 }
 
@@ -318,7 +318,7 @@ export function commentTableMarkdown(
     comments.reduce(
       (ct: string, comment: Comment): string =>
         ct +
-        `| ${comment.id}&nbsp; | ${comment.text} | <small>${voteTallySummary(comment)}</small> |${extraColumnDataMd(extraColumns, comment)}\n`,
+        `| ${comment.id}&nbsp; | ${comment.text} | <small>${voteInfoToString(comment)}</small> |${extraColumnDataMd(extraColumns, comment)}\n`,
       ""
     )
   );

@@ -26,6 +26,7 @@ import {
   SummarizationType,
   Topic,
   SummaryContent,
+  VoteInfo,
 } from "../src/types";
 import * as path from "path";
 import * as fs from "fs";
@@ -274,12 +275,7 @@ export async function getCommentsFromCsv(inputFilePath: string): Promise<Comment
     .map((name: string) => name.replace("-agree-count", ""))
     .sort();
 
-  if (groupNames.length === 0) {
-    throw new TypeError(
-      "CSV is expected to contain headers of the style <Group Name>-agree-count, " +
-        "<Group Name>-disagree-count, and optionally <Group Name>-pass-count"
-    );
-  }
+  const usesGroups = groupNames.length > 0;
 
   if (!inputFilePath) {
     throw new Error("Input file path is missing!");
@@ -301,17 +297,8 @@ export async function getCommentsFromCsv(inputFilePath: string): Promise<Comment
         const newComment: Comment = {
           text: row.comment_text,
           id: row["comment-id"].toString(),
-          voteTalliesByGroup: {},
+          voteInfo: getVoteInfoFromCsvRow(row, usesGroups, groupNames),
         };
-        const voteTalliesByGroup: { [key: string]: VoteTally } = {};
-        for (const groupName of groupNames) {
-          voteTalliesByGroup[groupName] = new VoteTally(
-            Number(row[`${groupName}-agree-count`]),
-            Number(row[`${groupName}-disagree-count`]),
-            Number(row[`${groupName}-pass-count`])
-          );
-        }
-        newComment.voteTalliesByGroup = voteTalliesByGroup;
         if (row.topics) {
           // In this case, use the topics output format from the categorization_runner.ts routines
           newComment.topics = parseTopicsString(row.topics);
@@ -328,6 +315,26 @@ export async function getCommentsFromCsv(inputFilePath: string): Promise<Comment
       })
       .on("end", () => resolve(data));
   });
+}
+
+function getVoteInfoFromCsvRow(
+  row: CommentCsvRow,
+  usesGroups: boolean,
+  groupNames: string[]
+): VoteInfo {
+  if (usesGroups) {
+    const voteInfo: { [key: string]: VoteTally } = {};
+    for (const groupName of groupNames) {
+      voteInfo[groupName] = new VoteTally(
+        Number(row[`${groupName}-agree-count`]),
+        Number(row[`${groupName}-disagree-count`]),
+        Number(row[`${groupName}-pass-count`])
+      );
+    }
+    return voteInfo;
+  } else {
+    return new VoteTally(Number(row["agrees"]), Number(row["disagrees"]), Number(row["passes"]));
+  }
 }
 
 export function getTopicsFromComments(comments: Comment[]): Topic[] {

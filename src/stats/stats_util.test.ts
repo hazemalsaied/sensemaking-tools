@@ -20,6 +20,8 @@ import {
   getGroupInformedDisagreeConsensus,
   getMinDisagreeProb,
   getMinAgreeProb,
+  getCommentVoteCount,
+  getTotalAgreeRate,
 } from "./stats_util";
 
 describe("stats utility functions", () => {
@@ -35,12 +37,86 @@ describe("stats utility functions", () => {
     expect(getAgreeRate({ agreeCount: 5, disagreeCount: 0, totalCount: 5 })).toBeCloseTo(6 / 7);
   });
 
+  it("should get the comment vote count with groups", () => {
+    expect(
+      getCommentVoteCount({
+        id: "1",
+        text: "hello",
+        voteInfo: {
+          "0": {
+            agreeCount: 10,
+            disagreeCount: 5,
+            passCount: 0,
+            totalCount: 15,
+          },
+          "1": {
+            agreeCount: 5,
+            disagreeCount: 10,
+            passCount: 5,
+            totalCount: 20,
+          },
+        },
+      })
+    ).toEqual(35);
+  });
+
+  it("should get the comment vote count without groups", () => {
+    expect(
+      getCommentVoteCount({
+        id: "1",
+        text: "hello",
+        voteInfo: {
+          agreeCount: 10,
+          disagreeCount: 5,
+          passCount: 0,
+          totalCount: 15,
+        },
+      })
+    ).toEqual(15);
+  });
+
+  it("should get the total agree rate across groups for a given comment", () => {
+    expect(
+      getTotalAgreeRate(
+        {
+          "0": {
+            agreeCount: 10,
+            disagreeCount: 5,
+            passCount: 0,
+            totalCount: 15,
+          },
+          "1": {
+            agreeCount: 5,
+            disagreeCount: 10,
+            passCount: 5,
+            totalCount: 20,
+          },
+        },
+        false
+      )
+    ).toEqual(15 / 35);
+  });
+
+  it("should get the total agree rate for a given comment", () => {
+    expect(
+      getTotalAgreeRate(
+        {
+          agreeCount: 10,
+          disagreeCount: 5,
+          passCount: 0,
+          totalCount: 15,
+        },
+        false
+      )
+    ).toEqual(10 / 15);
+  });
+
   it("should get the group informed consensus for a given comment", () => {
     expect(
       getGroupInformedConsensus({
         id: "1",
         text: "comment1",
-        voteTalliesByGroup: {
+        voteInfo: {
           "0": {
             agreeCount: 10,
             disagreeCount: 5,
@@ -63,7 +139,7 @@ describe("stats utility functions", () => {
       getMinAgreeProb({
         id: "1",
         text: "comment1",
-        voteTalliesByGroup: {
+        voteInfo: {
           "0": {
             agreeCount: 10,
             disagreeCount: 5,
@@ -98,7 +174,7 @@ describe("stats utility functions", () => {
       getGroupInformedDisagreeConsensus({
         id: "1",
         text: "comment1",
-        voteTalliesByGroup: {
+        voteInfo: {
           "0": {
             agreeCount: 5,
             disagreeCount: 10,
@@ -121,7 +197,7 @@ describe("stats utility functions", () => {
       getMinDisagreeProb({
         id: "1",
         text: "comment1",
-        voteTalliesByGroup: {
+        voteInfo: {
           "0": {
             agreeCount: 5,
             disagreeCount: 10,
@@ -145,7 +221,7 @@ describe("stats utility functions", () => {
         {
           id: "1",
           text: "comment1",
-          voteTalliesByGroup: {
+          voteInfo: {
             "0": {
               agreeCount: 1,
               disagreeCount: 2,

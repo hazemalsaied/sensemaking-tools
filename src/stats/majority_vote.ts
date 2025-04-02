@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import { decimalToPercent } from "../sensemaker_utils";
-import { Comment, CommentWithVoteTallies } from "../types";
+import { Comment, CommentWithVoteInfo } from "../types";
 import { getTotalAgreeRate, getTotalDisagreeRate, getTotalPassRate } from "./stats_util";
 import { SummaryStats } from "./summary_stats";
 
@@ -42,9 +42,9 @@ export class MajoritySummaryStats extends SummaryStats {
    * Returns the top k comments according to the given metric.
    */
   override topK(
-    sortBy: (comment: CommentWithVoteTallies) => number,
+    sortBy: (comment: CommentWithVoteInfo) => number,
     k: number = this.maxSampleSize,
-    filterFn: (comment: CommentWithVoteTallies) => boolean = () => true
+    filterFn: (comment: CommentWithVoteInfo) => boolean = () => true
   ): Comment[] {
     return this.filteredComments
       .filter(filterFn)
@@ -60,12 +60,11 @@ export class MajoritySummaryStats extends SummaryStats {
    */
   getCommonGroundComments(k: number = this.maxSampleSize) {
     return this.topK(
-      (comment) => getTotalAgreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate),
+      (comment) => getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate),
       k,
       // Before getting the top agreed comments, enforce a minimum level of agreement
-      (comment: CommentWithVoteTallies) =>
-        getTotalAgreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) >=
-        this.minCommonGroundProb
+      (comment: CommentWithVoteInfo) =>
+        getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) >= this.minCommonGroundProb
     );
   }
 
@@ -91,22 +90,19 @@ export class MajoritySummaryStats extends SummaryStats {
       (comment) =>
         1 -
         Math.abs(
-          getTotalAgreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) -
-            getTotalDisagreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate)
+          getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) -
+            getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate)
         ) -
-        getTotalPassRate(comment.voteTalliesByGroup, this.asProbabilityEstimate),
+        getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate),
       k,
       // Before getting the top differences comments, enforce a minimum level of difference of
       // opinion.
-      (comment: CommentWithVoteTallies) =>
-        getTotalAgreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) >=
+      (comment: CommentWithVoteInfo) =>
+        getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) >= this.minDifferecenProb &&
+        getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) <= this.maxDifferenceProb &&
+        getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate) <=
           this.minDifferecenProb &&
-        getTotalAgreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) <=
-          this.maxDifferenceProb &&
-        getTotalDisagreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) <=
-          this.minDifferecenProb &&
-        getTotalDisagreeRate(comment.voteTalliesByGroup, this.asProbabilityEstimate) <=
-          this.maxDifferenceProb
+        getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate) <= this.maxDifferenceProb
     );
   }
 
