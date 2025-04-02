@@ -40,6 +40,8 @@ function oneShotInstructions(topicNames: string[]) {
     `The structure of the list you output should be in terms of the topic names, in the order that follows. ` +
     `Each list item should start in bold with topic name name (including percentage, exactly as listed below), then a colon, and then a short one or two sentence summary for the corresponding topic.` +
     `The complete response should be only the markdown list, and no other text. ` +
+    `For example, a list item might look like this:\n` +
+    `<output_format format="markdown">* **Topic Name (45%):**  Topic summary.</output_format>\n` +
     `Here are the topics:
     ${topicNames.map((s) => "* " + s).join("\n")}`
   );
