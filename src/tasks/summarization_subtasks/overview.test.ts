@@ -112,6 +112,7 @@ describe("isMdListValid", () => {
   });
 
   it("should return true if all lines match the expected format and topic order", async () => {
+    // asterisks before colon: **:
     expect(
       isMdListValid("* **Topic 1**: Summary\n* **Topic 2**: Summary\n* **Topic 3**: Summary", [
         "Topic 1",
@@ -119,12 +120,20 @@ describe("isMdListValid", () => {
         "Topic 3",
       ])
     ).toEqual(true);
+    // asterisks after colon: :**
     expect(
       isMdListValid("* **Topic 1:** Summary\n* **Topic 2:** Summary\n* **Topic 3:** Summary", [
         "Topic 1",
         "Topic 2",
         "Topic 3",
       ])
+    ).toEqual(true);
+    // extra space between bullet point and topic name: *   **Topic 1:**
+    expect(
+      isMdListValid(
+        "*   **Topic 1:** Summary\n*   **Topic 2:** Summary\n*   **Topic 3:** Summary",
+        ["Topic 1", "Topic 2", "Topic 3"]
+      )
     ).toEqual(true);
   });
 });

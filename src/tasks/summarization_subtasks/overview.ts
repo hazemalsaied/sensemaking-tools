@@ -200,7 +200,13 @@ export function isMdListValid(mdList: string, topicNames: string[]): boolean {
   const lines = mdList.split("\n");
   for (const [index, line] of lines.entries()) {
     // Check to make sure that every line matches the expected format
-    if (!line.match(/^[\*\-]\s\*\*.*:?\*\*:?\s/) && !line.match(/^[\*\-]\s\_\_.*:?\_\_:?\s/)) {
+    // Valid examples:
+    // * **Topic Name:** A summary.
+    // *   **Topic Name with extra spaces in front:** A summary.
+    // * __Topic Name:__ A summary.
+    // - **Topic Name**:  A summary.
+    // - __Topic Name__:  A summary.
+    if (!line.match(/^[\*\-]\s+\*\*.*:?\*\*:?\s/) && !line.match(/^[\*\-]\s+\_\_.*:?\_\_:?\s/)) {
       console.log("Line does not match expected format:", line);
       return false;
     }
