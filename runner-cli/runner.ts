@@ -16,6 +16,7 @@
 // directory, and as documented in `runner_utils.ts`.
 
 import { Command } from "commander";
+import { writeFileSync } from "fs";
 import {
   getCommentsFromCsv,
   getSummary,
@@ -57,6 +58,9 @@ async function main(): Promise<void> {
   writeFileSync(options.outputBasename + "-summary.md", markdownContent);
   writeSummaryToHtml(summary, options.outputBasename + "-summary.html");
   writeSummaryToGroundedCSV(summary, options.outputBasename + "-summaryClaimsAndComments.csv");
+
+  const jsonContent = JSON.stringify(summary, null, 2);
+  writeFileSync(options.outputBasename + "-summary.json", jsonContent);
 }
 
 main();
