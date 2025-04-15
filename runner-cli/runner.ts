@@ -23,7 +23,6 @@ import {
   writeSummaryToGroundedCSV,
   writeSummaryToHtml,
 } from "./runner_utils";
-import { writeFileSync } from "fs";
 
 async function main(): Promise<void> {
   // Parse command line arguments.
