@@ -38,14 +38,14 @@ export function learnSubtopicsForOneTopicPrompt(parentTopic: Topic, otherTopics?
 
   return `
 Analyze the following comments and identify relevant subtopics within the following topic:
-${parentTopic.name}
+"${parentTopic.name}"
 
 Important Considerations:
 - Use Title Case for topic and subtopic names. Do not use capital case like "name": "INFRASTRUCTURE".
 - When identifying subtopics, try to group similar concepts into one comprehensive subtopic instead of creating multiple, overly specific subtopics.
 - Try to create as few subtopics as possible
 - No subtopic should have the same name as the main topic.
-- Do not change the name of the main topic.
+- Do not change the name of the main topic ("${parentTopic.name}").
 - There are other topics that are being used on different sets of comments, do not use these topic names as subtopic names: ${otherTopicNames}
 
 Example of Incorrect Output:
@@ -138,10 +138,16 @@ export function learnedTopicsValid(response: Topic[], parentTopic?: Topic): bool
       .map((topic: Topic) => topic.name.toLowerCase())
       .concat("other");
     if (!topicNames.every((name) => allowedTopicNames.includes(name.toLowerCase()))) {
-      console.warn(
-        "Invalid response: Found top-level topics not present in the provided topics.",
-        topicNames
-      );
+      topicNames.forEach((topicName: string) => {
+        if (!allowedTopicNames.includes(topicName.toLowerCase())) {
+          console.warn(
+            "Invalid response: Found top-level topic not present in the provided topics. Provided topics: ",
+            allowedTopicNames,
+            " Found topic: ",
+            topicName
+          );
+        }
+      });
       return false;
     }
   }
