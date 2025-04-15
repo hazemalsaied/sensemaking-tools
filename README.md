@@ -8,7 +8,7 @@ Jigsaw’s [Sensemaker tools](https://medium.com/jigsaw/making-sense-of-large-sc
 * Statement Categorization \- sorts statements into topics defined by a user or from the Topic Identification function. Statements can belong to more than one topic.  
 * Summarization \- analyzes statements and vote data to output a summary of the conversation, including an overview, themes discussed, and areas of agreement and disagreement.
 
-Please see these [docs](https://jigsaw-code.github.io/sensemaking-tools) for a full breakdown of available methods and types. These tools are still in their beta stage.
+Please see these [docs](https://jigsaw-code.github.io/sensemaking-tools/docs/) for a full breakdown of available methods and types. These tools are still in their beta stage.
 
 # How It Works
 
