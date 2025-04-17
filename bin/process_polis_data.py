@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import re
 import pandas as pd
 import argparse as arg
 import itertools
@@ -8,13 +9,20 @@ import itertools
 print("Starting process_polis_data.py program")
 
 # argparse setup with arguments for two input files
+
+
 def getargs():
-  parser = arg.ArgumentParser(description="Process Polis data from the openData export data.")
+  parser = arg.ArgumentParser(
+      description="Process Polis data from the openData export data.")
   parser.add_argument("export_directory", help="Path to export directory.")
-  parser.add_argument("--participants-votes", help="Participants votes file (override).")
-  parser.add_argument("--comments", help="Path to the comments file (override).")
-  parser.add_argument("-o", "--output_file", help="Path to the output CSV file.", required=True)
-  parser.add_argument("--exclude-ungrouped-participants", help="Whether to include ungrouped participants in the output.", action="store_true")
+  parser.add_argument("--participants-votes",
+                      help="Participants votes file (override).")
+  parser.add_argument(
+      "--comments", help="Path to the comments file (override).")
+  parser.add_argument("-o", "--output_file",
+                      help="Path to the output CSV file.", required=True)
+  parser.add_argument("--exclude-ungrouped-participants",
+                      help="Whether to include ungrouped participants in the output.", action="store_true")
   args = parser.parse_args()
   args.participants_votes = args.participants_votes or f"{args.export_directory}/participants-votes.csv"
   args.comments = args.comments or f"{args.export_directory}/comments.csv"
@@ -63,7 +71,6 @@ group_ids = sorted(votes['group-id'].unique())
 print("Group ids:", group_ids)
 
 # prompt: find all of the column names in the votes df that match a numeric regex
-import re
 comment_ids = [col for col in votes.columns if re.match(r'^\d+$', col)]
 
 # Create a dictionary for mapping comment to total vote count for each column in
@@ -73,32 +80,38 @@ for comment_id in comment_ids:
   comment_vote_counts[int(comment_id)] = votes[comment_id].value_counts().sum()
 
 # Melt the DataFrame
-melted_votes = votes.melt(id_vars=["group-id"], value_vars=comment_ids, var_name='comment-id', value_name='value')
+melted_votes = votes.melt(id_vars=[
+                          "group-id"], value_vars=comment_ids, var_name='comment-id', value_name='value')
 melted_votes['comment-id'] = melted_votes['comment-id'].astype(int)
 # Group, count, unstack, and fill missing values
 result = (
-    melted_votes.groupby(['comment-id','group-id'])['value']
+    melted_votes.groupby(['comment-id', 'group-id'])['value']
     .value_counts()
     .unstack(fill_value=0)
     .reset_index()
 )
 
 # Rename columns
-result = result.rename(columns={-1: 'disagree-count', 0: 'pass-count', 1: 'agree-count'})
+result = result.rename(
+    columns={-1: 'disagree-count', 0: 'pass-count', 1: 'agree-count'})
 
 # Pivot out the group-id column so that each of the vote count columns look like "group-N-VOTE-count"
 pivoted = result.pivot(index="comment-id", columns='group-id')
 
 # A function for naming groups based on group id.
 # Note that for the group_id == 0, the "ungrouped" pseudo-group, this returns "Group-none"
+
+
 def group_name(group_id):
   return "Group-" + ("none" if group_id == 0 else str(group_id))
+
 
 # Use the pivoted data to prepare a dataframe for merging
 for_merge = pd.DataFrame({'comment-id': pivoted.index})
 for group_id in group_ids:
   for count_col in ["disagree-count", "pass-count", "agree-count"]:
-    for_merge[group_name(group_id) + "-" + count_col] = pivoted[count_col][group_id].values
+    for_merge[group_name(group_id) + "-" +
+              count_col] = pivoted[count_col][group_id].values
 
 # zero out total vote tallies since incorrect from filtering or database caching
 comments["agrees"] = 0
@@ -115,7 +128,8 @@ for group_id in group_ids:
   comments["agrees"] += comments[group + "-agree-count"]
   comments["passes"] += comments[group + "-pass-count"]
 
-comments["votes"] = comments["agrees"] + comments["disagrees"] + comments["passes"]
+comments["votes"] = comments["agrees"] + \
+    comments["disagrees"] + comments["passes"]
 
 comments["agree_rate"] = comments["agrees"] / comments["votes"]
 comments["disagree_rate"] = comments["disagrees"] / comments["votes"]
@@ -132,7 +146,8 @@ print("Validating aggregate vote counts...")
 failed_validations = 0
 for comment_id in comments['comment-id']:
   if comment_vote_counts[comment_id] < comments[comments['comment-id'] == int(comment_id)]["votes"].iloc[0]:
-    print(f"WARNING: Vote count mismatch for comment {comment_id}. Original count: {comment_vote_counts[comment_id]}, New count: {comments[comments['comment-id'] == int(comment_id)]['votes'].iloc[0]}")
+    print(
+        f"WARNING: Vote count mismatch for comment {comment_id}. Original count: {comment_vote_counts[comment_id]}, New count: {comments[comments['comment-id'] == int(comment_id)]['votes'].iloc[0]}")
     failed_validations += 1
 if failed_validations == 0:
   print("All validations passed!")
@@ -142,15 +157,16 @@ if failed_validations == 0:
 # to non-strict moderation)
 print("N comments total:", len(comments))
 print("N votes total:", comments["votes"].sum())
-moderated_comments = comments[(comments["moderated"] == 1) | ((comments["moderated"] == 0) & (comments["votes"] > 1))]
+moderated_comments = comments[(comments["moderated"] == 1) | (
+    (comments["moderated"] == 0) & (comments["votes"] > 1))]
 print("N comments included after moderation:", len(moderated_comments))
 print("N votes after moderation:", moderated_comments["votes"].sum())
 
 # prompt: write out to a CSV file
-moderated_comments = moderated_comments.rename(columns={'comment-body': 'comment_text'})
+moderated_comments = moderated_comments.rename(
+    columns={'comment-body': 'comment_text'})
 moderated_comments.to_csv(args.output_file, index=False)
 
 # Exit with non-zero error code if any validations failed
 if failed_validations > 0:
   exit(1)
-

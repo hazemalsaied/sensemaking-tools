@@ -20,45 +20,46 @@ import evals_lib
 
 
 def parse_arguments() -> argparse.Namespace:
-    """Parses command-line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Process evaluation data and calculate categorization differences."
-    )
-    parser.add_argument(
-        "--input-data",
-        type=str,
-        required=True,
-        nargs="+",
-        help="Path to the input data CSV files.",
-    )
-    parser.add_argument(
-        "--output-csv-path",
-        type=str,
-        required=True,
-        help="Path where the output CSV results file will be saved.",
-    )
-    return parser.parse_args()
+  """Parses command-line arguments."""
+  parser = argparse.ArgumentParser(
+      description="Process evaluation data and calculate categorization differences."
+  )
+  parser.add_argument(
+      "--input-data",
+      type=str,
+      required=True,
+      nargs="+",
+      help="Path to the input data CSV files.",
+  )
+  parser.add_argument(
+      "--output-csv-path",
+      type=str,
+      required=True,
+      help="Path where the output CSV results file will be saved.",
+  )
+  return parser.parse_args()
 
 
 def main(args: argparse.Namespace) -> None:
-    input_files = args.input_data
-    output_path = args.output_csv_path
+  input_files = args.input_data
+  output_path = args.output_csv_path
 
-    data = []
-    for filepath in input_files:
-        new_df = pd.read_csv(filepath)
-        new_df = evals_lib.convert_topics_col_to_list(new_df)
-        data.append(new_df)
-    categorization_diff_rate = evals_lib.get_categorization_diffs(data)
+  data = []
+  for filepath in input_files:
+    new_df = pd.read_csv(filepath)
+    new_df = evals_lib.convert_topics_col_to_list(new_df)
+    data.append(new_df)
 
-    results_data = {
-        "Evaluation Name": ["Topic Categorization Diff Rate"],
-        "Result": [categorization_diff_rate],
-    }
-    with open(output_path, "w") as f:
-        pd.DataFrame(data=results_data).to_csv(f, index=False)
+  categorization_diff_rate = evals_lib.get_categorization_diffs(data)
+
+  results_data = {
+      "Evaluation Name": ["Topic Categorization Diff Rate"],
+      "Result": [categorization_diff_rate],
+  }
+  with open(output_path, "w") as f:
+    pd.DataFrame(data=results_data).to_csv(f, index=False)
 
 
 if __name__ == "__main__":
-    args = parse_arguments()
-    main(args)
+  args = parse_arguments()
+  main(args)
