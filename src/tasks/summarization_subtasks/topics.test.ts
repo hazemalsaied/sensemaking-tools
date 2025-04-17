@@ -125,7 +125,7 @@ describe("AllTopicsSummaryTest", () => {
               type: "TopicSummary",
             },
             {
-              text: "This subtopic had high agreement compared to the other subtopics.",
+              text: "This subtopic had high alignment compared to the other subtopics.",
               title: "#### Subtopic A.1 (2 statements)",
               subContents: [
                 {
@@ -152,7 +152,7 @@ describe("AllTopicsSummaryTest", () => {
               type: "TopicSummary",
             },
             {
-              text: "This subtopic had high agreement compared to the other subtopics.",
+              text: "This subtopic had high alignment compared to the other subtopics.",
               title: "#### Subtopic B.1 (2 statements)",
               subContents: [
                 {

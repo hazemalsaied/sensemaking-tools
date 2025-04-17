@@ -77,6 +77,23 @@ export class MajoritySummaryStats extends SummaryStats {
   }
 
   /**
+   * Gets the topK disagreed upon comments across.
+   *
+   * @param k dfaults to this.maxSampleSize
+   * @returns the top disagreed on comments
+   */
+  getCommonGroundDisagreeComments(k: number = this.maxSampleSize) {
+    return this.topK(
+      (comment) => getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate),
+      k,
+      // Before using Group Informed Consensus a minimum bar of agreement between groups is enforced
+      (comment: CommentWithVoteInfo) =>
+        getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate) >=
+        this.minCommonGroundProb
+    );
+  }
+
+  /**
    * Gets the topK agreed upon comments based on highest % of agree votes.
    *
    * @param k the number of comments to get

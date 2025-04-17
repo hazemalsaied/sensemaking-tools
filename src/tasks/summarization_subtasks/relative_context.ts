@@ -52,14 +52,17 @@ export class RelativeContext {
   }
 
   /**
-   * Get the rate of all comments being considered high agreement
+   * Get the rate of all comments being considered high agreement (both all agree and all disagree)
    * @param summaryStats the subset of comments to consider
    * @returns the count of all potential high agreement comments.
    */
   private getHighAgreementRate(summaryStats: SummaryStats): number {
     // Allow all the comments to be chosen if they match the requirements.
     const maxLength = summaryStats.comments.length;
-    return summaryStats.getCommonGroundComments(maxLength).length / summaryStats.commentCount;
+    const highAgreeConsensusCount = summaryStats.getCommonGroundComments(maxLength).length;
+    const highDisagreeConsensusCount =
+      summaryStats.getCommonGroundDisagreeComments(maxLength).length;
+    return (highAgreeConsensusCount + highDisagreeConsensusCount) / summaryStats.commentCount;
   }
 
   getRelativeEngagement(summaryStats: SummaryStats): string {
@@ -96,15 +99,15 @@ export class RelativeContext {
   getRelativeAgreement(summaryStats: SummaryStats): string {
     const highAgreementRate = this.getHighAgreementRate(summaryStats);
     if (highAgreementRate < this.averageHighAgreeRate - this.highAgreeStdDeviation) {
-      return "low agreement";
+      return "low alignment";
     }
     if (highAgreementRate < this.averageHighAgreeRate) {
-      return "moderately low agreement";
+      return "moderately low alignment";
     }
     if (highAgreementRate < this.averageHighAgreeRate + this.highAgreeStdDeviation) {
-      return "moderately high agreement";
+      return "moderately high alignment";
     } else {
-      return "high agreement";
+      return "high alignment";
     }
   }
 }

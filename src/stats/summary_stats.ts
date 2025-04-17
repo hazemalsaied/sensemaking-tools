@@ -62,6 +62,11 @@ export abstract class SummaryStats {
    */
   abstract getCommonGroundNoCommentsMessage(): string;
 
+  /** Based on how the implementing class defines it, get the top comments everyone disagreed on
+   * @param k the number of comments to return
+   */
+  abstract getCommonGroundDisagreeComments(k?: number): Comment[];
+
   /**
    * Based on how the implementing class defines it, get the top disagreed on comments.
    * @param k the number of comments to return.

@@ -24,6 +24,10 @@ class TestSummaryStats extends SummaryStats {
     return this.comments.slice(0, k);
   }
 
+  getCommonGroundDisagreeComments(k?: number): Comment[] {
+    return this.comments.slice(0, k);
+  }
+
   getCommonGroundNoCommentsMessage(): string {
     return "There are no common ground comments.";
   }
