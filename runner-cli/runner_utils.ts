@@ -157,12 +157,14 @@ export async function getSummary(
   });
   // TODO: Make the summariation type an argument and add it as a flag in runner.ts. The data
   // requirements (like requiring votes) would also need updated.
-  return await sensemaker.summarize(
+  const summary = await sensemaker.summarize(
     comments,
     SummarizationType.AGGREGATE_VOTE,
     topics,
     additionalContext
   );
+  // For now, remove all Common Ground, Difference of Opinion, or TopicSummary sections
+  return summary.withoutContents((sc) => sc.type === "TopicSummary");
 }
 
 export function writeSummaryToHtml(summary: Summary, outputFile: string) {

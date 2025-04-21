@@ -43,15 +43,12 @@ async function main(): Promise<void> {
 
   const comments = await getCommentsFromCsv(options.inputFile);
 
-  let summary = await getSummary(
+  const summary = await getSummary(
     options.vertexProject,
     comments,
     undefined,
     options.additionalContext
   );
-
-  // For now, remove all Common Ground, Difference of Opinion, or TopicSummary sections
-  summary = summary.withoutContents((sc) => sc.type === "TopicSummary");
 
   const markdownContent = summary.getText("MARKDOWN");
   writeFileSync(options.outputBasename + "-summary.md", markdownContent);

@@ -25,6 +25,8 @@ export class MajoritySummaryStats extends SummaryStats {
   // Agreement and Disagreement must be between these values to be difference of opinion.
   minDifferecenProb = 0.4;
   maxDifferenceProb = 0.6;
+  // Must be above this threshold to be considered an uncertain comment.
+  minUncertaintyProb = 0.3;
 
   groupBasedSummarization = false;
   // This outlier protection isn't needed since we already filter our comments without many votes.
@@ -73,6 +75,22 @@ export class MajoritySummaryStats extends SummaryStats {
       `No statements met the thresholds necessary to be considered as a point of common ` +
       `ground (at least ${this.minVoteCount} votes, and at least ` +
       `${decimalToPercent(this.minCommonGroundProb)} agreement).`
+    );
+  }
+
+  /**
+   * Gets the topK uncertain comments based on pass votes.
+   *
+   * @param k the number of comments to get
+   * @returns the top uncertain comments
+   */
+  getUncertainComments(k: number = this.maxSampleSize) {
+    return this.topK(
+      (comment) => getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate),
+      k,
+      // Before getting the top comments, enforce a minimum level of uncertainty
+      (comment: CommentWithVoteInfo) =>
+        getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate) > this.minUncertaintyProb
     );
   }
 
