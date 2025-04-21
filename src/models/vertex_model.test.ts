@@ -14,6 +14,7 @@
 
 import { Type } from "@sinclair/typebox";
 import { VertexModel } from "./vertex_model";
+import { MAX_LLM_RETRIES } from "./model_util";
 
 // mock retry timeout
 jest.mock("./model_util", () => {
@@ -125,10 +126,11 @@ describe("VertexAI test", () => {
       });
 
       mockSingleModelResponse(generateContentStreamMock, JSON.stringify(expectedStructuredData));
-
       await expect(async () => {
         await model.generateData("Some instructions", schema);
-      }).rejects.toThrow("Model response does not match schema");
+      }).rejects.toThrow(
+        `Failed after ${MAX_LLM_RETRIES} attempts: Failed to get a valid model response.`
+      );
     });
   });
 });
