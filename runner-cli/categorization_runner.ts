@@ -49,7 +49,11 @@ async function main(): Promise<void> {
       "-a, --additionalContext <instructions>",
       "A short description of the conversation to add context."
     )
-    .option("-v, --vertexProject <project>", "The Vertex Project name.");
+    .option("-v, --vertexProject <project>", "The Vertex Project name.")
+    .option(
+      "-f, --forceRerun",
+      "Force rerun of categorization, ignoring existing topics in the input file."
+    );
   program.parse(process.argv);
   const options = program.opts();
   options.topicDepth = parseInt(options.topicDepth);
@@ -58,7 +62,13 @@ async function main(): Promise<void> {
   }
 
   const csvRows = await readCsv(options.inputFile);
-  const comments = convertCsvRowsToComments(csvRows);
+  let comments = convertCsvRowsToComments(csvRows);
+  if (options.forceRerun) {
+    comments = comments.map((comment) => {
+      delete comment.topics;
+      return comment;
+    });
+  }
 
   // Learn topics and categorize comments.
   const sensemaker = new Sensemaker({

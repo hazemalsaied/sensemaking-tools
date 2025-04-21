@@ -73,7 +73,8 @@ run_categorization() {
     --outputFile "${output_file}" \
     --vertexProject "${VERTEX_PROJECT}" \
     --inputFile "${INPUT_FILE}" \
-    --additionalContext "${ADDITIONAL_CONTEXT}"
+    --additionalContext "${ADDITIONAL_CONTEXT}" \
+    --forceRerun
 }
 
 export DEFAULT_VERTEX_PARALLELISM=${DEFAULT_VERTEX_PARALLELISM};

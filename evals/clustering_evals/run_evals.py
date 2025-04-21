@@ -50,14 +50,19 @@ def main(args: argparse.Namespace) -> None:
     new_df = evals_lib.convert_topics_col_to_list(new_df)
     data.append(new_df)
 
-  categorization_diff_rate = evals_lib.get_categorization_diffs(data)
+    categorization_diff_rate = evals_lib.get_categorization_diffs(data)
+    average_topic_set_similarity = evals_lib.get_average_topic_set_similarity(
+        data)
 
-  results_data = {
-      "Evaluation Name": ["Topic Categorization Diff Rate"],
-      "Result": [categorization_diff_rate],
-  }
-  with open(output_path, "w") as f:
-    pd.DataFrame(data=results_data).to_csv(f, index=False)
+    results_data = {
+        "Evaluation Name": [
+            "Topic Categorization Diff Rate",
+            "Average Topic Set Similarity",
+        ],
+        "Result": [categorization_diff_rate, average_topic_set_similarity],
+    }
+    with open(output_path, "w") as f:
+      pd.DataFrame(data=results_data).to_csv(f, index=False)
 
 
 if __name__ == "__main__":
