@@ -12,6 +12,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""This namespace contains utilities for processing semantic embeddings
+and semantic similarity/dissimilarity between pieces of text using
+the Vertex AI Embeddings API. Embedding values are cached in memory to
+avoid unnecessary computations."""
 
-def get_cosine_similarity(text1: str, text2: str) -> float:
-  return 1
+from google import genai
+from google.genai.types import EmbedContentConfig
+import numpy as np
+
+# Create a cache for comment embeddings, so that we don't need to re-request or
+# explicitly track string embeddings across multiple calls.
+embeddings = {}
+
+def get_embedding(comment_text: str) -> np.ndarray:
+  """Gets the emedding for the comment text, memoizing the results."""
+  vertex_client = genai.Client()
+  # Return the cached comment embedding if present
+  if comment_text in embeddings:
+    return embeddings[comment_text]
+  else:
+    response = vertex_client.models.embed_content(
+      model='text-embedding-large-exp-03-07',
+      contents=[
+        comment_text
+      ],
+      config=EmbedContentConfig(),
+    )
+    result = np.array(response.embeddings[0].values)
+    # Cache the result for later calls
+    embeddings[comment_text] = result
+    return result
+
+def get_cosine_similarity(a: str | np.ndarray, b: str | np.ndarray) -> float:
+  """Gets the cosine similarity between two vectors, or if an argument is a string,
+  to it's embedding vector."""
+  if isinstance(a, str):
+    a = get_embedding(a)
+  if isinstance(b, str):
+    b = get_embedding(b)
+  return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+def get_cosine_distance(a: str | np.ndarray, b: str | np.ndarray) -> float:
+  """Returns the cosine distance (1 - cosine_similarity) between two vectors,
+  or if an argument is a string, to it's embedding vector."""
+  return 1 - get_cosine_similarity(a, b)
