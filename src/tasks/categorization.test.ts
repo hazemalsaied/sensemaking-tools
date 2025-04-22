@@ -385,13 +385,39 @@ describe("validateCommentRecord", () => {
         topics: [{ name: "Topic 2", subtopics: [{ name: "Other" }] }],
       },
     ];
+    const topicsWithOther = topics.concat([
+      { name: "Other", subtopics: [{ name: "Other Subtopic 1" }] },
+    ]);
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
       commentRecords,
       inputComments,
-      topics
+      topicsWithOther
     );
     expect(commentsPassedValidation.length).toBe(2);
     expect(commentsWithInvalidTopics.length).toBe(0);
+  });
+
+  it('should fiter our comments with an invalid subtopic name in the "Other" category', () => {
+    const commentRecords: CommentRecord[] = [
+      {
+        id: "1",
+        topics: [{ name: "Other", subtopics: [{ name: "Other Subtopic 1" }] }],
+      },
+      {
+        id: "2",
+        topics: [{ name: "Other", subtopics: [{ name: "Some invalid subtopic name" }] }],
+      },
+    ];
+    const topicsWithOther = topics.concat([
+      { name: "Other", subtopics: [{ name: "Other Subtopic 1" }] },
+    ]);
+    const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
+      commentRecords,
+      inputComments,
+      topicsWithOther
+    );
+    expect(commentsPassedValidation.length).toBe(1);
+    expect(commentsWithInvalidTopics.length).toBe(1);
   });
 });
 

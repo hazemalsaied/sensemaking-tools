@@ -212,12 +212,8 @@ function hasInvalidTopicNames(
 ): boolean {
   // We use `some` here to return as soon as we find an invalid topic (or subtopic).
   return comment.topics.some((topic: Topic) => {
-    if (topic.name === "Other") {
-      return false; // "Other" topic can have any subtopic names - we can skip checking them.
-    }
-
     const isValidTopic = topic.name in inputTopics;
-    if (!isValidTopic) {
+    if (!isValidTopic && topic.name !== "Other") {
       console.warn(
         `Comment has an invalid topic: ${topic.name}, comment: ${JSON.stringify(comment)}`
       );
@@ -572,16 +568,22 @@ export async function categorizeCommentsRecursive(
   if (!topics) {
     topics = await learnOneLevelOfTopics(comments, model, undefined, undefined, additionalContext);
     comments = await oneLevelCategorization(comments, model, topics, additionalContext);
+    // Sometimes comments are categorized into an "Other" topic if no given topics are a good fit.
+    // This needs included in the list of topics so these are processed downstream.
+    topics.push({ name: "Other" });
     return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext);
   }
 
   if (topics && currentTopicDepth === 0) {
     comments = await oneLevelCategorization(comments, model, topics, additionalContext);
+    // Sometimes comments are categorized into an "Other" topic if no given topics are a good fit.
+    // This needs included in the list of topics so these are processed downstream.
+    topics.push({ name: "Other" });
     return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext);
   }
 
   let index = 0;
-  const parentTopics = getTopicsAtDepth(topics, currentTopicDepth).concat([{ name: "Other" }]);
+  const parentTopics = getTopicsAtDepth(topics, currentTopicDepth);
   for (let topic of parentTopics) {
     console.log(
       "Categorizing statements into subtopics under: ",
@@ -613,7 +615,11 @@ export async function categorizeCommentsRecursive(
       additionalContext
     );
     comments = mergeCommentTopics(comments, categorizedComments, topic, currentTopicDepth);
-    topics = mergeTopics(topics, topic);
+    // Sometimes comments are categorized into an "Other" subtopic if no given subtopics are a good fit.
+    // This needs included in the list of subtopics so these are processed downstream.
+    const topicWithNewSubtopics = topic;
+    topicWithNewSubtopics.subtopics.push({ name: "Other" });
+    topics = mergeTopics(topics, topicWithNewSubtopics);
   }
   return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext);
 }
