@@ -196,7 +196,6 @@ function getModelParams(modelName: string, schema?: Schema): ModelParams {
     model: modelName,
     generationConfig: {
       // Param docs: http://cloud/vertex-ai/generative-ai/docs/model-reference/inference#generationconfig
-      maxOutputTokens: 8192,
       temperature: 0,
       topP: 0,
     },

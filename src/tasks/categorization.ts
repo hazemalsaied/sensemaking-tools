@@ -93,6 +93,7 @@ Important Considerations:
 - All comments must be assigned at least one existing topic.
 - If no existing topic fits a comment well, assign it to the "Other" topic.
 - Do not create any new topics that are not listed in the Input Topics.
+- When generating the JSON output, minimize the size of the response. For example, prefer this compact format: {"id": "5258", "topics": [{"name": "Arts, Culture, And Recreation"}]} instead of adding unnecessary whitespace or newlines.
 `;
 }
 
