@@ -1,8 +1,8 @@
-# Sensemaker tools
+# Jigsaw's tools for sensemaking
 
 # Overview
 
-Jigsaw’s [Sensemaker tools](https://medium.com/jigsaw/making-sense-of-large-scale-online-conversations-b153340bda55) help make sense of large-scale online conversations, leveraging LLMs to categorize statements, and summarize statements and voting patterns to surface actionable insights. There are currently three main functions:
+[Sensemaker](https://medium.com/jigsaw/making-sense-of-large-scale-online-conversations-b153340bda55), an evolving toolkit developed by Jigsaw, helps make sense of large-scale online conversations, leveraging LLMs to categorize statements, and summarize statements and voting patterns to surface actionable insights. There are currently three main functions:
 
 * Topic Identification \- identifies the main points of discussion. The level of detail is configurable, allowing the tool to discover: just the top level topics; topics and subtopics; or the deepest level — topics, subtopics, and themes (sub-subtopics).  
 * Statement Categorization \- sorts statements into topics defined by a user or from the Topic Identification function. Statements can belong to more than one topic.  
@@ -14,7 +14,7 @@ Please see these [docs](https://jigsaw-code.github.io/sensemaking-tools/docs/) f
 
 ## Topic Identification
 
-Jigsaw’s Sensemaker tools provide an option to identify the topics present in the comments. The tool offers flexibility to learn:
+Sensemaker provides an option to identify the topics present in the comments. The tool offers flexibility to learn:
 
 * Top-level topics  
 * Both top-level and subtopics  
