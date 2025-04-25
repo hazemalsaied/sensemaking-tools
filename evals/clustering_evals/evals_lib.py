@@ -54,7 +54,7 @@ def get_categorization_diffs(data: list[pd.DataFrame]) -> float:
     for df2 in data[index + 1: len(data)]:
       pairwise_diffs.append(get_pairwise_categorization_diffs(df1, df2))
 
-    return np.mean(pairwise_diffs)
+  return np.mean(pairwise_diffs)
 
 
 def get_topic_set_similarity(topic_set_1: set[str], topic_set_2: set[str]) -> float:
