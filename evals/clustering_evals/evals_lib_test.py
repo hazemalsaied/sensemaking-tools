@@ -99,7 +99,7 @@ class TestEvalsLib(unittest.TestCase):
     self.assertEqual(result.mean, 0.5)
 
   
-  @patch("evals_lib.embeddings_lib.get_cosine_similarity")
+  @patch("evals_lib.embeddings.get_cosine_similarity")
   def test_get_topic_set_similarity_identical_sets(self, mock_get_cosine_similarity):
     """Test with two identical sets of topics."""
     mock_get_cosine_similarity.return_value = 1.0
@@ -109,7 +109,7 @@ class TestEvalsLib(unittest.TestCase):
     self.assertEqual(result, 1.0)
     self.assertEqual(mock_get_cosine_similarity.call_count, 18)
 
-  @patch("evals_lib.embeddings_lib.get_cosine_similarity")
+  @patch("evals_lib.embeddings.get_cosine_similarity")
   def test_get_topic_set_similarity_partial_overlap(self, mock_get_cosine_similarity):
     """Test with two sets of topics that have some overlap."""
     mock_get_cosine_similarity.side_effect = lambda x, y: 1.0 if x == y else 0
@@ -122,7 +122,7 @@ class TestEvalsLib(unittest.TestCase):
   @patch("evals_lib.get_topic_set_similarity")
   def test_analyze_topic_set_similarity_identical_dataframes(
       self, mock_get_topic_set_similarity
-  ): 
+  ):
     """Test with two identical DataFrames."""
     mock_get_topic_set_similarity.return_value = 1.0
     df1 = pd.DataFrame({"topics": [["topic1"], ["topic2"]]})
@@ -147,3 +147,34 @@ class TestEvalsLib(unittest.TestCase):
     self.assertEqual(result.min, 0.25)
     self.assertEqual(result.max, 0.75)
     self.assertEqual(mock_get_topic_set_similarity.call_count, 3)
+
+  @patch("evals_lib.embeddings.get_cosine_distance")
+  def test_topic_centered_silhouette(self, mock_get_cosine_distance):
+    """Test the topic_centered_silhouette function."""
+    # Arrange
+    mock_get_cosine_distance.side_effect = lambda x, y: {
+        ("topic1", "comment1"): 0.1,
+        ("topic1", "comment2"): 0.8,
+        ("topic2", "comment1"): 0.7,
+        ("topic2", "comment2"): 0.2,
+    }[(x, y)]
+    df = pd.DataFrame(
+        {
+            "comment-id": [1, 2],
+            "comment_text": ["comment1", "comment2"],
+            "topics": [["topic1"], ["topic2"]],
+        }
+    )
+    # Here, constructing the individual silhouette scores for each topic
+    silh1 = 0.6 / 0.7
+    silh2 = 0.6 / 0.8
+    # And the average of these
+    silh = (silh1 + silh2) / 2
+
+    # Act
+    result = evals_lib.topic_centered_silhouette(df)
+
+    # Assert
+    self.assertAlmostEqual(result.mean, silh, places=3)
+    self.assertAlmostEqual(result.min, silh2, places=3)
+    self.assertAlmostEqual(result.max, silh1, places=3)

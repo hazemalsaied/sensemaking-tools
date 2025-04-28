@@ -15,7 +15,7 @@
 """Library for running performance and stability evals on Topic Identification and Categorization."""
 
 import pandas as pd
-import embeddings_lib
+import embeddings_lib as embeddings
 import numpy as np
 
 from typing import TypedDict
@@ -85,7 +85,7 @@ def get_topic_set_similarity(topic_set_1: set[str], topic_set_2: set[str]) -> fl
     similarities = []
     for topic in topic_set_1:
       other_topics_and_similarity = [
-          (other_topic, embeddings_lib.get_cosine_similarity(topic, other_topic))
+          (other_topic, embeddings.get_cosine_similarity(topic, other_topic))
           for other_topic in topic_set_2
       ]
       similarities.append(
@@ -115,3 +115,63 @@ def analyze_topic_set_similarity(data: list[pd.DataFrame]) -> AnalysisResults:
       similarity = get_topic_set_similarity(topic_set_1, topic_set_2)
       similarities.append(similarity)
   return AnalysisResults(similarities)
+
+
+def topic_centered_cohesion(comments: pd.DataFrame, topic_name: str) -> float:
+  """Returns cluster cohesion for the topic, treating the topic name embedding as the
+  center of the cluster. This is computed as the average distance between the topic
+  name embedding and embedding of each comment assigned that topic."""
+  topic_comments = comments[comments[TOPICS_COL].apply(lambda x: topic_name in x)]
+  distances = [embeddings.get_cosine_distance(topic_name, ct)
+               for ct in topic_comments[COMMENT_TEXT_COL]]
+  return np.mean(distances)
+
+
+def topic_centered_comment_separation(
+    comment: dict, topics: list[str]
+) -> tuple[float, str | None]:
+  """Computes cluster separation for the given comment, treating the topic name embedding
+  as the center of each cluster. This is computed as the shortest distance between the
+  comment embedding any the embedding of any topic name _not_ assigned said comment. The
+  return value is a tuple of the separation distance, together with the closest topic
+  name."""
+  distances = [(t, embeddings.get_cosine_distance(t, comment[COMMENT_TEXT_COL]))
+               for t in topics if t not in comment[TOPICS_COL]]
+  # This covers the case where a comment is assigned to every topic
+  if not distances:
+    return (float('nan'), None)
+  min_distance = min(distances)
+  return min_distance
+
+
+def topic_centered_separation(comments: pd.DataFrame, topic_name: str) -> float:
+  """Returns the cluster sepration for the given topic, treating the topic name
+  embedding as the center of each cluster. This is computed as the average of the
+  tpoic_centered_comment_separation scores for all comments assigned said topic."""
+  topics = comments[TOPICS_COL].explode().unique()
+  topic_comments = comments[comments[TOPICS_COL].apply(lambda x: topic_name in x)]
+  separations = [topic_centered_comment_separation(comment, topics)[1]
+                 for comment in topic_comments.to_dict('records')]
+  return np.mean(separations)
+
+
+def topic_centered_silhouette_for_topic(
+    comments: pd.DataFrame, topic_name: str
+) -> float:
+  """Returns the silhouette score for the given topic, treating the topic name
+  embedding as the center of each cluster. This is computed as the normalized
+  difference between topic_centered_separation and topic_centered_cohesion."""
+  cohesion = topic_centered_cohesion(comments, topic_name)
+  separation = topic_centered_separation(comments, topic_name)
+  return (separation - cohesion) / max(cohesion, separation)
+
+
+def topic_centered_silhouette(comments: pd.DataFrame) -> AnalysisResults:
+  """Returns analysis of silhouette scores for the clustering induced by the topics,
+  treating the topic name embedding as the center of each cluster. This is computed
+  as the average of all the topic_centered_topic_silhouette scores for all topics in
+  the dataset."""
+  topics = comments[TOPICS_COL].explode().unique()
+  topic_scores = [topic_centered_silhouette_for_topic(comments, topic)
+                  for topic in topics]
+  return AnalysisResults(topic_scores)
