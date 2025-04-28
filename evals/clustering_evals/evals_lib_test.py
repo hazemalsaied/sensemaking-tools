@@ -65,7 +65,7 @@ class TestEvalsLib(unittest.TestCase):
     result_df = evals_lib.convert_topics_col_to_list(pd.DataFrame(data))
     assert_topic_lists_equal(expected_topics, result_df["topics"].tolist())
 
-  def test_get_categorization_diffs_no_diffs(self):
+  def test_analyze_categorization_diffs_no_diffs(self):
     """Test with two identical DataFrames."""
     df1 = pd.DataFrame(
         {
@@ -75,10 +75,10 @@ class TestEvalsLib(unittest.TestCase):
         }
     )
     data = [df1, df1]
-    result = evals_lib.get_categorization_diffs(data)
-    self.assertEqual(result, 0.0)
+    result = evals_lib.analyze_categorization_diffs(data)
+    self.assertEqual(result.mean, 0.0)
 
-  def test_get_categorization_diffs_some_diffs(self):
+  def test_analyze_categorization_diffs_some_diffs(self):
     """Test with two DataFrames with some differences."""
     df1 = pd.DataFrame(
         {
@@ -95,10 +95,10 @@ class TestEvalsLib(unittest.TestCase):
         }
     )
     data = [df1, df2]
-    result = evals_lib.get_categorization_diffs(data)
-    self.assertEqual(result, 0.5)
+    result = evals_lib.analyze_categorization_diffs(data)
+    self.assertEqual(result.mean, 0.5)
 
-
+  
   @patch("evals_lib.embeddings_lib.get_cosine_similarity")
   def test_get_topic_set_similarity_identical_sets(self, mock_get_cosine_similarity):
     """Test with two identical sets of topics."""
@@ -118,22 +118,22 @@ class TestEvalsLib(unittest.TestCase):
     result = evals_lib.get_topic_set_similarity(topic_set_1, topic_set_2)
     self.assertEqual(result, 2 / 3)
     self.assertEqual(mock_get_cosine_similarity.call_count, 18)
-
+  
   @patch("evals_lib.get_topic_set_similarity")
-  def test_get_average_topic_set_similarity_identical_dataframes(
+  def test_analyze_topic_set_similarity_identical_dataframes(
       self, mock_get_topic_set_similarity
-  ):
+  ): 
     """Test with two identical DataFrames."""
     mock_get_topic_set_similarity.return_value = 1.0
     df1 = pd.DataFrame({"topics": [["topic1"], ["topic2"]]})
     df2 = pd.DataFrame({"topics": [["topic1"], ["topic2"]]})
     data = [df1, df2]
-    result = evals_lib.get_average_topic_set_similarity(data)
-    self.assertEqual(result, 1.0)
+    result = evals_lib.analyze_topic_set_similarity(data)
+    self.assertEqual(result.mean, 1.0)
     self.assertEqual(mock_get_topic_set_similarity.call_count, 1)
 
   @patch("evals_lib.get_topic_set_similarity")
-  def test_get_average_topic_set_similarity_multiple_dataframes(
+  def test_analyze_topic_set_similarity_multiple_dataframes(
       self, mock_get_topic_set_similarity
   ):
     """Test with multiple DataFrames."""
@@ -142,6 +142,8 @@ class TestEvalsLib(unittest.TestCase):
     df2 = pd.DataFrame({"topics": [["topic3"], ["topic4"]]})
     df3 = pd.DataFrame({"topics": [["topic5"], ["topic6"]]})
     data = [df1, df2, df3]
-    result = evals_lib.get_average_topic_set_similarity(data)
-    self.assertEqual(result, 0.5)
+    result = evals_lib.analyze_topic_set_similarity(data)
+    self.assertEqual(result.mean, 0.5)
+    self.assertEqual(result.min, 0.25)
+    self.assertEqual(result.max, 0.75)
     self.assertEqual(mock_get_topic_set_similarity.call_count, 3)

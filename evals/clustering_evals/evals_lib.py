@@ -18,10 +18,24 @@ import pandas as pd
 import embeddings_lib
 import numpy as np
 
+from typing import TypedDict
 
 TOPICS_COL = "topics"
 COMMENT_ID_COL = "comment-id"
 COMMENT_TEXT_COL = "comment_text"
+
+class AnalysisResults:
+  """Holds summary statistics for an analysis."""
+  mean: float
+  stdev: float
+  min: float
+  max: float
+
+  def __init__(self, values: list[float]):
+    self.mean = np.mean(values)
+    self.stdev = np.std(values)
+    self.min = np.min(values)
+    self.max = np.max(values)
 
 
 def convert_topics_col_to_list(df: pd.DataFrame) -> pd.DataFrame:
@@ -47,14 +61,14 @@ def get_pairwise_categorization_diffs(df1: pd.DataFrame, df2: pd.DataFrame) -> f
   return count_diffs / df1.shape[0]
 
 
-def get_categorization_diffs(data: list[pd.DataFrame]) -> float:
+def analyze_categorization_diffs(data: list[pd.DataFrame]) -> float:
   """Gets the average rate of comments with at least one topic difference between all pairs of dataframes."""
   pairwise_diffs = []
   for index, df1 in enumerate(data):
     for df2 in data[index + 1: len(data)]:
       pairwise_diffs.append(get_pairwise_categorization_diffs(df1, df2))
 
-  return np.mean(pairwise_diffs)
+  return AnalysisResults(pairwise_diffs)
 
 
 def get_topic_set_similarity(topic_set_1: set[str], topic_set_2: set[str]) -> float:
@@ -88,7 +102,7 @@ def get_topic_set_similarity(topic_set_1: set[str], topic_set_2: set[str]) -> fl
   return np.mean([mean_similarity_1, mean_similarity_2])
 
 
-def get_average_topic_set_similarity(data: list[pd.DataFrame]) -> float:
+def analyze_topic_set_similarity(data: list[pd.DataFrame]) -> AnalysisResults:
   """Gets the average similarity between all pairs of dataframes."""
   topic_sets = []
   for df in data:
@@ -100,4 +114,4 @@ def get_average_topic_set_similarity(data: list[pd.DataFrame]) -> float:
     for topic_set_2 in topic_sets[index + 1: len(topic_sets)]:
       similarity = get_topic_set_similarity(topic_set_1, topic_set_2)
       similarities.append(similarity)
-  return np.mean(similarities)
+  return AnalysisResults(similarities)

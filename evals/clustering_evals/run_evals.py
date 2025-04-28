@@ -56,16 +56,18 @@ def main(args: argparse.Namespace) -> None:
     new_df = evals_lib.convert_topics_col_to_list(new_df)
     data.append(new_df)
 
-  categorization_diff_rate = evals_lib.get_categorization_diffs(data)
-  average_topic_set_similarity = evals_lib.get_average_topic_set_similarity(
-      data)
+  categorization_diff_results = evals_lib.analyze_categorization_diffs(data)
+  topic_set_similarity_results = evals_lib.analyze_topic_set_similarity(data)
 
+  results = [categorization_diff_results, topic_set_similarity_results]
+
+  # Create a dictionary to store the results
   results_data = {
-      "Evaluation Name": [
-          "Topic Categorization Diff Rate",
-          "Average Topic Set Similarity",
-      ],
-      "Result": [categorization_diff_rate, average_topic_set_similarity],
+      "Evaluation Name": ["Topic Categorization Diff Rate", "Topic Set Similarity"],
+      "Mean": [result.mean for result in results],
+      "Stdev": [result.stdev for result in results],
+      "Min": [result.min for result in results],
+      "Max": [result.max for result in results]
   }
   with open(output_path, "w") as f:
     pd.DataFrame(data=results_data).to_csv(f, index=False)

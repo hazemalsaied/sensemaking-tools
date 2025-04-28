@@ -55,5 +55,5 @@ def get_cosine_similarity(a: str | np.ndarray, b: str | np.ndarray) -> float:
 
 def get_cosine_distance(a: str | np.ndarray, b: str | np.ndarray) -> float:
   """Returns the cosine distance (1 - cosine_similarity) between two vectors,
-  or if an argument is a string, to it's embedding vector."""
+  or if an argument is a string, to its embedding vector."""
   return 1 - get_cosine_similarity(a, b)
