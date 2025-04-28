@@ -24,6 +24,7 @@ from autorating_utils import (
     EvalInput,
     generate_evaluation_report,
     format_comments,
+    format_summary,
 )
 from vertex_model import VertexModel, run_tasks_in_parallel
 
@@ -33,12 +34,13 @@ class HallucinationAutorater:
         self.model = model
         self.output_dir = output_dir
 
-    async def rate_hallucination(self, summaries: List[EvalInput]):
+    async def rate_hallucination(self, summaries: List[EvalInput], context: str = ""):
         """
         Evaluates the hallucination/fabrication tendency of generated summary statements.
 
         Args:
             summaries: A list of `EvalInput` objects.
+            context: optional additional context to provide to the model
         """
         start_time_total = time.perf_counter()
 
@@ -64,23 +66,29 @@ class HallucinationAutorater:
             statement = summary_data["summary"]
             comments = summary_data["source"]
 
+            formatted_summary = format_summary(statement)
             formatted_comments = format_comments(comments)
 
             prompt = f"""
 You are analyzing a statement that attempts to summarize a comment or a set of comments.
 
 STATEMENT:
-{statement}
+{formatted_summary}
 
 INPUT COMMENTS:
 {formatted_comments}
+
+ADDITIONAL CONTEXT:
+{context}
 
 INSTRUCTIONS:
 Step 1. Statement Breakdown and Evidence Mapping:
 a. Break down the statement into individual units of information.  Each distinct topic, claim, or assertion should be considered a separate unit.
 b. For each unit of information, determine if it is mentioned in any of the provided INPUT COMMENTS.
  * If the unit of information is supported by one or more comments, list the number(s) of the supporting comment(s) in square brackets after the unit. For example:  "improving educational opportunities[2]" (if supported by comment 2).  If multiple comments support the unit, list all of them: "environment[1,3]".
+ * If the unit of information is supported by the additional context, mark it with "context" in square brackets. For example:  "conversation in Kentucky[context]"
  * If the unit of information is NOT mentioned in *any* of the comments, mark it with an "X" in square brackets to indicate hallucination.  For example:  "supporting local businesses[X]"
+ * If a statement contains claims that there was 'disagreement among participants', don't flag it as this is intentional.
 c. Present the complete statement with the bracketed evidence tags. Example: "High consensus was reached on topics such as preserving green spaces[1], supporting local businesses[X], and improving educational opportunities[2]."
 
 Step 2. Answer the following question with "YES", "NO" or "MAYBE", followed by a *brief* explanation of the reasoning behind why this answer was given:

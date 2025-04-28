@@ -70,13 +70,13 @@ export type CommentCsvRow = VoteTallyCsvRow & CoreCommentCsvRow;
  * Add the text and supporting comments to statementsWithComments. Also adds nested content.
  * @param summaryContent the content and subcontent to add
  * @param allComments all the comments from the deliberation
- * @param statementsWithComments where to add new text and supporting comments
+ * @param statementsWithComments where to add new summary text and supporting source comments
  * @returns none
  */
 function addStatement(
   summaryContent: SummaryContent,
   allComments: Comment[],
-  statementsWithComments: { summary: string; comments: string }[]
+  statementsWithComments: { summary: string; source: string }[]
 ) {
   if (summaryContent.subContents) {
     summaryContent.subContents.forEach((subContent) => {
@@ -95,7 +95,7 @@ function addStatement(
   }
   statementsWithComments.push({
     summary: (summaryContent.title || "") + summaryContent.text,
-    comments: comments.map((comment) => `*        [${comment.id}] ${comment.text}`).join("\n"),
+    source: comments.map((comment) => `*        [${comment.id}] ${comment.text}`).join("\n"),
   });
 }
 
@@ -106,7 +106,7 @@ function addStatement(
  * @param outputFilePath Path to the output CSV file that will have columns "summary" for the statement, and "comments" for the comment texts associated with that statement.
  */
 export function writeSummaryToGroundedCSV(summary: Summary, outputFilePath: string) {
-  const statementsWithComments: { summary: string; comments: string }[] = [];
+  const statementsWithComments: { summary: string; source: string }[] = [];
 
   for (const summaryContent of summary.contents) {
     addStatement(summaryContent, summary.comments, statementsWithComments);
@@ -116,7 +116,7 @@ export function writeSummaryToGroundedCSV(summary: Summary, outputFilePath: stri
     path: outputFilePath,
     header: [
       { id: "summary", title: "summary" },
-      { id: "comments", title: "comments" },
+      { id: "source", title: "source" },
     ],
   });
   csvWriter.writeRecords(statementsWithComments);

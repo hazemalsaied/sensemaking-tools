@@ -54,13 +54,14 @@ async def main():
     parser.add_argument("-o", "--outputDir", default="evals/autorating/results", help="Where to save evaluation results to")
     parser.add_argument("-l", "--location", default="us-central1", help="In which location to run the model")
     parser.add_argument("-m", "--model", default="gemini-2.5-pro-preview-03-25", help="Vertex AI model name")
+    parser.add_argument("-c", "--additionalContext", default="", help="Additional context to provide to the model")
     args = parser.parse_args()
 
     model = VertexModel(args.gcpProject, args.location, args.model)
     autorater = HallucinationAutorater(model, args.outputDir)
     summaries = read_csv(args.inputFile)
 
-    await autorater.rate_hallucination(summaries)
+    await autorater.rate_hallucination(summaries, args.additionalContext)
 
 
 if __name__ == "__main__":

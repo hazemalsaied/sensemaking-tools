@@ -15,7 +15,7 @@
 import os
 import unittest
 
-from autorating_utils import EvalResults, read_csv, generate_evaluation_report, format_comments
+from autorating_utils import EvalResults, read_csv, generate_evaluation_report, format_comments, format_summary
 
 
 class TestAutoratingUtils(unittest.TestCase):
@@ -67,18 +67,25 @@ class TestAutoratingUtils(unittest.TestCase):
 
     def test_format_comments_mixed_input(self):
         input_comments = """
-        *    This is the first comment with leading space and a star.
-        Comment two, no star.
-        *Third comment with a star
-
-
-        Fourth Comment
+        *        [1] This is the first comment.
+        *        [23] Comment two.
+        *        [456] Third comment
         """
-        expected_output = ("<comment>This is the first comment with leading space and a star.</comment>\n"
-                           "<comment>Comment two, no star.</comment>\n"
-                           "<comment>Third comment with a star</comment>\n"
-                           "<comment>Fourth Comment</comment>")
+        expected_output = ("<comment>This is the first comment.</comment>\n"
+                           "<comment>Comment two.</comment>\n"
+                           "<comment>Third comment</comment>")
         self.assertEqual(format_comments(input_comments), expected_output)
+
+    def test_format_summary(self):
+        test_cases = [
+            ("Common ground:  We all want a better future.", "We all want a better future."),
+            ("Differences of opinion:  Some want more taxes.", "Some want more taxes."),
+            ("Just a regular statement.", "Just a regular statement."),
+        ]
+
+        for input_summary, expected_output in test_cases:
+            with self.subTest(input=input_summary):
+                self.assertEqual(format_summary(input_summary), expected_output)
 
 
 if __name__ == "__main__":

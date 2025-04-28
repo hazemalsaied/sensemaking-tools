@@ -415,11 +415,17 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
       const summary = this.model.generateText(prompt);
       text = await summary;
     }
-    return {
+    const resp = {
       title: "Differences of opinion: ",
       text: text,
       citations: topDisagreeCommentsAcrossGroups.map((comment) => comment.id),
     };
+
+    // Since common ground is part of the summary, include its citations for evaluation
+    if (commonGroundSummary.citations) {
+      resp.citations = resp.citations.concat(commonGroundSummary.citations);
+    }
+    return resp;
   }
 }
 

@@ -16,6 +16,7 @@
 
 import csv
 import logging
+import re
 from typing import List, Dict, TypedDict
 
 
@@ -58,9 +59,14 @@ def read_csv(csv_file_path: str) -> List[EvalInput]:
                 return []
 
             for record in reader:
+                summary = record['summary'].strip()
+                source = record['source'].strip()
+                if not summary or not source:
+                    # Skip rows with empty summary or source
+                    continue
                 eval_input.append({
-                    'summary': record['summary'],
-                    'source': record['source']
+                    'summary': summary,
+                    'source': source
                 })
     except FileNotFoundError:
         logging.error(f"Input file not found: {csv_file_path}")
@@ -115,7 +121,17 @@ def format_comments(comments_string: str) -> str:
 
     for line in lines:
         cleaned_line = line.strip().lstrip("*").strip()  # remove *, and whitespaces
+        cleaned_line = re.sub(r"^\[\d+]\s*", "", cleaned_line)  # remove [numbers] at the beginning
         if cleaned_line:  # only add if there is a value
             formatted_comments += f"<comment>{cleaned_line}</comment>\n"
 
     return formatted_comments.strip()
+
+def format_summary(summary_claim: str) -> str:
+    """
+    Removes text unrelated to evaluation from a summary claim.
+    """
+    summary_claim = summary_claim.strip()
+    # Remove "Common ground: " or "Differences of opinion: " from the beginning
+    summary_claim = re.sub(r"^(Common ground:|Differences of opinion:)\s*", "", summary_claim)
+    return summary_claim.strip()

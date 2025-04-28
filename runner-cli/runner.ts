@@ -30,7 +30,7 @@ async function main(): Promise<void> {
   program
     .option(
       "-o, --outputBasename <file>",
-      "The output basename, this will be prepended to 'summary.html' and 'summaryClaimsAndComments.csv'."
+      "The output basename, this will be prepended to the output file names."
     )
     .option("-i, --inputFile <file>", "The input file name.")
     .option(
@@ -53,7 +53,7 @@ async function main(): Promise<void> {
   const markdownContent = summary.getText("MARKDOWN");
   writeFileSync(options.outputBasename + "-summary.md", markdownContent);
   writeSummaryToHtml(summary, options.outputBasename + "-summary.html");
-  writeSummaryToGroundedCSV(summary, options.outputBasename + "-summaryClaimsAndComments.csv");
+  writeSummaryToGroundedCSV(summary, options.outputBasename + "-summaryAndSource.csv");
 
   const jsonContent = JSON.stringify(summary, null, 2);
   writeFileSync(options.outputBasename + "-summary.json", jsonContent);
