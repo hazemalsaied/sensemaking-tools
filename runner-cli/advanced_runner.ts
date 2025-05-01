@@ -26,7 +26,7 @@ import { getCommentsFromCsv, getSummary } from "./runner_utils";
 import { MajoritySummaryStats } from "../src/stats/majority_vote";
 import { TopicStats } from "../src/stats/summary_stats";
 import { RelativeContext } from "../src/tasks/summarization_subtasks/relative_context";
-import { Comment, VoteInfo } from "../src/types";
+import { Comment, CommentWithVoteInfo, VoteInfo } from "../src/types";
 import { getTotalAgreeRate, getTotalDisagreeRate, getTotalPassRate } from "../src/stats/stats_util";
 
 // Whether to return the estimated rates of agreement/disagreement/passing by using a prior.
@@ -48,9 +48,16 @@ interface CommentWithScores {
   agreeRate?: number;
   disagreeRate?: number;
   passRate?: number;
+
   isHighAlignment?: boolean;
+  highAlignmentScore?: number;
+
   isLowAlignment?: boolean;
+  lowAlignmentScore?: number;
+
   isHighUncertainty?: boolean;
+  highUncertaintyScore?: number;
+
   isFilteredOut?: boolean;
 }
 
@@ -91,6 +98,7 @@ function getCommentsWithScores(
       votes: comment.voteInfo,
     };
     if (comment.voteInfo) {
+      const commentWithVoteInfo = comment as CommentWithVoteInfo;
       commentWithScores.passRate = getTotalPassRate(comment.voteInfo, USE_PROBABILITY_ESTIMATES);
       commentWithScores.agreeRate = getTotalAgreeRate(comment.voteInfo, USE_PROBABILITY_ESTIMATES);
       commentWithScores.disagreeRate = getTotalDisagreeRate(
@@ -98,8 +106,14 @@ function getCommentsWithScores(
         USE_PROBABILITY_ESTIMATES
       );
       commentWithScores.isHighAlignment = highAlignmentCommentIDs.includes(comment.id);
+      commentWithScores.highAlignmentScore = stats.getCommonGroundScore(commentWithVoteInfo);
+
       commentWithScores.isLowAlignment = lowAlignmentCommentIDs.includes(comment.id);
+      commentWithScores.lowAlignmentScore = stats.getDifferenceOfOpinionScore(commentWithVoteInfo);
+
       commentWithScores.isHighUncertainty = highUncertaintyCommentIDs.includes(comment.id);
+      commentWithScores.highUncertaintyScore = stats.getUncertainScore(commentWithVoteInfo);
+
       commentWithScores.isFilteredOut = !filteredCommentIds.includes(comment.id);
     }
     return commentWithScores;
@@ -134,7 +148,6 @@ async function main(): Promise<void> {
     JSON.stringify(minimalTopicStats, null, 2)
   );
 
-  // TODO: This does not capture the high alignment comments that are all disagree.
   const commentsWithScores = getCommentsWithScores(comments, stats);
   writeFileSync(
     options.outputBasename + "-comments-with-scores.json",

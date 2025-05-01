@@ -25,8 +25,6 @@ export class MajoritySummaryStats extends SummaryStats {
   // Agreement and Disagreement must be between these values to be difference of opinion.
   minDifferecenProb = 0.4;
   maxDifferenceProb = 0.6;
-  // Must be above this threshold to be considered an uncertain comment.
-  minUncertaintyProb = 0.3;
 
   groupBasedSummarization = false;
   // This outlier protection isn't needed since we already filter our comments without many votes.
@@ -54,19 +52,54 @@ export class MajoritySummaryStats extends SummaryStats {
       .slice(0, k);
   }
 
+  /** Returns a score indicating how well a comment represents when everyone agrees. */
+  getCommonGroundAgreeScore(comment: CommentWithVoteInfo): number {
+    return getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate);
+  }
+
+  /** Returns a score indicating how well a comment represents the common ground. */
+  getCommonGroundScore(comment: CommentWithVoteInfo): number {
+    return Math.max(
+      this.getCommonGroundAgreeScore(comment),
+      getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate)
+    );
+  }
+
+  meetsCommonGroundAgreeThreshold(comment: CommentWithVoteInfo): boolean {
+    return (
+      getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) >= this.minCommonGroundProb
+    );
+  }
+
   /**
    * Gets the topK agreed upon comments based on highest % of agree votes.
    *
    * @param k the number of comments to get
    * @returns the top agreed on comments
    */
+  getCommonGroundAgreeComments(k: number = this.maxSampleSize) {
+    return this.topK(
+      (comment) => this.getCommonGroundAgreeScore(comment),
+      k,
+      // Before getting the top agreed comments, enforce a minimum level of agreement
+      (comment: CommentWithVoteInfo) => this.meetsCommonGroundAgreeThreshold(comment)
+    );
+  }
+
+  /**
+   * Gets the topK common ground comments where either everyone agrees or everyone disagrees.
+   *
+   * @param k the number of comments to get
+   * @returns the top common ground comments
+   */
   getCommonGroundComments(k: number = this.maxSampleSize) {
     return this.topK(
-      (comment) => getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate),
+      (comment) => this.getCommonGroundScore(comment),
       k,
       // Before getting the top agreed comments, enforce a minimum level of agreement
       (comment: CommentWithVoteInfo) =>
-        getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) >= this.minCommonGroundProb
+        this.meetsCommonGroundAgreeThreshold(comment) ||
+        this.meetsCommonGroundDisagreeThreshold(comment)
     );
   }
 
@@ -78,6 +111,12 @@ export class MajoritySummaryStats extends SummaryStats {
     );
   }
 
+  /** Returns a score indicating how well a comment represents an uncertain viewpoint based on pass
+   *  votes */
+  getUncertainScore(comment: CommentWithVoteInfo): number {
+    return getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate);
+  }
+
   /**
    * Gets the topK uncertain comments based on pass votes.
    *
@@ -86,11 +125,17 @@ export class MajoritySummaryStats extends SummaryStats {
    */
   getUncertainComments(k: number = this.maxSampleSize) {
     return this.topK(
-      (comment) => getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate),
+      (comment) => this.getUncertainScore(comment),
       k,
       // Before getting the top comments, enforce a minimum level of uncertainty
       (comment: CommentWithVoteInfo) =>
         getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate) > this.minUncertaintyProb
+    );
+  }
+
+  meetsCommonGroundDisagreeThreshold(comment: CommentWithVoteInfo): boolean {
+    return (
+      getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate) >= this.minCommonGroundProb
     );
   }
 
@@ -105,9 +150,21 @@ export class MajoritySummaryStats extends SummaryStats {
       (comment) => getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate),
       k,
       // Before using Group Informed Consensus a minimum bar of agreement between groups is enforced
-      (comment: CommentWithVoteInfo) =>
-        getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate) >=
-        this.minCommonGroundProb
+      (comment: CommentWithVoteInfo) => this.meetsCommonGroundDisagreeThreshold(comment)
+    );
+  }
+
+  /** Returns a score indicating how well a comment represents a difference of opinions. This
+   * score prioritizes comments where the agreement rate and disagreement rate are
+   * both high, and the pass rate is low.*/
+  getDifferenceOfOpinionScore(comment: CommentWithVoteInfo): number {
+    return (
+      1 -
+      Math.abs(
+        getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) -
+          getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate)
+      ) -
+      getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate)
     );
   }
 
@@ -122,13 +179,7 @@ export class MajoritySummaryStats extends SummaryStats {
       // Rank comments with the same agree and disagree rates the most highly and prefer when these
       // values are higher. So the best score would be when both the agree rate and the disagree
       // rate are 0.5.
-      (comment) =>
-        1 -
-        Math.abs(
-          getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) -
-            getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate)
-        ) -
-        getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate),
+      (comment) => this.getDifferenceOfOpinionScore(comment),
       k,
       // Before getting the top differences comments, enforce a minimum level of difference of
       // opinion.

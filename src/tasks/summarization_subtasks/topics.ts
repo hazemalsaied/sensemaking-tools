@@ -286,7 +286,9 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
 
     if (process.env["DEBUG_MODE"] === "true") {
       // Based on the common ground and differences of opinion comments,
-      const commonGroundComments = this.input.getCommonGroundComments();
+      // TODO: Should also include common ground disagree comments (aka what everyone agrees they
+      // don't like)
+      const commonGroundComments = this.input.getCommonGroundAgreeComments();
       const differencesComments = this.input.getDifferenceOfOpinionComments();
 
       // Figure out what comments aren't currently being summarized
@@ -362,7 +364,9 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
    * @returns a short paragraph describing the similarities, including comment citations.
    */
   async getCommonGroundSummary(topic: string): Promise<SummaryContent> {
-    const commonGroundComments = this.input.getCommonGroundComments();
+    // TODO: Should also include common ground disagree comments (aka what everyone agrees they
+    // don't like)
+    const commonGroundComments = this.input.getCommonGroundAgreeComments();
     const nComments = commonGroundComments.length;
     let text = "";
     if (nComments === 0) {

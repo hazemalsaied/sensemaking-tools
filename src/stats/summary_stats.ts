@@ -29,6 +29,9 @@ export abstract class SummaryStats {
   filteredComments: CommentWithVoteInfo[];
   minCommonGroundProb = 0.6;
   minAgreeProbDifference = 0.3;
+  // Must be above this threshold to be considered an uncertain comment.
+  minUncertaintyProb = 0.3;
+
   maxSampleSize = 12;
   public minVoteCount = 20;
   // Whether group data is used as part of the summary.
@@ -51,10 +54,19 @@ export abstract class SummaryStats {
   }
 
   /**
-   * Based on how the implementing class defines it, get the top agreed on comments.
+   * Get the top common ground comments that everyone either agrees on or disagrees on.
    * @param k the number of comments to return
    */
   abstract getCommonGroundComments(k?: number): Comment[];
+
+  /** Returns a score indicating how well a comment represents the common ground. */
+  abstract getCommonGroundScore(comment: Comment): number;
+
+  /**
+   * Get the top common ground comments that everyone agrees on.
+   * @param k the number of comments to return
+   */
+  abstract getCommonGroundAgreeComments(k?: number): Comment[];
 
   /**
    * Returns an error message explaining why no common ground comments were found. The
@@ -62,7 +74,7 @@ export abstract class SummaryStats {
    */
   abstract getCommonGroundNoCommentsMessage(): string;
 
-  /** Based on how the implementing class defines it, get the top comments everyone disagreed on
+  /** Get the top common ground comments that everyone disagrees on.
    * @param k the number of comments to return
    */
   abstract getCommonGroundDisagreeComments(k?: number): Comment[];
@@ -72,6 +84,18 @@ export abstract class SummaryStats {
    * @param k the number of comments to return.
    */
   abstract getDifferenceOfOpinionComments(k?: number): Comment[];
+
+  /** Returns a score indicating how well a comment represents a difference of opinions. */
+  abstract getDifferenceOfOpinionScore(comment: Comment): number;
+
+  /**
+   * Gets the topK uncertain comments.
+   * @param k the number of comments to get
+   */
+  abstract getUncertainComments(k?: number): Comment[];
+
+  /** Returns a score indicating how well a comment represents an uncertain viewpoint */
+  abstract getUncertainScore(comment: Comment): number;
 
   /**
    * Returns an error message explaining why no differences of opinion comments were found. The

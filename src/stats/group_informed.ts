@@ -21,6 +21,7 @@ import {
   getMaxGroupAgreeProbDifference,
   getMinAgreeProb,
   getMinDisagreeProb,
+  getTotalPassRate,
 } from "./stats_util";
 import { SummaryStats } from "./summary_stats";
 
@@ -32,6 +33,10 @@ import { SummaryStats } from "./summary_stats";
  * but is specifically tailored to group based summarization.
  */
 export class GroupedSummaryStats extends SummaryStats {
+  // This outlier protection is needed since although we filter out comments with too few votes,
+  // sometimes group sizes are skewed so one group will have very few votes.
+  asProbabilityEstimate = true;
+
   /**
    * An override of the SummaryStats static factory method,
    * to allow for GroupedSummaryStats specific initialization.
@@ -54,6 +59,14 @@ export class GroupedSummaryStats extends SummaryStats {
       .slice(0, k);
   }
 
+  /** Returns a score indicating how well a comment represents the common ground. */
+  getCommonGroundScore(comment: CommentWithVoteInfo): number {
+    return Math.max(
+      getGroupInformedDisagreeConsensus(comment),
+      this.getCommonGroundAgreeScore(comment)
+    );
+  }
+
   /**
    * Gets the topK agreed upon comments across all groups.
    *
@@ -64,10 +77,36 @@ export class GroupedSummaryStats extends SummaryStats {
    */
   getCommonGroundComments(k: number = this.maxSampleSize) {
     return this.topK(
-      (comment) => getGroupInformedConsensus(comment),
+      (comment) => this.getCommonGroundScore(comment),
       k,
-      // Before using Group Informed Consensus a minimum bar of agreement between groups is enforced
-      (comment: CommentWithVoteInfo) => getMinAgreeProb(comment) >= this.minCommonGroundProb
+      // Before getting the top agreed comments, enforce a minimum level of agreement
+      (comment: CommentWithVoteInfo) =>
+        this.meetsCommonGroundAgreeThreshold(comment) ||
+        this.meetsCommonGroundDisagreeThreshold(comment)
+    );
+  }
+
+  meetsCommonGroundAgreeThreshold(comment: CommentWithVoteInfo): boolean {
+    return getMinAgreeProb(comment) >= this.minCommonGroundProb;
+  }
+
+  getCommonGroundAgreeScore(comment: CommentWithVoteInfo): number {
+    return getGroupInformedConsensus(comment);
+  }
+
+  /**
+   * Gets the topK agreed upon comments across all groups.
+   *
+   * This is measured via the getGroupInformedConsensus metric, subject to the constraints of
+   * this.minVoteCount and this.minAgreeProbCommonGround settings.
+   * @param k dfaults to this.maxSampleSize
+   * @returns the top agreed on comments
+   */
+  getCommonGroundAgreeComments(k: number = this.maxSampleSize) {
+    return this.topK(
+      (comment) => this.getCommonGroundAgreeScore(comment),
+      k,
+      (comment) => this.meetsCommonGroundAgreeThreshold(comment)
     );
   }
 
@@ -92,8 +131,12 @@ export class GroupedSummaryStats extends SummaryStats {
       (comment) => getGroupInformedDisagreeConsensus(comment),
       k,
       // Before using Group Informed Consensus a minimum bar of agreement between groups is enforced
-      (comment: CommentWithVoteInfo) => getMinDisagreeProb(comment) >= this.minCommonGroundProb
+      (comment: CommentWithVoteInfo) => this.meetsCommonGroundDisagreeThreshold(comment)
     );
+  }
+
+  meetsCommonGroundDisagreeThreshold(comment: CommentWithVoteInfo): boolean {
+    return getMinDisagreeProb(comment) >= this.minCommonGroundProb;
   }
 
   /**
@@ -114,6 +157,11 @@ export class GroupedSummaryStats extends SummaryStats {
     );
   }
 
+  /** Returns a score indicating how well a comment represents a difference of opinions. */
+  getDifferenceOfOpinionScore(comment: CommentWithVoteInfo): number {
+    return getMaxGroupAgreeProbDifference(comment);
+  }
+
   /**
    * Returns the top K comments that best distinguish differences of opinion between groups.
    *
@@ -127,7 +175,7 @@ export class GroupedSummaryStats extends SummaryStats {
   getDifferenceOfOpinionComments(k: number = this.maxSampleSize): Comment[] {
     return this.topK(
       // Get the maximum absolute group agree difference for any group.
-      getMaxGroupAgreeProbDifference,
+      (comment) => this.getDifferenceOfOpinionScore(comment),
       k,
       (comment: CommentWithVoteInfo) =>
         // Some group must agree with the comment less than the minAgreeProbCommonGround
@@ -144,6 +192,28 @@ export class GroupedSummaryStats extends SummaryStats {
       `No statements met the thresholds necessary to be considered as a significant ` +
       `difference of opinion (at least ${this.minVoteCount} votes, and more than ` +
       `${decimalToPercent(this.minAgreeProbDifference)} difference in agreement rate between groups).`
+    );
+  }
+
+  /** Returns a score indicating how well a comment represents an uncertain viewpoint based on pass
+   *  votes. This is not based on groups. */
+  getUncertainScore(comment: CommentWithVoteInfo): number {
+    return getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate);
+  }
+
+  /**
+   * Gets the topK uncertain comments based on pass votes.
+   *
+   * @param k the number of comments to get
+   * @returns the top uncertain comments
+   */
+  getUncertainComments(k: number = this.maxSampleSize) {
+    return this.topK(
+      (comment) => this.getUncertainScore(comment),
+      k,
+      // Before getting the top comments, enforce a minimum level of uncertainty
+      (comment: CommentWithVoteInfo) =>
+        getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate) > this.minUncertaintyProb
     );
   }
 

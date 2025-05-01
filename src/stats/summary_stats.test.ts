@@ -24,8 +24,28 @@ class TestSummaryStats extends SummaryStats {
     return this.comments.slice(0, k);
   }
 
+  getCommonGroundScore(): number {
+    return 1;
+  }
+
+  getCommonGroundAgreeComments(k?: number): Comment[] {
+    return this.comments.slice(0, k);
+  }
+
   getCommonGroundDisagreeComments(k?: number): Comment[] {
     return this.comments.slice(0, k);
+  }
+
+  getDifferenceOfOpinionScore(): number {
+    return 1;
+  }
+
+  getUncertainComments(k?: number): Comment[] {
+    return this.comments.slice(0, k);
+  }
+
+  getUncertainScore(): number {
+    return 1;
   }
 
   getCommonGroundNoCommentsMessage(): string {
@@ -78,6 +98,7 @@ describe("Summary Stats methods", () => {
       ],
       summaryStats: {
         minCommonGroundProb: 0.6,
+        minUncertaintyProb: 0.3,
         minAgreeProbDifference: 0.3,
         maxSampleSize: 12,
         minVoteCount: 20,
