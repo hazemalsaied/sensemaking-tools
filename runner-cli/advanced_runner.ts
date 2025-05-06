@@ -61,8 +61,11 @@ interface CommentWithScores {
   isFilteredOut?: boolean;
 }
 
-function createMinimalStats(stats: TopicStats[]): MinimalTopicStat[] {
-  const relativeContext = new RelativeContext(stats);
+function createMinimalStats(
+  stats: TopicStats[],
+  relativeContext: RelativeContext | null = null
+): MinimalTopicStat[] {
+  if (!relativeContext) relativeContext = new RelativeContext(stats);
   return stats.map((stat): MinimalTopicStat => {
     const minimalStat: MinimalTopicStat = {
       name: stat.name,
@@ -71,7 +74,9 @@ function createMinimalStats(stats: TopicStats[]): MinimalTopicStat[] {
       relativeAlignment: relativeContext.getRelativeAgreement(stat.summaryStats),
       relativeEngagement: relativeContext.getRelativeEngagement(stat.summaryStats),
       // Recursively process subtopics if they exist
-      subtopicStats: stat.subtopicStats ? createMinimalStats(stat.subtopicStats) : undefined,
+      subtopicStats: stat.subtopicStats
+        ? createMinimalStats(stat.subtopicStats, relativeContext)
+        : undefined,
     };
     return minimalStat;
   });
