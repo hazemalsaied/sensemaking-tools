@@ -135,7 +135,7 @@ def topic_centered_comment_separation(
   comment embedding any the embedding of any topic name _not_ assigned said comment. The
   return value is a tuple of the separation distance, together with the closest topic
   name."""
-  distances = [(t, embeddings.get_cosine_distance(t, comment[COMMENT_TEXT_COL]))
+  distances = [(embeddings.get_cosine_distance(t, comment[COMMENT_TEXT_COL]), t)
                for t in topics if t not in comment[TOPICS_COL]]
   # This covers the case where a comment is assigned to every topic
   if not distances:
@@ -150,7 +150,7 @@ def topic_centered_separation(comments: pd.DataFrame, topic_name: str) -> float:
   tpoic_centered_comment_separation scores for all comments assigned said topic."""
   topics = comments[TOPICS_COL].explode().unique()
   topic_comments = comments[comments[TOPICS_COL].apply(lambda x: topic_name in x)]
-  separations = [topic_centered_comment_separation(comment, topics)[1]
+  separations = [topic_centered_comment_separation(comment, topics)[0]
                  for comment in topic_comments.to_dict('records')]
   return np.mean(separations)
 

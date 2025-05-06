@@ -178,3 +178,19 @@ class TestEvalsLib(unittest.TestCase):
     self.assertAlmostEqual(result.mean, silh, places=3)
     self.assertAlmostEqual(result.min, silh2, places=3)
     self.assertAlmostEqual(result.max, silh1, places=3)
+
+  @patch("evals_lib.embeddings.get_cosine_distance")
+  def test_topic_centered_comment_separation_three_topics(self, mock_get_cosine_distance):
+    """Test the topic_centered_comment_separation function with three topics."""
+    # Arrange so that topic3 is the closest separation topic, ensuring this gets
+    # selected over topic2 (which is miminal by alphanumeric sort)
+    mock_get_cosine_distance.side_effect = lambda x, y: {
+        ("topic1", "comment1"): 0.1,
+        ("topic2", "comment1"): 0.7,
+        ("topic3", "comment1"): 0.5,
+    }[(x, y)]
+    comment1 = {"comment_text": "comment1", "topics": ["topic1"]}
+    topics = ["topic1", "topic2", "topic3"]
+    # Act & Assert
+    result1 = evals_lib.topic_centered_comment_separation(comment1, topics)
+    self.assertEqual(result1, (0.5, "topic3"))
