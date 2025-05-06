@@ -23,7 +23,7 @@ export class MajoritySummaryStats extends SummaryStats {
   // Must be above this threshold to be considered high agreement.
   minCommonGroundProb = 0.7;
   // Agreement and Disagreement must be between these values to be difference of opinion.
-  minDifferecenProb = 0.4;
+  minDifferenceProb = 0.4;
   maxDifferenceProb = 0.6;
 
   groupBasedSummarization = false;
@@ -184,16 +184,16 @@ export class MajoritySummaryStats extends SummaryStats {
       // Before getting the top differences comments, enforce a minimum level of difference of
       // opinion.
       (comment: CommentWithVoteInfo) =>
-        getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) >= this.minDifferecenProb &&
+        getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) >= this.minDifferenceProb &&
         getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) <= this.maxDifferenceProb &&
         getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate) <=
-          this.minDifferecenProb &&
+          this.minDifferenceProb &&
         getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate) <= this.maxDifferenceProb
     );
   }
 
   getDifferencesOfOpinionNoCommentsMessage(): string {
-    const minThreshold = decimalToPercent(this.minDifferecenProb);
+    const minThreshold = decimalToPercent(this.minDifferenceProb);
     const maxThreshold = decimalToPercent(this.maxDifferenceProb);
     return (
       `No statements met the thresholds necessary to be considered as a significant ` +
