@@ -18,7 +18,6 @@ import { getTotalAgreeRate, getTotalDisagreeRate, getTotalPassRate } from "./sta
 import { SummaryStats } from "./summary_stats";
 
 // Stats basis for the summary that is based on majority vote algorithms. Does not use groups.
-
 export class MajoritySummaryStats extends SummaryStats {
   // Must be above this threshold to be considered high agreement.
   minCommonGroundProb = 0.7;
@@ -27,11 +26,14 @@ export class MajoritySummaryStats extends SummaryStats {
   maxDifferenceProb = 0.6;
 
   // Whether to include pass votes in agree and disagree rate calculations.
-  includePasses = true;
+  includePasses = false;
 
   groupBasedSummarization = false;
   // This outlier protection isn't needed since we already filter our comments without many votes.
   asProbabilityEstimate = false;
+
+  // Buffer between uncertainty comments and high/low alignment comments.
+  uncertaintyBuffer = 0.05;
 
   /**
    * An override of the SummaryStats static factory method,
@@ -71,7 +73,9 @@ export class MajoritySummaryStats extends SummaryStats {
   meetsCommonGroundAgreeThreshold(comment: CommentWithVoteInfo): boolean {
     return (
       getTotalAgreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate) >=
-      this.minCommonGroundProb
+        this.minCommonGroundProb &&
+      getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate) <=
+        this.minUncertaintyProb - this.uncertaintyBuffer
     );
   }
 
@@ -133,14 +137,16 @@ export class MajoritySummaryStats extends SummaryStats {
       k,
       // Before getting the top comments, enforce a minimum level of uncertainty
       (comment: CommentWithVoteInfo) =>
-        getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate) > this.minUncertaintyProb
+        getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate) >= this.minUncertaintyProb
     );
   }
 
   meetsCommonGroundDisagreeThreshold(comment: CommentWithVoteInfo): boolean {
     return (
       getTotalDisagreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate) >=
-      this.minCommonGroundProb
+        this.minCommonGroundProb &&
+      getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate) <=
+        this.minUncertaintyProb - this.uncertaintyBuffer
     );
   }
 
@@ -194,10 +200,12 @@ export class MajoritySummaryStats extends SummaryStats {
           this.minDifferenceProb &&
         getTotalAgreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate) <=
           this.maxDifferenceProb &&
-        getTotalDisagreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate) <=
+        getTotalDisagreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate) >=
           this.minDifferenceProb &&
         getTotalDisagreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate) <=
-          this.maxDifferenceProb
+          this.maxDifferenceProb &&
+        getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate) <=
+          this.minUncertaintyProb - this.uncertaintyBuffer
     );
   }
 

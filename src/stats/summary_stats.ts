@@ -14,7 +14,20 @@
 
 import { groupCommentsBySubtopic } from "../sensemaker_utils";
 import { Comment, CommentWithVoteInfo, isCommentWithVoteInfoType } from "../types";
-import { getCommentVoteCount } from "./stats_util";
+import { getCommentVoteCount, getTotalPassRate } from "./stats_util";
+
+function get75thPercentile(arr: number[]): number {
+  const sortedArr = [...arr].sort((a, b) => a - b);
+  const index = (sortedArr.length - 1) * 0.75;
+
+  if (Math.floor(index) === index) {
+    return sortedArr[index];
+  }
+
+  const lowerIndex = Math.floor(index);
+  const upperIndex = lowerIndex + 1;
+  return (sortedArr[lowerIndex] + sortedArr[upperIndex]) / 2;
+}
 
 // Base class for statistical basis for summaries
 
@@ -29,8 +42,10 @@ export abstract class SummaryStats {
   filteredComments: CommentWithVoteInfo[];
   minCommonGroundProb = 0.6;
   minAgreeProbDifference = 0.3;
-  // Must be above this threshold to be considered an uncertain comment.
-  minUncertaintyProb = 0.3;
+  // Must be above this threshold to be considered an uncertain comment. This can be overriden in
+  // the constructor if the particular conversation has relatively high passes.
+  minUncertaintyProb: number = 0.2;
+  asProbabilityEstimate = false;
 
   maxSampleSize = 12;
   public minVoteCount = 20;
@@ -42,6 +57,13 @@ export abstract class SummaryStats {
     this.filteredComments = comments.filter(isCommentWithVoteInfoType).filter((comment) => {
       return getCommentVoteCount(comment, true) >= this.minVoteCount;
     });
+    const topQuartilePassRate = get75thPercentile(
+      this.filteredComments.map((comment) =>
+        getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate)
+      )
+    );
+    // Uncertain comments must have at least a certain minimum pass rate.
+    this.minUncertaintyProb = Math.max(topQuartilePassRate, this.minUncertaintyProb);
   }
 
   /**
