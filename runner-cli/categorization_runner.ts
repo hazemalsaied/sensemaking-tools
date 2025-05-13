@@ -13,10 +13,17 @@
 // limitations under the License.
 
 // Learns and assigns topics and subtopics to a CSV of comments.
-// Input CSV must contain "comment_text" and "comment-id" fields
-// Output CSV contains all input fields plus a new "topics" field which
-// concatenates all topics and subtopics, e.g.
+//
+// The input CSV must contain "comment_text" and "comment-id" fields. The output CSV will contain
+// all input fields plus a new "topics" field which concatenates all topics and subtopics, e.g.
 // "Transportation:PublicTransit;Transportation:Parking;Technology:Internet"
+//
+// Sample Usage:
+// npx ts-node library/runner-cli/categorization_runner.ts \
+//    --topicDepth 2 \
+//    --outputFile ~/outputs/test.csv  \
+//    --vertexProject "{CLOUD_PROJECT_ID}" \
+//    --inputFile ~/input.csv \
 
 import { VertexModel } from "../src/models/vertex_model";
 import { Sensemaker } from "../src/sensemaker";

@@ -15,10 +15,23 @@
 // Advanced data output mode.
 //
 // There are 3 outputs:
-// - a topic stats json that includes the topics found, their size, their engagement and alignment,
-//        and their subtopics
-// - a comments json that includes the total vote count and agree, disagree, and pass rate.
-// - the summary as a json
+// - a topic stats JSON that includes the topics found, their size, their votes, their engagement
+//        and alignment, and their subtopics
+// - a comments JSON that includes the comment id, text, votes, pass rate, agree rate, disagree
+//        rate,  whether the comment is high alignment, low alignment, uncertain, and whether the
+//        comment is filtered out.
+// - the summary object as a JSON which includes the section titles, text, and cited comment ids.
+//
+// The input CSV is expected to have the following columns: comment-id, comment_text, and topics.
+// Vote data should also be included, for data without group information the columns should be:
+// agrees, disagrees, and optionally passes. For data with group information the columns should be:
+// {group name}-agree-count, {group name}-disagree-count, and optionally {group name}-pass-count
+// for each group.
+//
+// Sample Usage:
+// time npx ts-node ./runner-cli/advanced_runner.ts --outputBasename final-copy \
+//   --vertexProject "{CLOUD_PROJECT_ID}" \
+//   --inputFile "./data.csv"
 
 import { Command } from "commander";
 import { writeFileSync } from "fs";
@@ -143,8 +156,13 @@ async function main(): Promise<void> {
   const options = program.opts();
 
   const comments = await getCommentsFromCsv(options.inputFile);
-  // TODO: Consider making this a flag so the user can choose between algorithms.
   const stats = new MajoritySummaryStats(comments);
+  if (stats.getStatsByTopic().length === 0) {
+    throw Error(
+      "Expected input comments to have topics. Please categorize them using the " +
+        "categorization_runner.ts"
+    );
+  }
 
   // Modify the SummaryStats output to drop comment info and add RelativeContext.
   const minimalTopicStats = createMinimalStats(stats.getStatsByTopic());

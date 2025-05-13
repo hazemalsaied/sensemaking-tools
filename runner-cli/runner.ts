@@ -12,8 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Run the summarizer based on CSV data as output from the processing scripts in the `bin`
-// directory, and as documented in `runner_utils.ts`.
+// Summarizes the input file and outputs a HTML report.
+//
+// There are 3 outputs:
+//  summary.md: the summary as a Markdown file
+//  summary.html: the summary as a HTML file with hover over citations
+//  summaryAndSource.csv: a CSV of each paragraph of the summary and the comments
+//     associated with them.
+//
+// The input CSV is expected to have the following columns: comment-id, comment_text, and votes.
+// Vote data should be included in one of two forms - for data without group information the
+// columns should be: agrees, disagrees, and optionally passes. For data with group information
+// the columns should be: {group name}-agree-count, {group name}-disagree-count, and optionally
+// {group name}-pass-count for each group.
+//
+// Sample Usage:
+//  npx ts-node ./library/runner-cli/runner.ts --outputBasename out \
+// --vertexProject "{CLOUD_PROJECT_ID}" \
+// --inputFile "data.csv"
 
 import { Command } from "commander";
 import { writeFileSync } from "fs";
