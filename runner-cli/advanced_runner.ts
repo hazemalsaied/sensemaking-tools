@@ -35,7 +35,7 @@
 
 import { Command } from "commander";
 import { writeFileSync } from "fs";
-import { getCommentsFromCsv, getSummary } from "./runner_utils";
+import { concatTopics, getCommentsFromCsv, getSummary } from "./runner_utils";
 import { MajoritySummaryStats } from "../src/stats/majority_vote";
 import { TopicStats } from "../src/stats/summary_stats";
 import { RelativeContext } from "../src/tasks/summarization_subtasks/relative_context";
@@ -58,6 +58,8 @@ interface CommentWithScores {
   id: string;
   text: string;
   votes?: VoteInfo;
+  topics?: string;
+
   agreeRate?: number;
   disagreeRate?: number;
   passRate?: number;
@@ -114,7 +116,9 @@ function getCommentsWithScores(
       id: comment.id,
       text: comment.text,
       votes: comment.voteInfo,
+      topics: concatTopics(comment),
     };
+
     if (comment.voteInfo) {
       const commentWithVoteInfo = comment as CommentWithVoteInfo;
       commentWithScores.passRate = getTotalPassRate(comment.voteInfo, USE_PROBABILITY_ESTIMATES);

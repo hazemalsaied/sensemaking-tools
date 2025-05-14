@@ -33,6 +33,7 @@ import { parse } from "csv-parse";
 import { createObjectCsvWriter } from "csv-writer";
 import * as fs from "fs";
 import * as path from "path";
+import { concatTopics } from "./runner_utils";
 
 type CommentCsvRow = {
   "comment-id": string;
@@ -148,31 +149,6 @@ function setTopics(csvRows: CommentCsvRow[], categorizedComments: Comment[]): Co
     csvRowsWithTopics.push(csvRow);
   }
   return csvRowsWithTopics;
-}
-
-// Returns topics and subtopics concatenated together like
-// "Transportation:PublicTransit;Transportation:Parking;Technology:Internet"
-function concatTopics(comment: Comment): string {
-  const pairsArray = [];
-  for (const topic of comment.topics || []) {
-    if ("subtopics" in topic) {
-      for (const subtopic of topic.subtopics || []) {
-        if ("subtopics" in subtopic) {
-          if ("subtopics" in (subtopic as Topic)) {
-            for (const subsubtopic of subtopic.subtopics as Topic[]) {
-              pairsArray.push(`${topic.name}:${subtopic.name}:${subsubtopic.name}`);
-            }
-          }
-        } else {
-          pairsArray.push(`${topic.name}:${subtopic.name}`);
-        }
-      }
-    } else {
-      // handle case where no subtopics available
-      pairsArray.push(`${topic.name}`);
-    }
-  }
-  return pairsArray.join(";");
 }
 
 async function writeCsv(csvRows: CommentCsvRow[], outputFile: string) {

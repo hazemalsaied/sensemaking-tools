@@ -205,6 +205,31 @@ export function writeSummaryToHtml(summary: Summary, outputFile: string) {
   console.log(`Written summary to ${outputFile}`);
 }
 
+// Returns topics and subtopics concatenated together like
+// "Transportation:PublicTransit;Transportation:Parking;Technology:Internet"
+export function concatTopics(comment: Comment): string {
+  const pairsArray = [];
+  for (const topic of comment.topics || []) {
+    if ("subtopics" in topic) {
+      for (const subtopic of topic.subtopics || []) {
+        if ("subtopics" in subtopic && (subtopic.subtopics as Topic[]).length) {
+          if ("subtopics" in (subtopic as Topic)) {
+            for (const subsubtopic of subtopic.subtopics as Topic[]) {
+              pairsArray.push(`${topic.name}:${subtopic.name}:${subsubtopic.name}`);
+            }
+          }
+        } else {
+          pairsArray.push(`${topic.name}:${subtopic.name}`);
+        }
+      }
+    } else {
+      // handle case where no subtopics available
+      pairsArray.push(`${topic.name}`);
+    }
+  }
+  return pairsArray.join(";");
+}
+
 /**
  * Parse a topics string from the categorization_runner.ts into a (possibly) nested topics
  * array, omitting subtopics and subsubtopics if not present in the labels.
