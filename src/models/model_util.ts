@@ -21,6 +21,8 @@ export const MAX_LLM_RETRIES = 9;
 // How long in milliseconds to wait between API calls.
 export const RETRY_DELAY_MS = 10000; // 10 seconds
 // Set default vertex parallelism based on similarly named environment variable, or default to 2
-export const DEFAULT_VERTEX_PARALLELISM = parseInt(
-  process.env["DEFAULT_VERTEX_PARALLELISM"] || "2"
-);
+const parallelismEnvVar =
+  typeof process !== "undefined" && process.env
+    ? process.env["DEFAULT_VERTEX_PARALLELISM"]
+    : undefined;
+export const DEFAULT_VERTEX_PARALLELISM = parseInt(parallelismEnvVar || "2");

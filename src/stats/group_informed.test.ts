@@ -13,43 +13,23 @@
 // limitations under the License.
 
 import { GroupedSummaryStats } from "./group_informed";
-import { Comment } from "../types";
+import { Comment, VoteTally } from "../types";
 
 const TEST_COMMENTS = [
   {
     id: "1",
     text: "comment1",
     voteInfo: {
-      "0": {
-        agreeCount: 20,
-        disagreeCount: 10,
-        passCount: 0,
-        totalCount: 30,
-      },
-      "1": {
-        agreeCount: 5,
-        disagreeCount: 10,
-        passCount: 5,
-        totalCount: 20,
-      },
+      "0": new VoteTally(20, 10, 0),
+      "1": new VoteTally(5, 10, 5),
     },
   },
   {
     id: "2",
     text: "comment2",
     voteInfo: {
-      "0": {
-        agreeCount: 2,
-        disagreeCount: 5,
-        passCount: 3,
-        totalCount: 10,
-      },
-      "1": {
-        agreeCount: 5,
-        disagreeCount: 3,
-        passCount: 2,
-        totalCount: 10,
-      },
+      "0": new VoteTally(2, 5, 3),
+      "1": new VoteTally(5, 3, 2),
     },
   },
 ];

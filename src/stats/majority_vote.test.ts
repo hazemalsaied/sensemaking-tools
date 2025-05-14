@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { VoteTally } from "../types";
 import { MajoritySummaryStats } from "./majority_vote";
 
 const TEST_COMMENTS = [
@@ -20,12 +21,7 @@ const TEST_COMMENTS = [
     id: "1",
     text: "comment1",
     voteInfo: {
-      "0": {
-        agreeCount: 20,
-        disagreeCount: 1,
-        passCount: 2,
-        totalCount: 23,
-      },
+      "0": new VoteTally(20, 1, 2),
     },
   },
   // Everyone Disagrees
@@ -33,12 +29,7 @@ const TEST_COMMENTS = [
     id: "2",
     text: "comment2",
     voteInfo: {
-      "0": {
-        agreeCount: 2,
-        disagreeCount: 50,
-        passCount: 3,
-        totalCount: 55,
-      },
+      "0": new VoteTally(2, 50, 3),
     },
   },
   // Split Votes
@@ -46,12 +37,7 @@ const TEST_COMMENTS = [
     id: "3",
     text: "comment3",
     voteInfo: {
-      "0": {
-        agreeCount: 10,
-        disagreeCount: 11,
-        passCount: 3,
-        totalCount: 24,
-      },
+      "0": new VoteTally(10, 11, 3),
     },
   },
 ];

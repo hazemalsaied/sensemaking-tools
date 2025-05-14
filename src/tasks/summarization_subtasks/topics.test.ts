@@ -14,7 +14,7 @@
 
 import { VertexModel } from "../../models/vertex_model";
 import { GroupedSummaryStats } from "../../stats/group_informed";
-import { CommentWithVoteInfo } from "../../types";
+import { CommentWithVoteInfo, VoteTally } from "../../types";
 import { AllTopicsSummary, TopicSummary } from "./topics";
 
 // Mock the model response. This mock needs to be set up to return response specific for each test.
@@ -28,8 +28,8 @@ const TEST_COMMENTS: CommentWithVoteInfo[] = [
     id: "1",
     text: "comment 1",
     voteInfo: {
-      "0": { agreeCount: 10, disagreeCount: 5, passCount: 0, totalCount: 15 },
-      "1": { agreeCount: 5, disagreeCount: 10, passCount: 5, totalCount: 20 },
+      "0": new VoteTally(10, 5, 0),
+      "1": new VoteTally(5, 10, 5),
     },
     topics: [{ name: "Topic A", subtopics: [{ name: "Subtopic A.1" }] }],
   },
@@ -37,8 +37,8 @@ const TEST_COMMENTS: CommentWithVoteInfo[] = [
     id: "2",
     text: "comment 2",
     voteInfo: {
-      "0": { agreeCount: 10, disagreeCount: 5, passCount: 0, totalCount: 15 },
-      "1": { agreeCount: 5, disagreeCount: 10, passCount: 5, totalCount: 20 },
+      "0": new VoteTally(10, 5, 0),
+      "1": new VoteTally(5, 10, 5),
     },
     topics: [{ name: "Topic A", subtopics: [{ name: "Subtopic A.1" }] }],
   },
@@ -46,8 +46,8 @@ const TEST_COMMENTS: CommentWithVoteInfo[] = [
     id: "3",
     text: "comment 3",
     voteInfo: {
-      "0": { agreeCount: 10, disagreeCount: 5, passCount: 0, totalCount: 15 },
-      "1": { agreeCount: 5, disagreeCount: 10, passCount: 5, totalCount: 20 },
+      "0": new VoteTally(10, 5, 0),
+      "1": new VoteTally(5, 10, 5),
     },
     topics: [{ name: "Topic A", subtopics: [{ name: "Subtopic A.2" }] }],
   },
@@ -55,8 +55,8 @@ const TEST_COMMENTS: CommentWithVoteInfo[] = [
     id: "4",
     text: "comment 4",
     voteInfo: {
-      "0": { agreeCount: 10, disagreeCount: 5, passCount: 0, totalCount: 15 },
-      "1": { agreeCount: 5, disagreeCount: 10, passCount: 5, totalCount: 20 },
+      "0": new VoteTally(10, 5, 0),
+      "1": new VoteTally(5, 10, 5),
     },
     topics: [{ name: "Topic B", subtopics: [{ name: "Subtopic B.1" }] }],
   },
@@ -64,8 +64,8 @@ const TEST_COMMENTS: CommentWithVoteInfo[] = [
     id: "5",
     text: "comment 5",
     voteInfo: {
-      "0": { agreeCount: 10, disagreeCount: 5, passCount: 0, totalCount: 15 },
-      "1": { agreeCount: 5, disagreeCount: 10, passCount: 5, totalCount: 20 },
+      "0": new VoteTally(10, 5, 0),
+      "1": new VoteTally(5, 10, 5),
     },
     topics: [{ name: "Topic B", subtopics: [{ name: "Subtopic B.1" }] }],
   },

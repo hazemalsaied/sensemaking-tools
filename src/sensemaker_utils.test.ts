@@ -20,7 +20,7 @@ import {
   executeConcurrently,
   getUniqueTopics,
 } from "./sensemaker_utils";
-import { Comment } from "./types";
+import { Comment, VoteTally } from "./types";
 
 // mock retry timeout
 jest.mock("./models/model_util", () => {
@@ -37,36 +37,16 @@ const TEST_COMMENTS = [
     id: "1",
     text: "comment1",
     voteInfo: {
-      "0": {
-        agreeCount: 10,
-        disagreeCount: 5,
-        passCount: 0,
-        totalCount: 15,
-      },
-      "1": {
-        agreeCount: 5,
-        disagreeCount: 10,
-        passCount: 5,
-        totalCount: 20,
-      },
+      "0": new VoteTally(10, 5, 0),
+      "1": new VoteTally(5, 10, 5),
     },
   },
   {
     id: "2",
     text: "comment2",
     voteInfo: {
-      "0": {
-        agreeCount: 2,
-        disagreeCount: 5,
-        passCount: 3,
-        totalCount: 10,
-      },
-      "1": {
-        agreeCount: 5,
-        disagreeCount: 3,
-        passCount: 2,
-        totalCount: 10,
-      },
+      "0": new VoteTally(2, 5, 3),
+      "1": new VoteTally(5, 3, 2),
     },
   },
 ];
@@ -164,9 +144,9 @@ describe("SensemakerUtilsTest", () => {
   it("should format comments with vote tallies via formatCommentsWithVotes", () => {
     expect(formatCommentsWithVotes(TEST_COMMENTS)).toEqual([
       `comment1
-      vote info per group: {"0":{"agreeCount":10,"disagreeCount":5,"passCount":0,"totalCount":15},"1":{"agreeCount":5,"disagreeCount":10,"passCount":5,"totalCount":20}}`,
+      vote info per group: {"0":{"agreeCount":10,"disagreeCount":5,"passCount":0},"1":{"agreeCount":5,"disagreeCount":10,"passCount":5}}`,
       `comment2
-      vote info per group: {"0":{"agreeCount":2,"disagreeCount":5,"passCount":3,"totalCount":10},"1":{"agreeCount":5,"disagreeCount":3,"passCount":2,"totalCount":10}}`,
+      vote info per group: {"0":{"agreeCount":2,"disagreeCount":5,"passCount":3},"1":{"agreeCount":5,"disagreeCount":3,"passCount":2}}`,
     ]);
   });
 

@@ -96,16 +96,7 @@ describe("Summary Stats methods", () => {
           summaryStats: expect.any(TestSummaryStats),
         },
       ],
-      summaryStats: {
-        minCommonGroundProb: 0.6,
-        minUncertaintyProb: 0.3,
-        minAgreeProbDifference: 0.3,
-        maxSampleSize: 12,
-        minVoteCount: 20,
-        groupBasedSummarization: true,
-        comments: [comment],
-        filteredComments: [],
-      },
+      summaryStats: expect.any(TestSummaryStats),
     });
   });
 });

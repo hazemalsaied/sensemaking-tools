@@ -40,7 +40,7 @@ export abstract class SummaryStats {
   constructor(comments: Comment[]) {
     this.comments = comments;
     this.filteredComments = comments.filter(isCommentWithVoteInfoType).filter((comment) => {
-      return getCommentVoteCount(comment) >= this.minVoteCount;
+      return getCommentVoteCount(comment, true) >= this.minVoteCount;
     });
   }
 
@@ -106,7 +106,7 @@ export abstract class SummaryStats {
   // The total number of votes across the entire set of input comments
   get voteCount(): number {
     return this.comments.reduce((sum: number, comment: Comment) => {
-      return sum + getCommentVoteCount(comment);
+      return sum + getCommentVoteCount(comment, true);
     }, 0);
   }
 

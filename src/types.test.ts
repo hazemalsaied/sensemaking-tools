@@ -25,8 +25,8 @@ import {
 
 describe("Types Test", () => {
   it("The total votes should be the sum of all the different VoteTally values", () => {
-    expect(new VoteTally(1, 2, 3).totalCount).toEqual(6);
-    expect(new VoteTally(1, 2).totalCount).toEqual(3);
+    expect(new VoteTally(1, 2, 3).getTotalCount(true)).toEqual(6);
+    expect(new VoteTally(1, 2).getTotalCount(true)).toEqual(3);
   });
 
   it("Valid VoteTallies should pass isVoteTallyType", () => {

@@ -26,6 +26,9 @@ export class MajoritySummaryStats extends SummaryStats {
   minDifferenceProb = 0.4;
   maxDifferenceProb = 0.6;
 
+  // Whether to include pass votes in agree and disagree rate calculations.
+  includePasses = true;
+
   groupBasedSummarization = false;
   // This outlier protection isn't needed since we already filter our comments without many votes.
   asProbabilityEstimate = false;
@@ -54,20 +57,21 @@ export class MajoritySummaryStats extends SummaryStats {
 
   /** Returns a score indicating how well a comment represents when everyone agrees. */
   getCommonGroundAgreeScore(comment: CommentWithVoteInfo): number {
-    return getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate);
+    return getTotalAgreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate);
   }
 
   /** Returns a score indicating how well a comment represents the common ground. */
   getCommonGroundScore(comment: CommentWithVoteInfo): number {
     return Math.max(
       this.getCommonGroundAgreeScore(comment),
-      getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate)
+      getTotalDisagreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate)
     );
   }
 
   meetsCommonGroundAgreeThreshold(comment: CommentWithVoteInfo): boolean {
     return (
-      getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) >= this.minCommonGroundProb
+      getTotalAgreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate) >=
+      this.minCommonGroundProb
     );
   }
 
@@ -135,7 +139,8 @@ export class MajoritySummaryStats extends SummaryStats {
 
   meetsCommonGroundDisagreeThreshold(comment: CommentWithVoteInfo): boolean {
     return (
-      getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate) >= this.minCommonGroundProb
+      getTotalDisagreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate) >=
+      this.minCommonGroundProb
     );
   }
 
@@ -147,7 +152,8 @@ export class MajoritySummaryStats extends SummaryStats {
    */
   getCommonGroundDisagreeComments(k: number = this.maxSampleSize) {
     return this.topK(
-      (comment) => getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate),
+      (comment) =>
+        getTotalDisagreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate),
       k,
       // Before using Group Informed Consensus a minimum bar of agreement between groups is enforced
       (comment: CommentWithVoteInfo) => this.meetsCommonGroundDisagreeThreshold(comment)
@@ -161,8 +167,8 @@ export class MajoritySummaryStats extends SummaryStats {
     return (
       1 -
       Math.abs(
-        getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) -
-          getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate)
+        getTotalAgreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate) -
+          getTotalDisagreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate)
       ) -
       getTotalPassRate(comment.voteInfo, this.asProbabilityEstimate)
     );
@@ -184,11 +190,14 @@ export class MajoritySummaryStats extends SummaryStats {
       // Before getting the top differences comments, enforce a minimum level of difference of
       // opinion.
       (comment: CommentWithVoteInfo) =>
-        getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) >= this.minDifferenceProb &&
-        getTotalAgreeRate(comment.voteInfo, this.asProbabilityEstimate) <= this.maxDifferenceProb &&
-        getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate) <=
+        getTotalAgreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate) >=
           this.minDifferenceProb &&
-        getTotalDisagreeRate(comment.voteInfo, this.asProbabilityEstimate) <= this.maxDifferenceProb
+        getTotalAgreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate) <=
+          this.maxDifferenceProb &&
+        getTotalDisagreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate) <=
+          this.minDifferenceProb &&
+        getTotalDisagreeRate(comment.voteInfo, this.includePasses, this.asProbabilityEstimate) <=
+          this.maxDifferenceProb
     );
   }
 

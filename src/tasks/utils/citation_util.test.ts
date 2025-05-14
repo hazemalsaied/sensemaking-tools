@@ -63,18 +63,8 @@ describe("commentCitation", () => {
       id: "123",
       text: "This is a test comment.",
       voteInfo: {
-        group1: {
-          agreeCount: 10,
-          disagreeCount: 5,
-          passCount: 1,
-          totalCount: 16,
-        },
-        group2: {
-          agreeCount: 15,
-          disagreeCount: 2,
-          passCount: 3,
-          totalCount: 20,
-        },
+        group1: new VoteTally(10, 5, 1),
+        group2: new VoteTally(15, 2, 3),
       },
     };
     expect(commentCitation(comment)).toBe(

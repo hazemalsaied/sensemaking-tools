@@ -252,8 +252,12 @@ export class VoteTally {
     this.passCount = passCount;
   }
 
-  get totalCount(): number {
-    return this.agreeCount + this.disagreeCount + (this.passCount || 0);
+  getTotalCount(includePasses: boolean): number {
+    if (includePasses) {
+      return this.agreeCount + this.disagreeCount + (this.passCount || 0);
+    } else {
+      return this.agreeCount + this.disagreeCount;
+    }
   }
 }
 

@@ -224,7 +224,7 @@ export class GroupedSummaryStats extends SummaryStats {
       isGroupVoteTalliesType(comment.voteInfo);
       const voteInfo = comment.voteInfo as GroupVoteTallies;
       for (const groupName in voteInfo) {
-        const commentVoteCount = voteInfo[groupName].totalCount;
+        const commentVoteCount = voteInfo[groupName].getTotalCount(true);
         if (groupName in groupNameToStats) {
           groupNameToStats[groupName].voteCount += commentVoteCount;
         } else {
