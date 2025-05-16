@@ -42,9 +42,6 @@ import { RelativeContext } from "../src/tasks/summarization_subtasks/relative_co
 import { Comment, CommentWithVoteInfo, VoteInfo } from "../src/types";
 import { getTotalAgreeRate, getTotalDisagreeRate, getTotalPassRate } from "../src/stats/stats_util";
 
-// Whether to return the estimated rates of agreement/disagreement/passing by using a prior.
-const USE_PROBABILITY_ESTIMATES = false;
-
 interface MinimalTopicStat {
   name: string;
   commentCount: number;
@@ -121,11 +118,16 @@ function getCommentsWithScores(
 
     if (comment.voteInfo) {
       const commentWithVoteInfo = comment as CommentWithVoteInfo;
-      commentWithScores.passRate = getTotalPassRate(comment.voteInfo, USE_PROBABILITY_ESTIMATES);
-      commentWithScores.agreeRate = getTotalAgreeRate(comment.voteInfo, USE_PROBABILITY_ESTIMATES);
+      commentWithScores.passRate = getTotalPassRate(comment.voteInfo, stats.asProbabilityEstimate);
+      commentWithScores.agreeRate = getTotalAgreeRate(
+        comment.voteInfo,
+        stats.includePasses,
+        stats.asProbabilityEstimate
+      );
       commentWithScores.disagreeRate = getTotalDisagreeRate(
         comment.voteInfo,
-        USE_PROBABILITY_ESTIMATES
+        stats.includePasses,
+        stats.asProbabilityEstimate
       );
       commentWithScores.isHighAlignment = highAlignmentCommentIDs.includes(comment.id);
       commentWithScores.highAlignmentScore = stats.getCommonGroundScore(commentWithVoteInfo);
