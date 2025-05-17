@@ -185,6 +185,13 @@ def topic_centered_silhouette(comments: pd.DataFrame) -> AnalysisResults:
   return AnalysisResults(topic_scores)
 
 
+def analyze_topic_centered_silhouette_scores(data: list[pd.DataFrame]) -> AnalysisResults:
+  """Returns analysis of topic_centered_silhouette scores for a collection
+  of comment dataframes."""
+  scores = [topic_centered_silhouette(df).mean for df in data]
+  return AnalysisResults(scores)
+
+
 # Now we define a more traditional centroid-based silhouette.
 
 class CentroidSilhouette:
@@ -303,3 +310,10 @@ class CentroidSilhouette:
     if not distances:
       return (float("nan"), None)
     return min(distances)
+
+
+def analyze_centroid_silhouette_scores(data: list[pd.DataFrame]) -> AnalysisResults:
+  """Returns analysis of centroid_silhouette scores for a collection
+  of comment dataframes."""
+  scores = [CentroidSilhouette(df).silhouette().mean for df in data]
+  return AnalysisResults(scores)

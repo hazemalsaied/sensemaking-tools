@@ -58,12 +58,24 @@ def main(args: argparse.Namespace) -> None:
 
   categorization_diff_results = evals_lib.analyze_categorization_diffs(data)
   topic_set_similarity_results = evals_lib.analyze_topic_set_similarity(data)
+  topic_centered_silhouette_results = evals_lib.analyze_topic_centered_silhouette_scores(data)
+  centroid_silhouette_results = evals_lib.analyze_centroid_silhouette_scores(data)
 
-  results = [categorization_diff_results, topic_set_similarity_results]
+  results = [
+    categorization_diff_results,
+    topic_set_similarity_results,
+    topic_centered_silhouette_results,
+    centroid_silhouette_results
+  ]
 
   # Create a dictionary to store the results
   results_data = {
-      "Evaluation Name": ["Topic Categorization Diff Rate", "Topic Set Similarity"],
+      "Evaluation Name": [
+        "Topic Categorization Diff Rate",
+        "Topic Set Similarity",
+        "Topic Centered Silhouette",
+        "Centroid Silhouette"
+      ],
       "Mean": [result.mean for result in results],
       "Stdev": [result.stdev for result in results],
       "Min": [result.min for result in results],
