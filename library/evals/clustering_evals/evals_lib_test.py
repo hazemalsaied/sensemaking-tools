@@ -18,6 +18,8 @@ import pandas as pd
 import unittest
 from unittest.mock import patch
 import evals_lib
+import numpy as np
+import math
 
 
 def assert_topic_lists_equal(
@@ -194,3 +196,89 @@ class TestEvalsLib(unittest.TestCase):
     # Act & Assert
     result1 = evals_lib.topic_centered_comment_separation(comment1, topics)
     self.assertEqual(result1, (0.5, "topic3"))
+
+
+  @patch("evals_lib.embeddings.get_embedding")
+  def test_get_topic_centroid(self, mock_get_embedding):
+    """Test the get_topic_centroid method."""
+    # Arrange
+    mock_get_embedding.side_effect = lambda x: {
+        "comment1": np.array([0.1, 0.9]),
+        "comment2": np.array([0.0, 0.9]),
+    }[x]
+    df = pd.DataFrame(
+        {
+            "comment-id": [1, 2],
+            "comment_text": ["comment1", "comment2"],
+            "topics": [["topic1"], ["topic1"]],
+        }
+    )
+    expected_centroid = np.array([0.05, 0.9])
+
+    # Act
+    result = evals_lib.CentroidSilhouette(df).get_topic_centroid("topic1")
+
+    # Assert
+    np.testing.assert_array_almost_equal(result, expected_centroid)
+
+
+  @patch("evals_lib.embeddings.get_embedding")
+  def test_centroid_silhouette_for_single_topic(self, mock_get_embedding):
+    """Test the centroid_silhouette function."""
+    # Arrange
+    mock_get_embedding.side_effect = lambda x: {
+        "comment1": np.array([2, 7]),
+        "comment2": np.array([0, 9]),
+        "comment3": np.array([-2, -8]),
+        "comment4": np.array([-4, -6]),
+        "comment5": np.array([4, 5]),
+        "comment6": np.array([6, 9]),
+    }[x]
+    df = pd.DataFrame([
+      {"comment-id": 1, "comment_text": "comment1", "topics": ["topic1"]},
+      {"comment-id": 2, "comment_text": "comment2", "topics": ["topic1"]},
+      {"comment-id": 3, "comment_text": "comment3", "topics": ["topic2"]},
+      {"comment-id": 4, "comment_text": "comment4", "topics": ["topic2"]},
+      {"comment-id": 5, "comment_text": "comment5", "topics": ["topic3"]},
+      {"comment-id": 6, "comment_text": "comment6", "topics": ["topic3"]},
+    ])
+    # Some intermediate results based on this setup (computed "by hand" with
+    # with scikit-learn)
+    coh1 = 0.00977411
+    sep1 = 0.12208195
+    silh1 = (sep1 - coh1) / sep1
+
+    # Act
+    silhouette_obj = evals_lib.CentroidSilhouette(df)
+    topic1_cohesion = silhouette_obj.topic_cohesion("topic1")
+    topic1_separation = silhouette_obj.topic_separation("topic1")
+    topic1_result = silhouette_obj.topic_silhouette("topic1")
+
+    # Assert
+    self.assertAlmostEqual(topic1_cohesion, coh1, places=3)
+    self.assertAlmostEqual(topic1_separation, sep1, places=3)
+    self.assertAlmostEqual(topic1_result, silh1, places=3)
+
+  @patch("evals_lib.CentroidSilhouette.topic_silhouette")
+  def test_centroid_silhouette_for_all_topics(self, mock_topic_silhouette):
+    """Test the centroid_silhouette function."""
+    # Arrange
+    mock_topic_silhouette.side_effect = [0.1, 0.2, 0.3]
+    df = pd.DataFrame([
+      {"comment-id": 1, "comment_text": "comment1", "topics": ["topic1"]},
+      {"comment-id": 2, "comment_text": "comment2", "topics": ["topic2"]},
+      {"comment-id": 3, "comment_text": "comment3", "topics": ["topic3"]},
+    ])
+    expected_mean = 0.2
+    expected_min = 0.1
+    expected_max = 0.3
+
+    # Act
+    silhouette_obj = evals_lib.CentroidSilhouette(df)
+    result = silhouette_obj.silhouette()
+
+    # Assert
+    self.assertAlmostEqual(result.mean, expected_mean, places=3)
+    self.assertAlmostEqual(result.min, expected_min, places=3)
+    self.assertAlmostEqual(result.max, expected_max, places=3)
+ 
