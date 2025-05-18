@@ -19,8 +19,6 @@ import pandas as pd
 import embeddings_lib as embeddings
 import numpy as np
 
-from typing import TypedDict
-
 TOPICS_COL = "topics"
 COMMENT_ID_COL = "comment-id"
 COMMENT_TEXT_COL = "comment_text"
@@ -39,31 +37,53 @@ class AnalysisResults:
     self.max = np.max(values)
 
 
-def convert_topics_col_to_list(df: pd.DataFrame) -> pd.DataFrame:
-  """Converts the topics column from a string of semicolon-separated topics to a list of topics."""
-  df[TOPICS_COL] = df[TOPICS_COL].str.split(";")
-  df[TOPICS_COL] = df[TOPICS_COL].apply(
+def convert_topics_col_to_list(comments: pd.DataFrame) -> pd.DataFrame:
+  """Converts the topics column values from strings of semicolon-separated
+  topics to lists of topic strings.
+
+  Args:
+    comments: The comments dataframe.
+
+  Returns:
+    The same comments dataframe, with converted topics column.
+  """
+  comments[TOPICS_COL] = comments[TOPICS_COL].str.split(";")
+  comments[TOPICS_COL] = comments[TOPICS_COL].apply(
       lambda x: list(set([i.split(":")[0] for i in x]))
   )
-  return df
+  return comments
 
 
-def get_pairwise_categorization_diffs(df1: pd.DataFrame, df2: pd.DataFrame) -> float:
-  """Gets the rate of comments with at least one topic difference between df1 and df2."""
+def get_pairwise_categorization_diffs(
+  df1: pd.DataFrame, df2: pd.DataFrame
+) -> float:
+  """Returns the rate of comments with at least one topic difference between df1
+  and df2.
+
+  Args:
+    df1: The first comments dataframe.
+    df2: The second comments dataframe.
+  """
   count_diffs = 0
 
   for _, row in df1.iterrows():
     matching_row = df2[df2[COMMENT_ID_COL].eq(row[COMMENT_ID_COL])]
     unique_diffs = set(row[TOPICS_COL]) ^ set(matching_row[TOPICS_COL].iloc[0])
     if len(unique_diffs) >= 1:
-      # TODO: add additional metric that tracks degree of change, ie how many assignments changed.
+      # TODO: add additional metric that tracks degree of change, ie how many
+      # assignments changed.
       count_diffs += 1
 
   return count_diffs / df1.shape[0]
 
 
 def analyze_categorization_diffs(data: list[pd.DataFrame]) -> float:
-  """Gets the average rate of comments with at least one topic difference between all pairs of dataframes."""
+  """Returns the average rate of comments with at least one topic difference
+  between all pairs of comments dataframes.
+
+  Args:
+    data: A list of comments dataframes.
+  """
   pairwise_diffs = []
   for index, df1 in enumerate(data):
     for df2 in data[index + 1: len(data)]:
@@ -72,14 +92,16 @@ def analyze_categorization_diffs(data: list[pd.DataFrame]) -> float:
   return AnalysisResults(pairwise_diffs)
 
 
-def get_topic_set_similarity(topic_set_1: set[str], topic_set_2: set[str]) -> float:
-  """Gets the similarity between two sets of topics.
+def get_topic_set_similarity(
+  topic_set_1: set[str], topic_set_2: set[str]
+) -> float:
+  """Returns the average semantic similarity between the closest matching topic
+  names between two sets of topic names.
 
-  For each topic in the first topic set, get the most similar corresponding topic in the second
-  topic set. This value is then recorded. The same process is done for the second topic set to
-  ensure all topics in both sets are considered. The average of these values is returned.
+  Args:
+    topic_set_1: The first set of topic names.
+    topic_set_2: The second set of topic names.
   """
-
   def get_similarities_for_first_topic_set(
       topic_set_1: set[str], topic_set_2: set[str]
   ) -> list[float]:
@@ -93,8 +115,8 @@ def get_topic_set_similarity(topic_set_1: set[str], topic_set_2: set[str]) -> fl
           max(other_topics_and_similarity, key=lambda x: x[1])[1])
     return similarities
 
-  # For each topic set get the average similarity of each topic to its most similar topic. This is
-  # macro-averaged at the topic set level.
+  # For each topic set get the average similarity of each topic to its most
+  # similar topic. This is macro-averaged at the topic set level.
   mean_similarity_1 = np.mean(get_similarities_for_first_topic_set(
       topic_set_1, topic_set_2))
   mean_similarity_2 = np.mean(get_similarities_for_first_topic_set(
@@ -104,7 +126,11 @@ def get_topic_set_similarity(topic_set_1: set[str], topic_set_2: set[str]) -> fl
 
 
 def analyze_topic_set_similarity(data: list[pd.DataFrame]) -> AnalysisResults:
-  """Gets the average similarity between all pairs of dataframes."""
+  """Return the average topic_set_similarity between all pairs of dataframes.
+
+  Args:
+    data: A list of comments dataframes.
+  """
   topic_sets = []
   for df in data:
     exploded_topics = df[TOPICS_COL].explode()
