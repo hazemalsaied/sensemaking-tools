@@ -154,7 +154,8 @@ export class Sensemaker {
     includeSubtopics: boolean,
     topics?: Topic[],
     additionalContext?: string,
-    topicDepth?: 1 | 2 | 3
+    topicDepth?: 1 | 2 | 3,
+    language?:string
   ): Promise<Comment[]> {
     const startTime = performance.now();
     if (!includeSubtopics && topicDepth && topicDepth > 1) {
@@ -168,7 +169,8 @@ export class Sensemaker {
       includeSubtopics ? topicDepth || 2 : 1,
       this.getModel("categorizationModel"),
       topics,
-      additionalContext
+      additionalContext,
+      language
     );
 
     console.log(`Categorization took ${(performance.now() - startTime) / (1000 * 60)} minutes.`);

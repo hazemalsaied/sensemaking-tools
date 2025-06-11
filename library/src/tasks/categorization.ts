@@ -558,7 +558,8 @@ export async function categorizeCommentsRecursive(
   topicDepth: 1 | 2 | 3,
   model: Model,
   topics?: Topic[],
-  additionalContext?: string
+  additionalContext?: string,
+  language?:string
 ): Promise<Comment[]> {
   // The exit condition - if the requested topic depth matches the current depth of topics on the
   // comments then exit.
@@ -568,12 +569,12 @@ export async function categorizeCommentsRecursive(
     return comments;
   }
   if (!topics) {
-    topics = await learnOneLevelOfTopics(comments, model, undefined, undefined, additionalContext);
+    topics = await learnOneLevelOfTopics(comments, model, undefined, undefined, additionalContext, language);
     // Sometimes comments are categorized into an "Other" topic if no given topics are a good fit.
     // This needs included in the list of topics so these are processed downstream.
     topics.push({ name: "Other", relevance: -1 });
     comments = await oneLevelCategorization(comments, model, topics, additionalContext);
-    return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext);
+    return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, language);
   }
 
   if (topics && currentTopicDepth === 0) {
@@ -582,7 +583,7 @@ export async function categorizeCommentsRecursive(
     // Sometimes comments are categorized into an "Other" topic if no given topics are a good fit.
     // This needs included in the list of topics so these are processed downstream.
 
-    return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext);
+    return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, language);
   }
 
   let index = 0;
@@ -602,7 +603,7 @@ export async function categorizeCommentsRecursive(
     if (!("subtopics" in topic)) {
       // The subtopics are added to the existing topic, so a list of length one is returned.
       const newTopicAndSubtopics = (
-        await learnOneLevelOfTopics(commentsInTopic, model, topic, parentTopics, additionalContext)
+        await learnOneLevelOfTopics(commentsInTopic, model, topic, parentTopics, additionalContext, language)
       )[0];
       if (!("subtopics" in newTopicAndSubtopics)) {
         throw Error("Badly formed LLM response - expected 'subtopics' to be in topics ");
@@ -624,7 +625,7 @@ export async function categorizeCommentsRecursive(
     topicWithNewSubtopics.subtopics.push({ name: "Other", relevance: -1 });
     topics = mergeTopics(topics, topicWithNewSubtopics);
   }
-  return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext);
+  return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, language);
 }
 
 export async function oneLevelCategorization(

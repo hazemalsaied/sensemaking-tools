@@ -79,7 +79,7 @@ describe("CategorizationTest", () => {
       new VertexModel("project", "location", "gemini-1000"),
       instructions,
       comments,
-      [{ name: "Topic 1" }]
+      [{ name: "Topic 1", relevance: -1 }]
     );
 
     expect(mockGenerateData).toHaveBeenCalledTimes(2);
@@ -123,7 +123,7 @@ describe("CategorizationTest", () => {
       new VertexModel("project", "location", "gemini-1000"),
       instructions,
       comments,
-      [{ name: "Topic 1" }]
+      [{ name: "Topic 1", relevance: -1 }]
     );
 
     expect(mockGenerateData).toHaveBeenCalledTimes(2);
@@ -136,9 +136,9 @@ describe("CategorizationTest", () => {
       { id: "2", text: "Comment 2" },
       { id: "3", text: "Comment 3" },
     ];
-    const topics = '[{"name": "Topic 1", "subtopics": []}]';
+    const topics = '[{"name": "Topic 1", relevance: -1, "subtopics": []}]';
     const instructions = "Categorize the comments based on these topics: " + topics;
-    const topicsJson = [{ name: "Topic 1", subtopics: [] }];
+    const topicsJson = [{ name: "Topic 1", relevance: -1, subtopics: [] }];
 
     // Mock the model to always return an empty response. This simulates a
     // categorization failure.
@@ -157,17 +157,17 @@ describe("CategorizationTest", () => {
       {
         id: "1",
         text: "Comment 1",
-        topics: [{ name: "Other" }],
+        topics: [{ name: "Other", relevance: -1}],
       },
       {
         id: "2",
         text: "Comment 2",
-        topics: [{ name: "Other" }],
+        topics: [{ name: "Other", relevance: -1 }],
       },
       {
         id: "3",
         text: "Comment 3",
-        topics: [{ name: "Other" }],
+        topics: [{ name: "Other", relevance: -1 }],
       },
     ];
     expect(commentRecords).toEqual(expected);
@@ -175,8 +175,8 @@ describe("CategorizationTest", () => {
 
   it("should not categorize comments if they already have topics", async () => {
     const comments: Comment[] = [
-      { id: "1", text: "Comment 1", topics: [{ name: "Topic A" }] },
-      { id: "2", text: "Comment 2", topics: [{ name: "Topic B" }] },
+      { id: "1", text: "Comment 1", topics: [{ name: "Topic A", relevance: -1 }] },
+      { id: "2", text: "Comment 2", topics: [{ name: "Topic B", relevance: -1 }] },
     ];
     const topicDepth = 1;
     // Mock the Model class and its methods
@@ -201,19 +201,19 @@ describe("validateCommentRecord", () => {
   ];
 
   const topics: Topic[] = [
-    { name: "Topic 1", subtopics: [{ name: "Subtopic 1" }] },
-    { name: "Topic 2", subtopics: [{ name: "Subtopic 2" }] },
+    { name: "Topic 1", relevance: -1, subtopics: [{ name: "Subtopic 1", relevance: -1 }] },
+    { name: "Topic 2", relevance: -1, subtopics: [{ name: "Subtopic 2", relevance: -1 }] },
   ];
 
   it("should return all comments as valid with correct input", () => {
     const commentRecords: CommentRecord[] = [
       {
         id: "1",
-        topics: [{ name: "Topic 1", subtopics: [{ name: "Subtopic 1" }] }],
+        topics: [{ name: "Topic 1", relevance: -1, subtopics: [{ name: "Subtopic 1", relevance: -1 }] }],
       },
       {
         id: "2",
-        topics: [{ name: "Topic 2", subtopics: [{ name: "Subtopic 2" }] }],
+        topics: [{ name: "Topic 2", relevance: -1, subtopics: [{ name: "Subtopic 2", relevance: -1 }] }],
       },
     ];
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
@@ -229,15 +229,15 @@ describe("validateCommentRecord", () => {
     const commentRecords: CommentRecord[] = [
       {
         id: "1",
-        topics: [{ name: "Topic 1", subtopics: [{ name: "Subtopic 1" }] }],
+        topics: [{ name: "Topic 1", relevance: -1, subtopics: [{ name: "Subtopic 1", relevance: -1 }] }],
       },
       {
         id: "2",
-        topics: [{ name: "Topic 2", subtopics: [{ name: "Subtopic 2" }] }],
+        topics: [{ name: "Topic 2", relevance: -1, subtopics: [{ name: "Subtopic 2", relevance: -1 }] }],
       },
       {
         id: "3",
-        topics: [{ name: "Topic 1", subtopics: [{ name: "Subtopic 1" }] }],
+        topics: [{ name: "Topic 1", relevance: -1, subtopics: [{ name: "Subtopic 1", relevance: -1 }] }],
       },
     ];
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
@@ -253,7 +253,7 @@ describe("validateCommentRecord", () => {
     const commentRecords: CommentRecord[] = [
       {
         id: "1",
-        topics: [{ name: "Topic 1", subtopics: [{ name: "Subtopic 1" }] }],
+        topics: [{ name: "Topic 1", relevance: -1, subtopics: [{ name: "Subtopic 1", relevance: -1 }] }],
       },
       { id: "2", topics: [] },
     ];
@@ -270,11 +270,11 @@ describe("validateCommentRecord", () => {
     const commentRecords: CommentRecord[] = [
       {
         id: "1",
-        topics: [{ name: "Topic 1", subtopics: [{ name: "Subtopic 1" }] }],
+        topics: [{ name: "Topic 1", relevance: -1, subtopics: [{ name: "Subtopic 1", relevance: -1 }] }],
       },
       {
         id: "2",
-        topics: [{ name: "Topic 2", subtopics: [] }],
+        topics: [{ name: "Topic 2", relevance: -1, subtopics: [] }],
       },
     ];
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
@@ -290,11 +290,11 @@ describe("validateCommentRecord", () => {
     const commentRecords: CommentRecord[] = [
       {
         id: "1",
-        topics: [{ name: "Topic 1", subtopics: [{ name: "Subtopic 1" }] }],
+        topics: [{ name: "Topic 1", relevance: -1, subtopics: [{ name: "Subtopic 1", relevance: -1 }] }],
       },
       {
         id: "2",
-        topics: [{ name: "Invalid Topic", subtopics: [{ name: "Subtopic 2" }] }],
+        topics: [{ name: "Invalid Topic", relevance: -1, subtopics: [{ name: "Subtopic 2", relevance: -1 }] }],
       },
     ];
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
@@ -311,13 +311,13 @@ describe("validateCommentRecord", () => {
       {
         id: "1",
         topics: [
-          { name: "Topic 1", subtopics: [{ name: "Subtopic 1" }] },
-          { name: "Invalid Topic", subtopics: [{ name: "Subtopic 2" }] },
+          { name: "Topic 1", relevance: -1, subtopics: [{ name: "Subtopic 1", relevance: -1 }] },
+          { name: "Invalid Topic", relevance: -1, subtopics: [{ name: "Subtopic 2", relevance: -1 }] },
         ],
       },
       {
         id: "2",
-        topics: [{ name: "Topic 2", subtopics: [{ name: "Subtopic 2" }] }],
+        topics: [{ name: "Topic 2", relevance: -1, subtopics: [{ name: "Subtopic 2", relevance: -1 }] }],
       },
     ];
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
@@ -333,11 +333,11 @@ describe("validateCommentRecord", () => {
     const commentRecords: CommentRecord[] = [
       {
         id: "1",
-        topics: [{ name: "Topic 1", subtopics: [{ name: "Subtopic 1" }] }],
+        topics: [{ name: "Topic 1", relevance: -1, subtopics: [{ name: "Subtopic 1", relevance: -1 }] }],
       },
       {
         id: "2",
-        topics: [{ name: "Topic 2", subtopics: [{ name: "Invalid Subtopic" }] }],
+        topics: [{ name: "Topic 2", relevance: -1, subtopics: [{ name: "Invalid Subtopic", relevance: -1 }] }],
       },
     ];
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
@@ -356,13 +356,14 @@ describe("validateCommentRecord", () => {
         topics: [
           {
             name: "Topic 1",
-            subtopics: [{ name: "Subtopic 1" }, { name: "Invalid Subtopic" }],
+            relevance: -1,
+            subtopics: [{ name: "Subtopic 1", relevance: -1 }, { name: "Invalid Subtopic", relevance: -1 }],
           },
         ],
       },
       {
         id: "2",
-        topics: [{ name: "Topic 2", subtopics: [{ name: "Subtopic 2" }] }],
+        topics: [{ name: "Topic 2", relevance: -1, subtopics: [{ name: "Subtopic 2", relevance: -1 }] }],
       },
     ];
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
@@ -378,15 +379,15 @@ describe("validateCommentRecord", () => {
     const commentRecords: CommentRecord[] = [
       {
         id: "1",
-        topics: [{ name: "Other", subtopics: [{ name: "Other Subtopic 1" }] }],
+        topics: [{ name: "Other", relevance: -1, subtopics: [{ name: "Other Subtopic 1", relevance: -1 }] }],
       },
       {
         id: "2",
-        topics: [{ name: "Topic 2", subtopics: [{ name: "Other" }] }],
+        topics: [{ name: "Topic 2", relevance: -1, subtopics: [{ name: "Other", relevance: -1 }] }],
       },
     ];
     const topicsWithOther = topics.concat([
-      { name: "Other", subtopics: [{ name: "Other Subtopic 1" }] },
+      { name: "Other", relevance: -1, subtopics: [{ name: "Other Subtopic 1", relevance: -1 }] },
     ]);
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
       commentRecords,
@@ -401,15 +402,15 @@ describe("validateCommentRecord", () => {
     const commentRecords: CommentRecord[] = [
       {
         id: "1",
-        topics: [{ name: "Other", subtopics: [{ name: "Other Subtopic 1" }] }],
+        topics: [{ name: "Other", relevance: -1, subtopics: [{ name: "Other Subtopic 1", relevance: -1 }] }],
       },
       {
         id: "2",
-        topics: [{ name: "Other", subtopics: [{ name: "Some invalid subtopic name" }] }],
+        topics: [{ name: "Other", relevance: -1, subtopics: [{ name: "Some invalid subtopic name", relevance: -1 }] }],
       },
     ];
     const topicsWithOther = topics.concat([
-      { name: "Other", subtopics: [{ name: "Other Subtopic 1" }] },
+      { name: "Other", relevance: -1, subtopics: [{ name: "Other Subtopic 1", relevance: -1 }] },
     ]);
     const { commentsPassedValidation, commentsWithInvalidTopics } = validateCommentRecords(
       commentRecords,
@@ -471,7 +472,7 @@ describe("getTopicDepthFromTopics", () => {
   });
 
   it("should return 1 for topics with no subtopics", () => {
-    const topics: Topic[] = [{ name: "Topic A" }, { name: "Topic B" }];
+    const topics: Topic[] = [{ name: "Topic A", relevance: -1 }, { name: "Topic B", relevance: -1 }];
     const depth = getTopicDepthFromTopics(topics);
     expect(depth).toBe(1);
   });
@@ -479,8 +480,9 @@ describe("getTopicDepthFromTopics", () => {
   it("should return 2 for topics with one level of subtopics", () => {
     const topics: NestedTopic[] = [
       {
-        name: "Topic A",
-        subtopics: [{ name: "Subtopic A1" }, { name: "Subtopic A2" }],
+        name: "Topic A"
+        , relevance: -1,
+        subtopics: [{ name: "Subtopic A1", relevance: -1 }, { name: "Subtopic A2", relevance: -1 }],
       },
     ];
     const depth = getTopicDepthFromTopics(topics);
@@ -491,10 +493,12 @@ describe("getTopicDepthFromTopics", () => {
     const topics: NestedTopic[] = [
       {
         name: "Topic A",
+        relevance: -1,
         subtopics: [
           {
             name: "Subtopic A1",
-            subtopics: [{ name: "SubSubtopic A1.1" }, { name: "SubSubtopic A1.2" }],
+            relevance: -1,
+            subtopics: [{ name: "SubSubtopic A1.1", relevance: -1 }, { name: "SubSubtopic A1.2", relevance: -1 }],
           } as NestedTopic,
         ],
       },

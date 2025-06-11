@@ -99,9 +99,10 @@ export function learnOneLevelOfTopics(
   model: Model,
   topic?: Topic,
   otherTopics?: Topic[],
-  additionalContext?: string
+  additionalContext?: string,
+  language?:string
 ): Promise<Topic[]> {
-  const instructions = generateTopicModelingPrompt(topic, otherTopics);
+  const instructions = generateTopicModelingPrompt(topic, otherTopics, language);
   const schema = topic ? Type.Array(NestedTopic) : Type.Array(FlatTopic);
 
   return retryCall(

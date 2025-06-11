@@ -61,7 +61,7 @@ async function main(): Promise<void> {
     .option(
       "-f, --forceRerun",
       "Force rerun of categorization, ignoring existing topics in the input file."
-    );
+    ).option("-l, --language [string]", "The analysis language" );
   program.parse(process.argv);
   const options = program.opts();
   options.topicDepth = parseInt(options.topicDepth);
@@ -78,6 +78,8 @@ async function main(): Promise<void> {
     });
   }
 
+  const language = options.language ? options.language: "french";
+  console.log(`Analysis language:${language}`)
   // Learn topics and categorize comments.
   const sensemaker = new Sensemaker({
     defaultModel: new VertexModel(options.vertexProject, "us-central1"),
@@ -88,7 +90,8 @@ async function main(): Promise<void> {
     options.topicDepth >= 2 ? true : false,
     topics,
     options.additionalContext,
-    options.topicDepth
+    options.topicDepth,
+    language
   );
 
   const csvRowsWithTopics = setTopics(csvRows, categorizedComments);
