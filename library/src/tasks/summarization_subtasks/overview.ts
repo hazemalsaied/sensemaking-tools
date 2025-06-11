@@ -25,7 +25,7 @@ import {
   retryCall,
 } from "../../sensemaker_utils";
 
-function oneShotInstructions(topicNames: string[]) {
+function oneShotInstructions(topicNames: string[], language: string= "french") {
   return (
     `Your job is to compose a summary of the key findings from a public discussion, based on already composed summaries corresponding to topics and subtopics identified in said discussion. ` +
     `These topic and subtopic summaries are based on comments and voting patterns that participants submitted as part of the discussion. ` +
@@ -37,6 +37,7 @@ function oneShotInstructions(topicNames: string[]) {
     `Remember: this is just one component of a larger report, and you should compose this so that it will flow naturally in the context of the rest of the report. ` +
     `Be clear and concise in your writing, and do not use the passive voice, or ambiguous pronouns.` +
     `\n\n` +
+    `Do not forget that it is mandatory to use the same language as the comments language in your response. The language of the comments is ${language}.` +
     `The structure of the list you output should be in terms of the topic names, in the order that follows. ` +
     `Each list item should start in bold with topic name name (including percentage, exactly as listed below), then a colon, and then a short one or two sentence summary for the corresponding topic.` +
     `The complete response should be only the markdown list, and no other text. ` +
@@ -47,7 +48,7 @@ function oneShotInstructions(topicNames: string[]) {
   );
 }
 
-function perTopicInstructions(topicName: string) {
+function perTopicInstructions(topicName: string, language: string= "french") {
   return (
     `Your job is to compose a summary of the key findings from a public discussion, based on already composed summaries corresponding to topics and subtopics identified in said discussion. ` +
     `These topic and subtopic summaries are based on comments and voting patterns that participants submitted as part of the discussion. ` +
@@ -58,6 +59,8 @@ function perTopicInstructions(topicName: string) {
     `You also do not need to recap the context of the conversation, as this will have already been stated earlier in the report. ` +
     `Remember: this is just one component of a larger report, and you should compose this so that it will flow naturally in the context of the rest of the report. ` +
     `Be clear and concise in your writing, and do not use the passive voice, or ambiguous pronouns.` +
+    `Do not forget that it is mandatory to use the same language as the comments language in your response.` +
+    `The language of the comments is ${language}.` +
     `\n\n` +
     `Other topics will come later, but for now, your job is to compose a very short one or two sentence summary of the following topic: ${topicName}. ` +
     `This summary will be put together into a list with other such summaries later.`
@@ -79,13 +82,14 @@ export interface OverviewInput {
  * topics.
  */
 export class OverviewSummary extends RecursiveSummary<OverviewInput> {
-  async getSummary(): Promise<SummaryContent> {
+  async getSummary(language: string= "french"): Promise<SummaryContent> {
     const method = this.input.method || "one-shot";
     const result = await (method == "one-shot" ? this.oneShotSummary() : this.perTopicSummary());
 
     const preamble =
       `Below is a high level overview of the topics discussed in the conversation, as well as the percentage of statements categorized under each topic. ` +
-      `Note that the percentages may add up to greater than 100% when statements fall under more than one topic.\n\n`;
+      `Note that the percentages may add up to greater than 100% when statements fall under more than one topic.\n\n` +
+      `Do not forget that it is mandatory to use the same language as the comments language in your response. The language of the comments is ${language}.`;
     return { title: "## Overview", text: preamble + result };
   }
 

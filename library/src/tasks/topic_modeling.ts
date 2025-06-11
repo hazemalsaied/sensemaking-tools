@@ -29,9 +29,13 @@ Aim for a balanced number of topics that effectively summarizes the key themes w
 After analysis of the comments, determine the optimal number of topics to represent the content effectively.
 Justify why having fewer topics would be less optimal (potentially oversimplifying and missing key nuances), and why having more topics would also be less optimal (potentially leading to redundancy and a less clear overall structure).
 After determining the optimal number of topics, identify those topics.
+
+Important Considerations:
+- relevance must be -1 for topic modeling.
+- It's mandatory to propose topics names in the same language as the comments.
 `;
 
-export function learnSubtopicsForOneTopicPrompt(parentTopic: Topic, otherTopics?: Topic[]): string {
+export function learnSubtopicsForOneTopicPrompt(parentTopic: Topic, otherTopics?: Topic[], language: string = "french"): string {
   const otherTopicNames = otherTopics?.map((topic) => topic.name).join(", ") ?? "";
 
   return `
@@ -44,7 +48,10 @@ After determining the optimal number of subtopics, identify those subtopics.
 
 Important Considerations:
 - No subtopics should have the same name as the overarching topic.
-- There are other overarching topics that are being used on different sets of comments, do not use these overarching topic names as identified subtopics names: ${otherTopicNames}
+- relevance must be -1 for topic modeling.
+- There are other overarching topics that are being used on different sets of comments, do not use these overarching topic names as identified subtopics 
+- It's mandatory to propose subtopics names in the same language as the comments. The language of the comments is ${language}.
+names: ${otherTopicNames}
 
 Example of Incorrect Output:
 
@@ -69,11 +76,11 @@ Example of Incorrect Output:
  * @param parentTopics - Optional. An array of top-level topics to use.
  * @returns The generated prompt string.
  */
-export function generateTopicModelingPrompt(parentTopic?: Topic, otherTopics?: Topic[]): string {
+export function generateTopicModelingPrompt(parentTopic?: Topic, otherTopics?: Topic[], language: string = "french"): string {
   if (parentTopic) {
-    return learnSubtopicsForOneTopicPrompt(parentTopic, otherTopics);
+    return learnSubtopicsForOneTopicPrompt(parentTopic, otherTopics, language);
   } else {
-    return LEARN_TOPICS_PROMPT;
+    return LEARN_TOPICS_PROMPT + `The language of the comments is ${language}.`;
   }
 }
 

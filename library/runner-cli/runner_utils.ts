@@ -184,16 +184,16 @@ export function writeSummaryToHtml(summary: Summary, outputFile: string) {
         }
     </style>
     ${
-      // When in DEBUG_MODE, we need to add the DataTables and jQuery libraries, and hook
-      // into our table elements to add support for features like sorting and search.
-      process.env.DEBUG_MODE === "true"
-        ? `
+    // When in DEBUG_MODE, we need to add the DataTables and jQuery libraries, and hook
+    // into our table elements to add support for features like sorting and search.
+    process.env.DEBUG_MODE === "true"
+      ? `
     <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
     <script src="https://cdn.datatables.net/2.2.1/js/dataTables.js"></script>
     <link rel="stylesheet" href="https://cdn.datatables.net/2.2.1/css/dataTables.dataTables.css" />
     <script>$(document).ready( function () {$('table').DataTable();} )</script>
     `
-        : ""
+      : ""
     }
 </head>
 <body>
@@ -215,16 +215,16 @@ export function concatTopics(comment: Comment): string {
         if ("subtopics" in subtopic && (subtopic.subtopics as Topic[]).length) {
           if ("subtopics" in (subtopic as Topic)) {
             for (const subsubtopic of subtopic.subtopics as Topic[]) {
-              pairsArray.push(`${topic.name}:${subtopic.name}:${subsubtopic.name}`);
+              pairsArray.push(`${topic.name}_${topic.relevance}:${subtopic.name}_${topic.relevance}:${subsubtopic.name}_${topic.relevance}`);
             }
           }
         } else {
-          pairsArray.push(`${topic.name}:${subtopic.name}`);
+          pairsArray.push(`${topic.name}_${topic.relevance}:${subtopic.name}_${topic.relevance}`);
         }
       }
     } else {
       // handle case where no subtopics available
-      pairsArray.push(`${topic.name}`);
+      pairsArray.push(`${topic.name}_${topic.relevance}`);
     }
   }
   return pairsArray.join(";");
@@ -256,7 +256,7 @@ export function parseTopicsString(topicsString: string): Topic[] {
             if (subtopic.name === subtopicName) {
               subsubtopic = "subtopics" in subtopic ? subtopic.subtopics : [];
               if (subsubtopicName) {
-                subsubtopic.push({ name: subsubtopicName });
+                subsubtopic.push({ name: subsubtopicName, relevance: -1 });
                 subtopicUpdated = true;
                 break;
               }
@@ -264,10 +264,10 @@ export function parseTopicsString(topicsString: string): Topic[] {
           }
 
           if (subsubtopicName) {
-            subsubtopic = [{ name: subsubtopicName }];
+            subsubtopic = [{ name: subsubtopicName, relevance: -1 }];
           }
           if (!subtopicUpdated) {
-            topicMapping[topicName].push({ name: subtopicName, subtopics: subsubtopic });
+            topicMapping[topicName].push({ name: subtopicName, relevance: -1, subtopics: subsubtopic });
           }
         }
 
@@ -279,9 +279,9 @@ export function parseTopicsString(topicsString: string): Topic[] {
   // map key/value pairs from subtopicMappings to Topic objects
   return Object.entries(subtopicMappings).map(([topicName, subtopics]) => {
     if (subtopics.length === 0) {
-      return { name: topicName };
+      return { name: topicName, relevance: -1 };
     } else {
-      return { name: topicName, subtopics: subtopics };
+      return { name: topicName, relevance: -1, subtopics: subtopics };
     }
   });
 }
@@ -334,7 +334,8 @@ export async function getCommentsFromCsv(inputFilePath: string): Promise<Comment
           newComment.topics = [];
           newComment.topics.push({
             name: row.topic.toString(),
-            subtopics: row.subtopic ? [{ name: row.subtopic.toString() }] : [],
+            relevance: -1,
+            subtopics: row.subtopic ? [{ name: row.subtopic.toString(), relevance: -1 }] : [],
           });
         }
 
@@ -383,9 +384,9 @@ export function getTopicsFromComments(comments: Comment[]): Topic[] {
   // Convert that map to a Topic array and return
   const returnTopics: Topic[] = [];
   for (const topicName in mapTopicToSubtopicSet) {
-    const topic: Topic = { name: topicName, subtopics: [] };
+    const topic: Topic = { name: topicName, relevance: -1, subtopics: [] };
     for (const subtopicName of mapTopicToSubtopicSet[topicName]!.keys()) {
-      topic.subtopics.push({ name: subtopicName });
+      topic.subtopics.push({ name: subtopicName, relevance: -1 });
     }
     returnTopics.push(topic);
   }

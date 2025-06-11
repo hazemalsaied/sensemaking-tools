@@ -27,6 +27,7 @@ import { filterSummaryContent } from "./sensemaker_utils";
  */
 export const FlatTopic = Type.Object({
   name: Type.String(),
+  relevance: Type.Number()
 });
 
 /**
@@ -39,6 +40,7 @@ export type FlatTopic = Static<typeof FlatTopic>;
  */
 export const NestedTopic = Type.Object({
   name: Type.String(),
+  relevance: Type.Number(),
   subtopics: Type.Array(FlatTopic),
 });
 

@@ -2,3 +2,6 @@
 /.eslintcache
 /.idea/
 __pycache__
+data
+changes_log.md
+package-lock.json

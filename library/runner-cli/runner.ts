@@ -56,6 +56,9 @@ async function main(): Promise<void> {
     .option("-v, --vertexProject <project>", "The Vertex Project name.");
   program.parse(process.argv);
   const options = program.opts();
+  let timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  
+  let outputBasename = options.outputBasename ? options.outputBasename : options.inputFile.split("/").pop(); 
 
   const comments = await getCommentsFromCsv(options.inputFile);
 
@@ -67,12 +70,12 @@ async function main(): Promise<void> {
   );
 
   const markdownContent = summary.getText("MARKDOWN");
-  writeFileSync(options.outputBasename + "-summary.md", markdownContent);
-  writeSummaryToHtml(summary, options.outputBasename + "-summary.html");
-  writeSummaryToGroundedCSV(summary, options.outputBasename + "-summaryAndSource.csv");
+  writeFileSync(outputBasename + "-" + timestamp + "-summary.md", markdownContent);
+  // writeSummaryToHtml(summary, options.outputBasename + "-" + timestamp + "-summary.html");
+  // writeSummaryToGroundedCSV(summary, options.outputBasename + "-" + timestamp + "-summaryAndSource.csv");
 
   const jsonContent = JSON.stringify(summary, null, 2);
-  writeFileSync(options.outputBasename + "-summary.json", jsonContent);
+  writeFileSync(outputBasename + "-" + timestamp + "-summary.json", jsonContent);
 }
 
 main();

@@ -30,12 +30,13 @@ import { RelativeContext } from "./relative_context";
 
 const COMMON_INSTRUCTIONS =
   "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. " +
-  "Do not generate bullet points or special formatting. Do not yap.";
+  "Do not generate bullet points or special formatting. Do not yap. " +
+  "Do not forget that it is mandatory to use the same language as the comments language in your response";
 const GROUP_SPECIFIC_INSTRUCTIONS =
   `Participants in this conversation have been clustered into opinion groups. ` +
   `These opinion groups mostly approve of these comments. `;
 
-function getCommonGroundInstructions(containsGroups: boolean): string {
+function getCommonGroundInstructions(containsGroups: boolean, language: string = "french"): string {
   const groupSpecificText = containsGroups ? GROUP_SPECIFIC_INSTRUCTIONS : "";
   return (
     `Here are several comments sharing different opinions. Your job is to summarize these ` +
@@ -45,49 +46,52 @@ function getCommonGroundInstructions(containsGroups: boolean): string {
     `be substantiated, detailed and informative: include specific findings, requests, proposals, ` +
     `action items and examples, grounded in the comments. Refer to the people who made these ` +
     `comments as participants, not commenters. Do not talk about how strongly they approve of ` +
-    `these comments. Use complete sentences. ${COMMON_INSTRUCTIONS}`
+    `these comments. Use complete sentences. ${COMMON_INSTRUCTIONS}. The language of the comments is ${language}.`
   );
 }
 
-function getCommonGroundSingleCommentInstructions(containsGroups: boolean): string {
+function getCommonGroundSingleCommentInstructions(containsGroups: boolean, language: string = "french"): string {
   const groupSpecificText = containsGroups ? GROUP_SPECIFIC_INSTRUCTIONS : "";
   return (
     `Here is a comment presenting an opinion from a discussion. Your job is to rewrite this ` +
     `comment clearly without embellishment. Do not pretend that you hold this opinion. You are not` +
     ` a participant in this discussion. ${groupSpecificText}Refer to the people who ` +
     `made these comments as participants, not commenters. Do not talk about how strongly they ` +
-    `approve of these comments. Write a complete sentence. ${COMMON_INSTRUCTIONS}`
+    `approve of these comments. Write a complete sentence. ${COMMON_INSTRUCTIONS}. The language of the comments is ${language}.`
   );
 }
 
 // TODO: Test whether conditionally including group specific text in this prompt improves
 // performance.
-const DIFFERENCES_OF_OPINION_INSTRUCTIONS =
-  `You are going to be presented with several comments from a discussion on which there were differing opinions, ` +
-  `as well as a summary of points of common ground from this discussion. Your job is summarize the ideas ` +
-  `contained in the comments, keeping in mind the points of common ground as backgrounnd in describing ` +
-  `the differences of opinion. Do not pretend that you hold any of these opinions. You are not a ` +
-  `participant in this discussion. Write a concise summary of these comments that is at least ` +
-  `one sentence and at most five sentences long. Refer to the people who made these comments as ` +
-  `participants, not commenters.  Do not talk about how strongly they disagree with these ` +
-  `comments. Use complete sentences. ${COMMON_INSTRUCTIONS}
+function getDifferencesOfOpinionInstructions(language: string = "french"): string {
+  const DIFFERENCES_OF_OPINION_INSTRUCTIONS =
+    `You are going to be presented with several comments from a discussion on which there were differing opinions, ` +
+    `as well as a summary of points of common ground from this discussion. Your job is summarize the ideas ` +
+    `contained in the comments, keeping in mind the points of common ground as backgrounnd in describing ` +
+    `the differences of opinion. Do not pretend that you hold any of these opinions. You are not a ` +
+    `participant in this discussion. Write a concise summary of these comments that is at least ` +
+    `one sentence and at most five sentences long. Refer to the people who made these comments as ` +
+    `participants, not commenters.  Do not talk about how strongly they disagree with these ` +
+    `comments. Use complete sentences. ${COMMON_INSTRUCTIONS}. The language of the comments is ${language}.
 
 Do not assume that these comments were written by different participants. These comments could be from ` +
-  `the same participant, so do not say some participants prosed one things while other ` +
-  `participants proposed another.  Do not say "Some participants proposed X while others Y".  ` +
-  `Instead say "One statement proposed X while another Y"
+    `the same participant, so do not say some participants prosed one things while other ` +
+    `participants proposed another.  Do not say "Some participants proposed X while others Y".  ` +
+    `Instead say "One statement proposed X while another Y"
 
 Where the difference of opinion comments refer to topics that are also covered in the common ground ` +
-  `summary, your output should begin in some variant of the form "While there was broad support for ..., ` +
-  `opinions differed with respect to ...". When this is not the case, you can beging simple as ` +
-  `"There was disagreement ..." or something similar to contextualize that the comments you are ` +
-  `summarizing had mixed support.`;
+    `summary, your output should begin in some variant of the form "While there was broad support for ..., ` +
+    `opinions differed with respect to ...". When this is not the case, you can beging simple as ` +
+    `"There was disagreement ..." or something similar to contextualize that the comments you are ` +
+    `summarizing had mixed support.`;
+  return DIFFERENCES_OF_OPINION_INSTRUCTIONS;
+}
 
-function getDifferencesOfOpinionSingleCommentInstructions(containsGroups: boolean): string {
+function getDifferencesOfOpinionSingleCommentInstructions(containsGroups: boolean, language: string = "french"): string {
   const groupSpecificText = containsGroups
     ? `Participants in this conversation have been clustered ` +
-      `into opinion groups. There were very different levels of agreement between the two opinion ` +
-      `groups regarding this comment. `
+    `into opinion groups. There were very different levels of agreement between the two opinion ` +
+    `groups regarding this comment. `
     : "";
   return (
     `You are going to be presented with a single comment from a discussion on which there were differing opinions, ` +
@@ -104,11 +108,12 @@ function getDifferencesOfOpinionSingleCommentInstructions(containsGroups: boolea
     `summary, your output should begin in some variant of the form "While there was broad support for ..., ` +
     `opinions differed with respect to ...". When this is not the case, you can beging simple as ` +
     `"There was disagreement ..." or something similar to contextualize that the comments you are ` +
-    `summarizing had mixed support.`
+    `summarizing had mixed support.` +
+    `The language of the comments is ${language}.`
   );
 }
 
-function getRecursiveTopicSummaryInstructions(topicStat: TopicStats): string {
+function getRecursiveTopicSummaryInstructions(topicStat: TopicStats, language: string = "french"): string {
   return (
     `Your job is to compose a summary paragraph to be included in a report on the results of a ` +
     `discussion among some number of participants. You are specifically tasked with producing ` +
@@ -127,7 +132,7 @@ function getRecursiveTopicSummaryInstructions(topicStat: TopicStats): string {
     `You also do not need to recap the context of the conversation, ` +
     `as this will have already been stated earlier in the report. Remember: this is just one paragraph in a larger ` +
     `summary, and you should compose this paragraph so that it will flow naturally in the context of the rest of the report. ` +
-    `${COMMON_INSTRUCTIONS}`
+    `${COMMON_INSTRUCTIONS}. The language of the comments is ${language}.`
   );
 }
 
@@ -410,7 +415,7 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
       const prompt = getAbstractPrompt(
         nComments === 1
           ? getDifferencesOfOpinionSingleCommentInstructions(this.input.groupBasedSummarization)
-          : DIFFERENCES_OF_OPINION_INSTRUCTIONS,
+          : getDifferencesOfOpinionInstructions(),
         [commonGroundSummary].concat(topDisagreeCommentsAcrossGroups),
         formatDifferenceOfOpinionData,
         this.additionalContext

@@ -49,7 +49,8 @@ export class VertexModel extends Model {
   constructor(
     project: string,
     location: string,
-    modelName: string = "gemini-2.5-pro-preview-03-25"
+    // modelName: string = "gemini-2.5-pro-preview-03-25"
+    modelName: string = "gemini-2.0-flash-001"
   ) {
     super();
     this.vertexAI = new VertexAI({

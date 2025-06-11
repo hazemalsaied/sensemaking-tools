@@ -226,7 +226,8 @@ export function getUniqueTopics(comments: Comment[]): Topic[] {
           const uniqueSubtopics = new Set([...existingSubtopics, ...newSubtopics]);
           topicNameToTopic.set(topic.name, {
             name: topic.name,
-            subtopics: Array.from(uniqueSubtopics).map((subtopic) => ({ name: subtopic })),
+            relevance: topic.relevance,
+            subtopics: Array.from(uniqueSubtopics).map((subtopic) => ({ name: subtopic, relevance: -1 })),
           });
         }
       }
@@ -269,10 +270,10 @@ function extraColumnDataMd(
 ): string {
   return extraColumns.length > 0
     ? " <small>" +
-        extraColumns
-          .map((extraColumn) => columnValue(extraColumn, row))
-          .join("</small> | <small>") +
-        "</small> |"
+    extraColumns
+      .map((extraColumn) => columnValue(extraColumn, row))
+      .join("</small> | <small>") +
+    "</small> |"
     : "";
 }
 

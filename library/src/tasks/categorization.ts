@@ -91,9 +91,10 @@ Important Considerations:
 - A comment can be assigned to multiple topics if necessary but prefer to assign only one topic 
 - Prioritize using the existing topics whenever possible.
 - All comments must be assigned at least one existing topic.
+- For each comment, provide a relevance score between 0 and 1 for each topic.
 - If no existing topic fits a comment well, assign it to the "Other" topic.
 - Do not create any new topics that are not listed in the Input Topics.
-- When generating the JSON output, minimize the size of the response. For example, prefer this compact format: {"id": "5258", "topics": [{"name": "Arts, Culture, And Recreation"}]} instead of adding unnecessary whitespace or newlines.
+- When generating the JSON output, minimize the size of the response. For example, prefer this compact format: {"id": "5258", "topics": [{"name": "Arts, Culture, And Recreation", "relevance": 0.7}]} instead of adding unnecessary whitespace or newlines.
 `;
 }
 
@@ -343,9 +344,9 @@ export function getTopicDepthFromTopics(topics: Topic[], currentDepth: number = 
     return "subtopics" in topic && topic.subtopics.length > 0;
   })
     ? getTopicDepthFromTopics(
-        topics.map((topic) => ("subtopics" in topic ? topic.subtopics : [])).flat(),
-        currentDepth + 1
-      )
+      topics.map((topic) => ("subtopics" in topic ? topic.subtopics : [])).flat(),
+      currentDepth + 1
+    )
     : currentDepth;
 }
 
@@ -447,7 +448,7 @@ function addNewLevelToTopic(topic: Topic, parentSubtopic: Topic, newSubtopics: T
     }
     return topic;
   } else {
-    return { name: topic.name, subtopics: newSubtopics };
+    return { name: topic.name, subtopics: newSubtopics, relevance: topic.relevance };
   }
 }
 
@@ -500,6 +501,7 @@ function mergeCommentTopics(
               if ("subtopics" in currentComment.topics[j]) {
                 currentComment.topics[j] = {
                   name: existingTopic.name,
+                  relevance: existingTopic.relevance,
                   subtopics: [
                     ...existingTopic.subtopics.slice(0, k),
                     addNewLevelToTopic(existingSubtopic, topic, matchingCategorized.topics),
@@ -529,7 +531,7 @@ function mergeTopics(topics: Topic[], topicAndNewSubtopics: Topic): Topic[] {
   }
   for (let i = 0; i < topics.length; i++) {
     if (topics[i].name === topicAndNewSubtopics.name) {
-      topics[i] = { name: topics[i].name, subtopics: topicAndNewSubtopics.subtopics };
+      topics[i] = { name: topics[i].name, relevance: topics[i].relevance, subtopics: topicAndNewSubtopics.subtopics };
       return topics;
     }
   }
@@ -565,21 +567,21 @@ export async function categorizeCommentsRecursive(
   if (currentTopicDepth >= topicDepth) {
     return comments;
   }
-
   if (!topics) {
     topics = await learnOneLevelOfTopics(comments, model, undefined, undefined, additionalContext);
-    comments = await oneLevelCategorization(comments, model, topics, additionalContext);
     // Sometimes comments are categorized into an "Other" topic if no given topics are a good fit.
     // This needs included in the list of topics so these are processed downstream.
-    topics.push({ name: "Other" });
+    topics.push({ name: "Other", relevance: -1 });
+    comments = await oneLevelCategorization(comments, model, topics, additionalContext);
     return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext);
   }
 
   if (topics && currentTopicDepth === 0) {
+    topics.push({ name: "Other", relevance: -1 });
     comments = await oneLevelCategorization(comments, model, topics, additionalContext);
     // Sometimes comments are categorized into an "Other" topic if no given topics are a good fit.
     // This needs included in the list of topics so these are processed downstream.
-    topics.push({ name: "Other" });
+
     return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext);
   }
 
@@ -605,7 +607,7 @@ export async function categorizeCommentsRecursive(
       if (!("subtopics" in newTopicAndSubtopics)) {
         throw Error("Badly formed LLM response - expected 'subtopics' to be in topics ");
       }
-      topic = { name: topic.name, subtopics: newTopicAndSubtopics.subtopics };
+      topic = { name: topic.name, relevance: topic.relevance, subtopics: newTopicAndSubtopics.subtopics };
     }
 
     // Use the subtopics as high-level topics and merge them in later.
@@ -619,7 +621,7 @@ export async function categorizeCommentsRecursive(
     // Sometimes comments are categorized into an "Other" subtopic if no given subtopics are a good fit.
     // This needs included in the list of subtopics so these are processed downstream.
     const topicWithNewSubtopics = topic;
-    topicWithNewSubtopics.subtopics.push({ name: "Other" });
+    topicWithNewSubtopics.subtopics.push({ name: "Other", relevance: -1 });
     topics = mergeTopics(topics, topicWithNewSubtopics);
   }
   return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext);
