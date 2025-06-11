@@ -93,16 +93,16 @@ describe("SensemakerUtilsTest", () => {
         id: "1",
         text: "Comment 1",
         topics: [
-          { name: "Topic 1", subtopics: [{ name: "Subtopic 1.1" }] },
-          { name: "Topic 2", subtopics: [{ name: "Subtopic 2.1" }] },
+          { name: "Topic 1", relevance: 0.9, subtopics: [{ name: "Subtopic 1.1", relevance: 0.9 }] },
+          { name: "Topic 2", relevance: 0.9, subtopics: [{ name: "Subtopic 2.1", relevance: 0.9 }] },
         ],
       };
       const comment2: Comment = {
         id: "2",
         text: "Comment 2",
         topics: [
-          { name: "Topic 1", subtopics: [{ name: "Subtopic 1.1" }] },
-          { name: "Topic 1", subtopics: [{ name: "Subtopic 1.2" }] },
+          { name: "Topic 1", relevance: 0.9, subtopics: [{ name: "Subtopic 1.1", relevance: 0.9 }] },
+          { name: "Topic 1", relevance: 0.9, subtopics: [{ name: "Subtopic 1.2", relevance: 0.9 }] },
         ],
       };
 
@@ -153,16 +153,16 @@ describe("SensemakerUtilsTest", () => {
   it("Should get unique topics from a list of comments", () => {
     expect(
       getUniqueTopics([
-        { id: "1", text: "hi", topics: [{ name: "topic1", subtopics: [{ name: "subtopic1" }] }] },
+        { id: "1", text: "hi", topics: [{ name: "topic1", relevance: 0.9, subtopics: [{ name: "subtopic1", relevance: 0.9 }] }] },
         {
           id: "2",
           text: "hello",
-          topics: [{ name: "topic1", subtopics: [{ name: "subtopic1" }, { name: "subtopic2" }] }],
+          topics: [{ name: "topic1", relevance: 0.9, subtopics: [{ name: "subtopic1", relevance: 0.9 }, { name: "subtopic2", relevance: 0.9 }] }],
         },
         {
           id: "3",
           text: "hola",
-          topics: [{ name: "topic2", subtopics: [{ name: "subtopic3" }] }],
+          topics: [{ name: "topic2", relevance: 0.9, subtopics: [{ name: "subtopic3", relevance: 0.9 }] }],
         },
       ])
     ).toEqual([
