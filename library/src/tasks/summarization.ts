@@ -39,7 +39,8 @@ export async function summarizeByType(
   model: Model,
   comments: Comment[],
   summarizationType: SummarizationType,
-  additionalContext?: string
+  additionalContext?: string,
+  language?: string
 ): Promise<Summary> {
   let summaryStats: SummaryStats;
   if (summarizationType === SummarizationType.GROUP_INFORMED_CONSENSUS) {
@@ -60,35 +61,42 @@ export class MultiStepSummary {
   private model: Model;
   // TODO: Figure out how we handle additional instructions with this structure.
   private additionalContext?: string;
+  private language?: string;
 
-  constructor(summaryStats: SummaryStats, model: Model, additionalContext?: string) {
+  constructor(summaryStats: SummaryStats, model: Model, additionalContext?: string, language?: string) {
     this.summaryStats = summaryStats;
     this.model = model;
     this.additionalContext = additionalContext;
+    this.language = language
   }
 
   async getSummary(): Promise<Summary> {
     const topicsSummary = await new AllTopicsSummary(
       this.summaryStats,
       this.model,
-      this.additionalContext
+      this.additionalContext,
+      this.language
     ).getSummary();
     const summarySections: SummaryContent[] = [];
     summarySections.push(
-      await new IntroSummary(this.summaryStats, this.model, this.additionalContext).getSummary()
+      await new IntroSummary(this.summaryStats, this.model, 
+        this.additionalContext,
+        this.language).getSummary()
     );
     summarySections.push(
       await new OverviewSummary(
         { summaryStats: this.summaryStats, topicsSummary: topicsSummary, method: "one-shot" },
         this.model,
-        this.additionalContext
+        this.additionalContext,
+        this.language
       ).getSummary()
     );
     summarySections.push(
       await new TopSubtopicsSummary(
         this.summaryStats,
         this.model,
-        this.additionalContext
+        this.additionalContext,
+        this.language
       ).getSummary()
     );
     if (this.summaryStats.groupBasedSummarization) {
@@ -96,7 +104,8 @@ export class MultiStepSummary {
         await new GroupsSummary(
           this.summaryStats as GroupedSummaryStats,
           this.model,
-          this.additionalContext
+          this.additionalContext,
+          this.language
         ).getSummary()
       );
     }

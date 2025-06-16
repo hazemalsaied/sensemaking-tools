@@ -29,6 +29,7 @@ Aim for a balanced number of topics that effectively summarizes the key themes w
 After analysis of the comments, determine the optimal number of topics to represent the content effectively.
 Justify why having fewer topics would be less optimal (potentially oversimplifying and missing key nuances), and why having more topics would also be less optimal (potentially leading to redundancy and a less clear overall structure).
 After determining the optimal number of topics, identify those topics.
+Topic names should consist of 3-4 words maximum, as if  It were a wiki page title.
 
 Important Considerations:
 - relevance must be -1 for topic modeling.
@@ -48,6 +49,7 @@ After determining the optimal number of subtopics, identify those subtopics.
 
 Important Considerations:
 - No subtopics should have the same name as the overarching topic.
+- Topic names should consist of 4-5 words maximum, as if  It were a wiki page title.
 - relevance must be -1 for topic modeling.
 - There are other overarching topics that are being used on different sets of comments, do not use these overarching topic names as identified subtopics 
 - It's mandatory to propose subtopics names in the same language as the comments. The language of the comments is ${language}.
@@ -100,7 +102,7 @@ export function learnOneLevelOfTopics(
   topic?: Topic,
   otherTopics?: Topic[],
   additionalContext?: string,
-  language?:string
+  language?: string
 ): Promise<Topic[]> {
   const instructions = generateTopicModelingPrompt(topic, otherTopics, language);
   const schema = topic ? Type.Array(NestedTopic) : Type.Array(FlatTopic);

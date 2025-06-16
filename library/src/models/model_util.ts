@@ -19,7 +19,7 @@ export const MAX_RETRIES = 7;
 // The maximum number of times an LLM call should be retried (it's higher to avoid rate limits).
 export const MAX_LLM_RETRIES = 7;
 // How long in milliseconds to wait between API calls.
-export const RETRY_DELAY_MS = 5000; // 5 seconds
+export const RETRY_DELAY_MS = 3000; // 5 seconds
 // Set default vertex parallelism based on similarly named environment variable, or default to 2
 const parallelismEnvVar =
   typeof process !== "undefined" && process.env

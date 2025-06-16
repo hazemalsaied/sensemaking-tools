@@ -22,11 +22,13 @@ export abstract class RecursiveSummary<InputType> {
   // Input data with at least minimumCommentCount votes.
   protected model: Model;
   protected additionalContext?: string;
+  protected language?: string;
 
-  constructor(input: InputType, model: Model, additionalContext?: string) {
+  constructor(input: InputType, model: Model, additionalContext?: string, language?: string) {
     this.input = input;
     this.model = model;
     this.additionalContext = additionalContext;
+    this.language = this.language;
   }
 
   abstract getSummary(): Promise<SummaryContent>;

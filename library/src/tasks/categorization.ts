@@ -573,6 +573,7 @@ export async function categorizeCommentsRecursive(
     // Sometimes comments are categorized into an "Other" topic if no given topics are a good fit.
     // This needs included in the list of topics so these are processed downstream.
     topics.push({ name: "Other", relevance: -1 });
+    console.log("Topics after learning one level of topics:", topics);
     comments = await oneLevelCategorization(comments, model, topics, additionalContext);
     return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, language);
   }
@@ -582,7 +583,7 @@ export async function categorizeCommentsRecursive(
     comments = await oneLevelCategorization(comments, model, topics, additionalContext);
     // Sometimes comments are categorized into an "Other" topic if no given topics are a good fit.
     // This needs included in the list of topics so these are processed downstream.
-
+    console.log("Topics after learning one level of topics:", topics);
     return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, language);
   }
 

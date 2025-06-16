@@ -57,6 +57,8 @@ async function main(): Promise<void> {
   program.parse(process.argv);
   const options = program.opts();
   let timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  const language = options.language ? options.language : "french";
+  console.log(`Analysis language:${language}`)
   
   let outputBasename = options.outputBasename ? options.outputBasename : options.inputFile.split("/").pop(); 
 
