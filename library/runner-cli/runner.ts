@@ -53,7 +53,7 @@ async function main(): Promise<void> {
       "-a, --additionalContext <context>",
       "A short description of the conversation to add context."
     )
-    .option("-v, --vertexProject <project>", "The Vertex Project name.");
+    .option("-v, --vertexProject <project>", "The Vertex Project name.").option("-l, --language [string]", "The analysis language");;
   program.parse(process.argv);
   const options = program.opts();
   let timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
