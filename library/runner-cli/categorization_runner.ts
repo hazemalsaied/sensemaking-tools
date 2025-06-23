@@ -34,6 +34,7 @@ import { createObjectCsvWriter } from "csv-writer";
 import * as fs from "fs";
 import * as path from "path";
 import { concatTopics } from "./runner_utils";
+import * as config from "../configs.json";
 
 type CommentCsvRow = {
   "comment-id": string;
@@ -57,11 +58,10 @@ async function main(): Promise<void> {
       "-a, --additionalContext <instructions>",
       "A short description of the conversation to add context."
     )
-    .option("-v, --vertexProject <project>", "The Vertex Project name.")
     .option(
       "-f, --forceRerun",
       "Force rerun of categorization, ignoring existing topics in the input file."
-    ).option("-l, --language [string]", "The analysis language" );
+    );
   program.parse(process.argv);
   const options = program.opts();
   options.topicDepth = parseInt(options.topicDepth);
@@ -78,11 +78,11 @@ async function main(): Promise<void> {
     });
   }
 
-  const language = options.language ? options.language: "french";
+  const language = config.default_language;
   console.log(`Analysis language:${language}`)
   // Learn topics and categorize comments.
   const sensemaker = new Sensemaker({
-    defaultModel: new VertexModel(options.vertexProject, "us-central1"),
+    defaultModel: new VertexModel(config.gcloud.project_id, config.gcloud.location),
   });
   const topics = options.topics ? getTopics(options.topics) : undefined;
   const categorizedComments = await sensemaker.categorizeComments(
@@ -172,7 +172,7 @@ async function writeCsv(csvRows: CommentCsvRow[], outputFile: string) {
 function getTopics(commaSeparatedTopics: string): Topic[] {
   const topics: Topic[] = [];
   for (const topic of commaSeparatedTopics.split(",")) {
-    topics.push({ name: topic, relevance:-1 });
+    topics.push({ name: topic, relevance: -1 });
   }
   return topics;
 }

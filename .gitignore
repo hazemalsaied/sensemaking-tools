@@ -5,3 +5,4 @@ __pycache__
 data
 changes_log.md
 package-lock.json
+library/configs.json

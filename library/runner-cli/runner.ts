@@ -39,33 +39,29 @@ import {
   writeSummaryToGroundedCSV,
   writeSummaryToHtml,
 } from "./runner_utils";
+import * as config from "../configs.json";
 
 async function main(): Promise<void> {
   // Parse command line arguments.
   const program = new Command();
   program
-    .option(
-      "-o, --outputBasename <file>",
-      "The output basename, this will be prepended to the output file names."
-    )
     .option("-i, --inputFile <file>", "The input file name.")
     .option(
       "-a, --additionalContext <context>",
       "A short description of the conversation to add context."
-    )
-    .option("-v, --vertexProject <project>", "The Vertex Project name.").option("-l, --language [string]", "The analysis language");;
+    );
   program.parse(process.argv);
   const options = program.opts();
   let timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
-  const language = options.language ? options.language : "french";
+  const language = config.default_language;
   console.log(`Analysis language:${language}`)
   
-  let outputBasename = options.outputBasename ? options.outputBasename : options.inputFile.split("/").pop(); 
+  let outputBasename = options.inputFile.split("/").pop(); 
 
   const comments = await getCommentsFromCsv(options.inputFile);
 
   const summary = await getSummary(
-    options.vertexProject,
+    config.gcloud.project_id,
     comments,
     undefined,
     options.additionalContext
