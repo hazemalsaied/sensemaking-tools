@@ -33,7 +33,7 @@ import { parse } from "csv-parse";
 import { createObjectCsvWriter } from "csv-writer";
 import * as fs from "fs";
 import * as path from "path";
-import { concatTopics } from "./runner_utils";
+import { concatTopics } from "./analysis_utils";
 import * as config from "../configs.json";
 
 type CommentCsvRow = {

@@ -33,13 +33,22 @@
 
 import { Command } from "commander";
 import { writeFileSync } from "fs";
+
 import {
   getCommentsFromCsv,
-  getSummary,
-  writeSummaryToGroundedCSV,
-  writeSummaryToHtml,
-} from "./runner_utils";
+  getSummary
+} from "./analysis_utils";
+
+import {
+  flattenCommentsToSensemakingTable,
+  flattenSubContentsToSensemakingTable,
+  persistSensemakingToDatabase
+} from "./export_utils";
+import { SensemakingRow } from "./export_utils";
+
 import * as config from "../configs.json";
+
+
 
 async function main(): Promise<void> {
   // Parse command line arguments.
@@ -49,15 +58,26 @@ async function main(): Promise<void> {
     .option(
       "-a, --additionalContext <context>",
       "A short description of the conversation to add context."
-    );
+    )
+    .option("-t, --tag <tag>", "Tag to associate with the analysis.")
+    .option("--slug <slug>", "slug for the analysis.")
+    .option("--database", "Persister l'analyse dans la base de données PostgreSQL.", false);
   program.parse(process.argv);
   const options = program.opts();
-  let timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  let timestamp = new Date().toISOString().slice(0, 10);
   const language = config.default_language;
-  console.log(`Analysis language:${language}`)
-  
-  let outputBasename = options.inputFile.split("/").pop(); 
+  const isoformated_today = new Date().toISOString().slice(0, 10);
 
+  if (!options.slug) {
+    console.log("Aucun alias spécifié. Sortie du programme.");
+    process.exit();
+  }
+  const tag = options.tag ? options.tag : isoformated_today;
+
+
+
+  let outputBasename = options.inputFile.split("/").slice(0, -1).join("/") + "/";
+  console.log(outputBasename);
   const comments = await getCommentsFromCsv(options.inputFile);
 
   const summary = await getSummary(
@@ -68,12 +88,45 @@ async function main(): Promise<void> {
   );
 
   const markdownContent = summary.getText("MARKDOWN");
-  writeFileSync(outputBasename + "-" + timestamp + "-summary.md", markdownContent);
+  let markdownFilename = outputBasename + "summary_" + timestamp + ".md";
+  writeFileSync(markdownFilename, markdownContent);
+  console.log("markdown filename: " + markdownFilename);
   // writeSummaryToHtml(summary, options.outputBasename + "-" + timestamp + "-summary.html");
   // writeSummaryToGroundedCSV(summary, options.outputBasename + "-" + timestamp + "-summaryAndSource.csv");
 
   const jsonContent = JSON.stringify(summary, null, 2);
-  writeFileSync(outputBasename + "-" + timestamp + "-summary.json", jsonContent);
+  const json_filename = outputBasename + "summary_" + timestamp + ".json";
+  writeFileSync(json_filename, jsonContent);
+  console.log("json filename: " + json_filename);
+
+
+  const sensemakingRows = flattenCommentsToSensemakingTable(summary.comments, options.slug, options.tag);
+
+
+  // Traitement des subContents
+  let subContentsRows: SensemakingRow[] = [];
+  if (summary.contents.length > 0 && summary.contents[summary.contents.length - 1]?.subContents) {
+    console.log("summary.contents.length: " + summary.contents.length);
+    const topicSubContent = summary.contents[summary.contents.length - 1];
+    if (topicSubContent.subContents) {
+      subContentsRows = flattenSubContentsToSensemakingTable(topicSubContent.subContents, options.slug, options.tag);
+    }
+  }
+
+  // Concaténer et persister toutes les rows dans PostgreSQL
+  const allSensemakingRows = [...sensemakingRows, ...subContentsRows];
+
+  if (allSensemakingRows.length > 0) {
+    if (options.database) {
+      console.log(`Persistance de ${allSensemakingRows.length} enregistrements dans la base de données PostgreSQL...`);
+      await persistSensemakingToDatabase(allSensemakingRows);
+      console.log('Persistance terminée avec succès');
+    } else {
+      console.log(`Persistance désactivée. ${allSensemakingRows.length} enregistrements prêts pour la persistance.`);
+    }
+  } else {
+    console.log('Aucun enregistrement à persister');
+  }
 }
 
 main();
