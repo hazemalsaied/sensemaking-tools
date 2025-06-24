@@ -18,6 +18,7 @@ import { executeConcurrently, getPrompt, hydrateCommentRecord } from "../sensema
 import { TSchema, Type } from "@sinclair/typebox";
 import { learnOneLevelOfTopics } from "./topic_modeling";
 import { MAX_RETRIES, RETRY_DELAY_MS } from "../models/model_util";
+import { loadCategorizationPrompt } from "./utils/template_loader";
 
 /**
  * @fileoverview Helper functions for performing comments categorization.
@@ -80,22 +81,7 @@ export async function categorizeWithRetry(
 }
 
 export function topicCategorizationPrompt(topics: Topic[]): string {
-  return `
-For each of the following comments, identify the most relevant topic from the list below.
-
-Input Topics:
-${JSON.stringify(topics)}
-
-Important Considerations:
-- Ensure the assigned topic accurately reflects the meaning of the comment.
-- A comment can be assigned to multiple topics if necessary but prefer to assign only one topic 
-- Prioritize using the existing topics whenever possible.
-- All comments must be assigned at least one existing topic.
-- For each comment, provide a relevance score between 0 and 1 for each topic.
-- If no existing topic fits a comment well, assign it to the "Other" topic.
-- Do not create any new topics that are not listed in the Input Topics.
-- When generating the JSON output, minimize the size of the response. For example, prefer this compact format: {"id": "5258", "topics": [{"name": "Arts, Culture, And Recreation", "relevance": 0.7}]} instead of adding unnecessary whitespace or newlines.
-`;
+  return loadCategorizationPrompt(topics);
 }
 
 /**
@@ -559,7 +545,7 @@ export async function categorizeCommentsRecursive(
   model: Model,
   topics?: Topic[],
   additionalContext?: string,
-  language?:string
+  language?: string
 ): Promise<Comment[]> {
   // The exit condition - if the requested topic depth matches the current depth of topics on the
   // comments then exit.

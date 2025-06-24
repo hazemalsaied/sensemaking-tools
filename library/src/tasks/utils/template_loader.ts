@@ -68,3 +68,14 @@ export function loadSubtopicsPrompt(
         language: language
     });
 }
+
+/**
+ * Charge un template de prompt pour la catégorisation des commentaires
+ * @param topics - Les topics disponibles pour la catégorisation
+ * @returns Le prompt rempli
+ */
+export function loadCategorizationPrompt(topics: any[]): string {
+    return loadAndFillTemplate('categorization_prompt.txt', {
+        topics: JSON.stringify(topics)
+    });
+}
