@@ -17,59 +17,15 @@ import { Model } from "../models/model";
 import { MAX_RETRIES } from "../models/model_util";
 import { getPrompt, retryCall } from "../sensemaker_utils";
 import { Comment, FlatTopic, NestedTopic, Topic } from "../types";
+import { loadLearnTopicsPrompt, loadSubtopicsPrompt } from './utils/template_loader';
 
 /**
  * @fileoverview Helper functions for performing topic modeling on sets of comments.
  */
 
-export const LEARN_TOPICS_PROMPT = `
-Analyze the following comments and identify common topics.
-Consider the granularity of topics: too few topics may oversimplify the content and miss important nuances, while too many topics may lead to redundancy and make the overall structure less clear.
-Aim for a balanced number of topics that effectively summarizes the key themes without excessive detail.
-After analysis of the comments, determine the optimal number of topics to represent the content effectively.
-Justify why having fewer topics would be less optimal (potentially oversimplifying and missing key nuances), and why having more topics would also be less optimal (potentially leading to redundancy and a less clear overall structure).
-After determining the optimal number of topics, identify those topics.
-Topic names should consist of 3-4 words maximum, as if  It were a wiki page title.
-
-Important Considerations:
-- relevance must be -1 for topic modeling.
-- It's mandatory to propose topics names in the same language as the comments.
-`;
 
 export function learnSubtopicsForOneTopicPrompt(parentTopic: Topic, otherTopics?: Topic[], language: string = "french"): string {
-  const otherTopicNames = otherTopics?.map((topic) => topic.name).join(", ") ?? "";
-
-  return `
-Analyze the following comments and identify common subtopics within the following overarching topic: "${parentTopic.name}".
-Consider the granularity of subtopics: too few subtopics may oversimplify the content and miss important nuances, while too many subtopics may lead to redundancy and make the overall structure less clear.
-Aim for a balanced number of subtopics that effectively summarizes the key themes without excessive detail.
-After analysis of the comments, determine the optimal number of subtopics to represent the content effectively.
-Justify why having fewer subtopics would be less optimal (potentially oversimplifying and missing key nuances), and why having more subtopics would also be less optimal (potentially leading to redundancy and a less clear overall structure).
-After determining the optimal number of subtopics, identify those subtopics.
-
-Important Considerations:
-- No subtopics should have the same name as the overarching topic.
-- Topic names should consist of 4-5 words maximum, as if  It were a wiki page title.
-- relevance must be -1 for topic modeling.
-- There are other overarching topics that are being used on different sets of comments, do not use these overarching topic names as identified subtopics 
-- It's mandatory to propose subtopics names in the same language as the comments. The language of the comments is ${language}.
-names: ${otherTopicNames}
-
-Example of Incorrect Output:
-
-[
-  {
-    "name": "Economic Development",
-    "subtopics": [
-        { "name": "Job Creation" },
-        { "name": "Business Growth" },
-        { "name": "Small Business Development" },
-        { "name": "Small Business Marketing" } // Incorrect: Too closely related to the "Small Business Development" subtopic
-        { "name": "Infrastructure & Transportation" } // Incorrect: This is the name of a main topic
-      ]
-  }
-]
-`;
+  return loadSubtopicsPrompt(parentTopic, otherTopics, language);
 }
 
 /**
@@ -82,7 +38,7 @@ export function generateTopicModelingPrompt(parentTopic?: Topic, otherTopics?: T
   if (parentTopic) {
     return learnSubtopicsForOneTopicPrompt(parentTopic, otherTopics, language);
   } else {
-    return LEARN_TOPICS_PROMPT + `The language of the comments is ${language}.`;
+    return loadLearnTopicsPrompt(language);
   }
 }
 
