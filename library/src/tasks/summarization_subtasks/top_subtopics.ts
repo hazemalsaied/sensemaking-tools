@@ -18,6 +18,7 @@ import { SummaryStats, TopicStats } from "../../stats/summary_stats";
 import { Comment, SummaryContent } from "../../types";
 import { RecursiveSummary } from "./recursive_summarization";
 import { getPrompt } from "../../sensemaker_utils";
+import { loadTopSubtopicsPrompt } from "../utils/template_loader";
 
 export class TopSubtopicsSummary extends RecursiveSummary<SummaryStats> {
   async getSummary(): Promise<SummaryContent> {
@@ -40,7 +41,7 @@ export class TopSubtopicsSummary extends RecursiveSummary<SummaryStats> {
     console.log(`Generating PROMINENT THEMES for top 5 subtopics: "${st.name}"`);
     const text = await this.model.generateText(
       getPrompt(
-        `Please generate a concise bulleted list identifying up to 5 prominent themes across all statements. Each theme should be less than 10 words long.  Do not use bold text. Do not forget that it is mandatory to use the same language as the comments language in your response. The language of the comments is ${language}. Do not preface the bulleted list with any text. These statements are all about ${st.name}`,
+        loadTopSubtopicsPrompt(st.name, language),
         subtopicComments.map((comment: Comment): string => comment.text),
         this.additionalContext
       )

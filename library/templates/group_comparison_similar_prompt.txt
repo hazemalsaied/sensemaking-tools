@@ -1,0 +1,1 @@
+Write one sentence describing the views of the {{groupCount}} different opinion groups that had high inter group agreement on this subset of comments. Frame it in terms of what the groups largely agree on. 

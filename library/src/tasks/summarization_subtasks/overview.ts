@@ -24,48 +24,7 @@ import {
   filterSummaryContent,
   retryCall,
 } from "../../sensemaker_utils";
-
-function oneShotInstructions(topicNames: string[], language: string= "french") {
-  return (
-    `Your job is to compose a summary of the key findings from a public discussion, based on already composed summaries corresponding to topics and subtopics identified in said discussion. ` +
-    `These topic and subtopic summaries are based on comments and voting patterns that participants submitted as part of the discussion. ` +
-    `You should format the results as a markdown list, to be included near the top of the final report, which shall include the complete topic and subtopic summaries. ` +
-    `Do not pretend that you hold any of these opinions. You are not a participant in this discussion. ` +
-    `Do not include specific numbers about how many comments were included in each topic or subtopic, as these will be included later in the final report output. ` +
-    `You also do not need to recap the context of the conversation, as this will have already been stated earlier in the report. ` +
-    `Where possible, prefer describing the results in terms of the "statements" submitted or the overall "conversation", rather than in terms of the participants' perspectives (Note: "comments" and "statements" are the same thing, but for the sake of this portion of the summary, only use the term "statements"). ` +
-    `Remember: this is just one component of a larger report, and you should compose this so that it will flow naturally in the context of the rest of the report. ` +
-    `Be clear and concise in your writing, and do not use the passive voice, or ambiguous pronouns.` +
-    `\n\n` +
-    `Do not forget that it is mandatory to use the same language as the comments language in your response. The language of the comments is ${language}.` +
-    `The structure of the list you output should be in terms of the topic names, in the order that follows. ` +
-    `Each list item should start in bold with topic name name (including percentage, exactly as listed below), then a colon, and then a short one or two sentence summary for the corresponding topic.` +
-    `The complete response should be only the markdown list, and no other text. ` +
-    `For example, a list item might look like this:\n` +
-    `<output_format format="markdown">* **Topic Name (45%):**  Topic summary.</output_format>\n` +
-    `Here are the topics:
-    ${topicNames.map((s) => "* " + s).join("\n")}`
-  );
-}
-
-function perTopicInstructions(topicName: string, language: string= "french") {
-  return (
-    `Your job is to compose a summary of the key findings from a public discussion, based on already composed summaries corresponding to topics and subtopics identified in said discussion. ` +
-    `These topic and subtopic summaries are based on comments and voting patterns that participants submitted as part of the discussion. ` +
-    `This summary will be formatted as a markdown list, to be included near the top of the final report, which shall include the complete topic and subtopic summaries. ` +
-    `Do not pretend that you hold any of these opinions. You are not a participant in this discussion. ` +
-    `Where possible, prefer descriging the results in terms of the "statements" submitted or the overall "conversation", rather than in terms of the participants' perspectives (Note: "comments" and "statements" are the same thing, but for the sake of this portion of the summary, only use the term "statements"). ` +
-    `Do not include specific numbers about how many comments were included in each topic or subtopic, as these will be included later in the final report output. ` +
-    `You also do not need to recap the context of the conversation, as this will have already been stated earlier in the report. ` +
-    `Remember: this is just one component of a larger report, and you should compose this so that it will flow naturally in the context of the rest of the report. ` +
-    `Be clear and concise in your writing, and do not use the passive voice, or ambiguous pronouns.` +
-    `Do not forget that it is mandatory to use the same language as the comments language in your response.` +
-    `The language of the comments is ${language}.` +
-    `\n\n` +
-    `Other topics will come later, but for now, your job is to compose a very short one or two sentence summary of the following topic: ${topicName}. ` +
-    `This summary will be put together into a list with other such summaries later.`
-  );
-}
+import { loadOverviewOneShotPrompt, loadOverviewPerTopicPrompt } from "../utils/template_loader";
 
 /**
  * The interface is the input structure for the OverviewSummary class, and controls
@@ -82,7 +41,7 @@ export interface OverviewInput {
  * topics.
  */
 export class OverviewSummary extends RecursiveSummary<OverviewInput> {
-  async getSummary(language: string= "french"): Promise<SummaryContent> {
+  async getSummary(language: string = "french"): Promise<SummaryContent> {
     const method = this.input.method || "one-shot";
     const result = await (method == "one-shot" ? this.oneShotSummary() : this.perTopicSummary());
 
@@ -101,7 +60,7 @@ export class OverviewSummary extends RecursiveSummary<OverviewInput> {
   async oneShotSummary(): Promise<string> {
     const topicNames = this.topicNames();
     const prompt = getAbstractPrompt(
-      oneShotInstructions(topicNames),
+      loadOverviewOneShotPrompt(topicNames, this.language),
       [filterSectionsForOverview(this.input.topicsSummary)],
       (summary: SummaryContent) =>
         `<topicsSummary>\n` +
@@ -138,7 +97,7 @@ export class OverviewSummary extends RecursiveSummary<OverviewInput> {
     for (const topicStats of this.input.summaryStats.getStatsByTopic()) {
       text += `* __${this.getTopicNameAndCommentPercentage(topicStats)}__: `;
       const prompt = getAbstractPrompt(
-        perTopicInstructions(topicStats.name),
+        loadOverviewPerTopicPrompt(topicStats.name, this.language),
         [filterSectionsForOverview(this.input.topicsSummary)],
         (summary: SummaryContent) =>
           `<topicsSummary>\n` +

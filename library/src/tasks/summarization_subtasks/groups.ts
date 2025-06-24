@@ -16,6 +16,11 @@ import { getPrompt, executeConcurrently } from "../../sensemaker_utils";
 import { GroupStats, GroupedSummaryStats } from "../../stats/group_informed";
 import { RecursiveSummary } from "./recursive_summarization";
 import { Comment, SummaryContent } from "../../types";
+import {
+  loadGroupComparisonSimilarPrompt,
+  loadGroupComparisonDifferentPrompt,
+  loadGroupDescriptionPrompt
+} from "../utils/template_loader";
 
 /**
  * Format a list of strings to be a human readable list ending with "and"
@@ -50,11 +55,11 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
    */
   private getGroupComparison(groupNames: string[]): (() => Promise<SummaryContent>)[] {
     const topAgreeCommentsAcrossGroups = this.input.getCommonGroundComments();
+    const groupComparisonSimilarPrompt = loadGroupComparisonSimilarPrompt(groupNames.length);
     const groupComparisonSimilar = this.model.generateText(
+
       getPrompt(
-        `Write one sentence describing the views of the ${groupNames.length} different opinion ` +
-          "groups that had high inter group agreement on this subset of comments. Frame it in " +
-          "terms of what the groups largely agree on.",
+        groupComparisonSimilarPrompt,
         topAgreeCommentsAcrossGroups.map((comment: Comment) => comment.text),
         this.additionalContext
       )
@@ -63,9 +68,7 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
     const topDisagreeCommentsAcrossGroups = this.input.getDifferenceOfOpinionComments();
     const groupComparisonDifferent = this.model.generateText(
       getPrompt(
-        "The following are comments that different groups had different opinions on. Write one sentence describing " +
-          "what groups had different opinions on. Frame it in terms of what differs between the " +
-          "groups. Do not suggest the groups agree on these issues. Include every comment in the summary.",
+        loadGroupComparisonDifferentPrompt(),
         topDisagreeCommentsAcrossGroups.map((comment: Comment) => comment.text),
         this.additionalContext
       )
@@ -105,11 +108,7 @@ export class GroupsSummary extends RecursiveSummary<GroupedSummaryStats> {
         this.model
           .generateText(
             getPrompt(
-              `Write a two sentence summary of ${groupName}. Focus on the groups' expressed` +
-                ` views and opinions as reflected in the comments and votes, without speculating ` +
-                `about demographics. Avoid politically charged language (e.g., "conservative," ` +
-                `"liberal", or "progressive"). Instead, describe the group based on their ` +
-                `demonstrated preferences within the conversation.`,
+              loadGroupDescriptionPrompt(groupName),
               topCommentsForGroup.map((comment: Comment) => comment.text),
               this.additionalContext
             )

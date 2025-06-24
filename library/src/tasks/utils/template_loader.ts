@@ -79,3 +79,163 @@ export function loadCategorizationPrompt(topics: any[]): string {
         topics: JSON.stringify(topics)
     });
 }
+
+/**
+ * Charge un template de prompt pour la comparaison des similarités entre groupes
+ * @param groupCount - Le nombre de groupes à comparer
+ * @returns Le prompt rempli
+ */
+export function loadGroupComparisonSimilarPrompt(groupCount: number): string {
+    return loadAndFillTemplate('group_comparison_similar_prompt.txt', {
+        groupCount: groupCount
+    });
+}
+
+/**
+ * Charge un template de prompt pour la comparaison des différences entre groupes
+ * @returns Le prompt rempli
+ */
+export function loadGroupComparisonDifferentPrompt(): string {
+    return loadAndFillTemplate('group_comparison_different_prompt.txt', {});
+}
+
+/**
+ * Charge un template de prompt pour la description d'un groupe
+ * @param groupName - Le nom du groupe à décrire
+ * @returns Le prompt rempli
+ */
+export function loadGroupDescriptionPrompt(groupName: string): string {
+    return loadAndFillTemplate('group_description_prompt.txt', {
+        groupName: groupName
+    });
+}
+
+/**
+ * Charge un template de prompt pour la génération d'overview en une seule fois
+ * @param topicNames - Les noms des topics avec leurs pourcentages
+ * @param language - Langue des commentaires
+ * @returns Le prompt rempli
+ */
+export function loadOverviewOneShotPrompt(topicNames: string[], language: string = "french"): string {
+    return loadAndFillTemplate('overview_one_shot_prompt.txt', {
+        topicNames: topicNames.map((s) => "* " + s).join("\n"),
+        language: language
+    });
+}
+
+/**
+ * Charge un template de prompt pour la génération d'overview par topic
+ * @param topicName - Le nom du topic à traiter
+ * @param language - Langue des commentaires
+ * @returns Le prompt rempli
+ */
+export function loadOverviewPerTopicPrompt(topicName: string, language: string = "french"): string {
+    return loadAndFillTemplate('overview_per_topic_prompt.txt', {
+        topicName: topicName,
+        language: language
+    });
+}
+
+/**
+ * Charge un template de prompt pour la génération des thèmes des subtopics
+ * @param subtopicName - Le nom du subtopic à analyser
+ * @param language - Langue des commentaires
+ * @returns Le prompt rempli
+ */
+export function loadTopSubtopicsPrompt(subtopicName: string, language: string = "french"): string {
+    return loadAndFillTemplate('top_subtopics_prompt.txt', {
+        subtopicName: subtopicName,
+        language: language
+    });
+}
+
+/**
+ * Charge un template de prompt pour la génération des thèmes des topics
+ * @param topicName - Le nom du topic à analyser
+ * @returns Le prompt rempli
+ */
+export function loadTopicsThemesPrompt(topicName: string): string {
+    return loadAndFillTemplate('topics_themes_prompt.txt', {
+        topicName: topicName
+    });
+}
+
+/**
+ * Charge un template de prompt pour la génération du terrain d'entente
+ * @param containsGroups - Si les groupes sont présents
+ * @param language - Langue des commentaires
+ * @returns Le prompt rempli
+ */
+export function loadTopicsCommonGroundPrompt(containsGroups: boolean, language: string = "french"): string {
+    const groupSpecificText = containsGroups
+        ? "Participants in this conversation have been clustered into opinion groups. These opinion groups mostly approve of these comments. "
+        : "";
+
+    return loadAndFillTemplate('topics_common_ground_prompt.txt', {
+        groupSpecificText: groupSpecificText,
+        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
+        language: language
+    });
+}
+
+/**
+ * Charge un template de prompt pour la génération du terrain d'entente (commentaire unique)
+ * @param containsGroups - Si les groupes sont présents
+ * @param language - Langue des commentaires
+ * @returns Le prompt rempli
+ */
+export function loadTopicsCommonGroundSinglePrompt(containsGroups: boolean, language: string = "french"): string {
+    const groupSpecificText = containsGroups
+        ? "Participants in this conversation have been clustered into opinion groups. These opinion groups mostly approve of these comments. "
+        : "";
+
+    return loadAndFillTemplate('topics_common_ground_single_prompt.txt', {
+        groupSpecificText: groupSpecificText,
+        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
+        language: language
+    });
+}
+
+/**
+ * Charge un template de prompt pour la génération des différences d'opinion
+ * @param language - Langue des commentaires
+ * @returns Le prompt rempli
+ */
+export function loadTopicsDifferencesOpinionPrompt(language: string = "french"): string {
+    return loadAndFillTemplate('topics_differences_opinion_prompt.txt', {
+        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
+        language: language
+    });
+}
+
+/**
+ * Charge un template de prompt pour la génération des différences d'opinion (commentaire unique)
+ * @param containsGroups - Si les groupes sont présents
+ * @param language - Langue des commentaires
+ * @returns Le prompt rempli
+ */
+export function loadTopicsDifferencesOpinionSinglePrompt(containsGroups: boolean, language: string = "french"): string {
+    const groupSpecificText = containsGroups
+        ? "Participants in this conversation have been clustered into opinion groups. There were very different levels of agreement between the two opinion groups regarding this comment. "
+        : "";
+
+    return loadAndFillTemplate('topics_differences_opinion_single_prompt.txt', {
+        groupSpecificText: groupSpecificText,
+        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
+        language: language
+    });
+}
+
+/**
+ * Charge un template de prompt pour la génération du résumé récursif des topics
+ * @param topicName - Le nom du topic
+ * @param language - Langue des commentaires
+ * @returns Le prompt rempli
+ */
+export function loadTopicsRecursiveSummaryPrompt(topicName: string, language: string = "french"): string {
+    return loadAndFillTemplate('topics_recursive_summary_prompt.txt', {
+        topicName: topicName,
+        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
+        language: language
+    });
+}
