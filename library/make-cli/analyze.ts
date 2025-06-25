@@ -61,7 +61,7 @@ async function main(): Promise<void> {
     )
     .option("-t, --tag <tag>", "Tag to associate with the analysis.")
     .option("--slug <slug>", "slug for the analysis.")
-    .option("--database", "Persister l'analyse dans la base de données PostgreSQL.", false);
+    .option("--database", "Persister l'analyse dans la base de données PostgreSQL.", true);
   program.parse(process.argv);
   const options = program.opts();
   let timestamp = new Date().toISOString().slice(0, 10);
@@ -69,14 +69,13 @@ async function main(): Promise<void> {
   const isoformated_today = new Date().toISOString().slice(0, 10);
 
   if (!options.slug) {
-    console.log("Aucun alias spécifié. Sortie du programme.");
+    console.log("Aucun slug spécifié. Sortie du programme.");
     process.exit();
   }
-  const tag = options.tag ? options.tag : isoformated_today;
 
 
 
-  let outputBasename = options.inputFile.split("/").slice(0, -1).join("/") + "/";
+  let outputBasename = options.inputFile.replace(".csv", "_");
   console.log(outputBasename);
   const comments = await getCommentsFromCsv(options.inputFile);
 
@@ -88,14 +87,14 @@ async function main(): Promise<void> {
   );
 
   const markdownContent = summary.getText("MARKDOWN");
-  let markdownFilename = outputBasename + "summary_" + timestamp + ".md";
+  let markdownFilename = outputBasename + "overview_" + timestamp + ".md";
   writeFileSync(markdownFilename, markdownContent);
   console.log("markdown filename: " + markdownFilename);
   // writeSummaryToHtml(summary, options.outputBasename + "-" + timestamp + "-summary.html");
   // writeSummaryToGroundedCSV(summary, options.outputBasename + "-" + timestamp + "-summaryAndSource.csv");
 
   const jsonContent = JSON.stringify(summary, null, 2);
-  const json_filename = outputBasename + "summary_" + timestamp + ".json";
+  const json_filename = outputBasename + "analysis_" + timestamp + ".json";
   writeFileSync(json_filename, jsonContent);
   console.log("json filename: " + json_filename);
 
