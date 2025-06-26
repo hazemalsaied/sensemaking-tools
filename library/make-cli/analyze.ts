@@ -40,11 +40,8 @@ import {
 } from "./analysis_utils";
 
 import {
-  flattenCommentsToSensemakingTable,
-  flattenSubContentsToSensemakingTable,
-  persistSensemakingToDatabase
+  persistJsonToDatabase
 } from "./export_utils";
-import { SensemakingRow } from "./export_utils";
 
 import * as config from "../configs.json";
 
@@ -65,8 +62,6 @@ async function main(): Promise<void> {
   program.parse(process.argv);
   const options = program.opts();
   let timestamp = new Date().toISOString().slice(0, 10);
-  const language = config.default_language;
-  const isoformated_today = new Date().toISOString().slice(0, 10);
 
   if (!options.slug) {
     console.log("Aucun slug spécifié. Sortie du programme.");
@@ -90,42 +85,22 @@ async function main(): Promise<void> {
   let markdownFilename = outputBasename + "overview_" + timestamp + ".md";
   writeFileSync(markdownFilename, markdownContent);
   console.log("markdown filename: " + markdownFilename);
-  // writeSummaryToHtml(summary, options.outputBasename + "-" + timestamp + "-summary.html");
-  // writeSummaryToGroundedCSV(summary, options.outputBasename + "-" + timestamp + "-summaryAndSource.csv");
 
+  
   const jsonContent = JSON.stringify(summary, null, 2);
   const json_filename = outputBasename + "analysis_" + timestamp + ".json";
   writeFileSync(json_filename, jsonContent);
   console.log("json filename: " + json_filename);
 
-
-  const sensemakingRows = flattenCommentsToSensemakingTable(summary.comments, options.slug, options.tag);
-
-
-  // Traitement des subContents
-  let subContentsRows: SensemakingRow[] = [];
-  if (summary.contents.length > 0 && summary.contents[summary.contents.length - 1]?.subContents) {
-    console.log("summary.contents.length: " + summary.contents.length);
-    const topicSubContent = summary.contents[summary.contents.length - 1];
-    if (topicSubContent.subContents) {
-      subContentsRows = flattenSubContentsToSensemakingTable(topicSubContent.subContents, options.slug, options.tag);
-    }
-  }
-
-  // Concaténer et persister toutes les rows dans PostgreSQL
-  const allSensemakingRows = [...sensemakingRows, ...subContentsRows];
-
-  if (allSensemakingRows.length > 0) {
-    if (options.database) {
-      console.log(`Persistance de ${allSensemakingRows.length} enregistrements dans la base de données PostgreSQL...`);
-      await persistSensemakingToDatabase(allSensemakingRows);
-      console.log('Persistance terminée avec succès');
-    } else {
-      console.log(`Persistance désactivée. ${allSensemakingRows.length} enregistrements prêts pour la persistance.`);
-    }
+  // Persister le contenu JSON dans la base de données
+  if (options.database) {
+    console.log('Persistance du contenu JSON dans la base de données PostgreSQL...');
+    await persistJsonToDatabase(jsonContent, options.slug, options.tag);
+    console.log('Persistance JSON terminée avec succès');
   } else {
-    console.log('Aucun enregistrement à persister');
+    console.log('Persistance JSON désactivée');
   }
+
 }
 
 main();
