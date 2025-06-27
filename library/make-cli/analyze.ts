@@ -43,8 +43,14 @@ import {
   persistJsonToDatabase
 } from "./export_utils";
 
-import * as config from "../configs.json";
+import {
+  extractTopicsFromComments,
+  generateTopicStatistics,
+  extractOverviewFromSummary,
+  generateTopicAnalysis
+} from "./json_utils";
 
+import * as config from "../configs.json";
 
 
 async function main(): Promise<void> {
@@ -81,13 +87,36 @@ async function main(): Promise<void> {
     options.additionalContext
   );
 
-  const markdownContent = summary.getText("MARKDOWN");
-  let markdownFilename = outputBasename + "overview_" + timestamp + ".md";
-  writeFileSync(markdownFilename, markdownContent);
-  console.log("markdown filename: " + markdownFilename);
+  // const markdownContent = summary.getText("MARKDOWN");
+  // let markdownFilename = outputBasename + "overview_" + timestamp + ".md";
+  // writeFileSync(markdownFilename, markdownContent);
+  // console.log("markdown filename: " + markdownFilename);
 
-  
-  const jsonContent = JSON.stringify(summary, null, 2);
+
+  // Créer le JSON selon le schéma défini
+  const reportData = {
+    generated_at: new Date().toISOString().slice(0, 16).replace('T', ' '),
+    topics: extractTopicsFromComments(comments),
+    categorized_comments: comments.map(comment => ({
+      id: comment.id,
+      text: comment.text,
+      topics: comment.topics ? comment.topics.map(topic => ({
+        name: topic.name,
+        relevance: topic.relevance || 0,
+        subtopics: ('subtopics' in topic && topic.subtopics) ? topic.subtopics.map(subtopic => ({
+          name: subtopic.name,
+          relevance: subtopic.relevance || 0
+        })) : []
+      })) : []
+    })),
+    topic_statistics: generateTopicStatistics(comments),
+    summary: {
+      overview: extractOverviewFromSummary(summary),
+      topic_analysis: generateTopicAnalysis(summary, comments)
+    }
+  };
+
+  const jsonContent = JSON.stringify(reportData, null, 2);
   const json_filename = outputBasename + "analysis_" + timestamp + ".json";
   writeFileSync(json_filename, jsonContent);
   console.log("json filename: " + json_filename);

@@ -394,3 +394,5 @@ export function getTopicsFromComments(comments: Comment[]): Topic[] {
   }
   return returnTopics;
 }
+
+
