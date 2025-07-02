@@ -64,7 +64,6 @@ async function main(): Promise<void> {
         await persistJsonToDatabase(jsonContent, options.slug, options.tag);
         console.log('Persistance JSON terminée avec succès');
 
-
     } catch (error) {
         console.error('Erreur lors du traitement:', error);
         process.exit(1);
