@@ -226,8 +226,9 @@ export function getUniqueTopics(comments: Comment[]): Topic[] {
           const uniqueSubtopics = new Set([...existingSubtopics, ...newSubtopics]);
           topicNameToTopic.set(topic.name, {
             name: topic.name,
+            keywords: topic.keywords,
             relevance: topic.relevance,
-            subtopics: Array.from(uniqueSubtopics).map((subtopic) => ({ name: subtopic, relevance: -1 })),
+            subtopics: Array.from(uniqueSubtopics).map((subtopic) => ({ name: subtopic, keywords: [], relevance: -1 })),
           });
         }
       }

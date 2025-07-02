@@ -258,7 +258,7 @@ export function parseTopicsString(topicsString: string): Topic[] {
             if (subtopic.name === subtopicName) {
               subsubtopic = "subtopics" in subtopic ? subtopic.subtopics : [];
               if (subsubtopicName) {
-                subsubtopic.push({ name: subsubtopicName, relevance: -1 });
+                subsubtopic.push({ name: subsubtopicName, keywords: [], relevance: -1 });
                 subtopicUpdated = true;
                 break;
               }
@@ -266,10 +266,10 @@ export function parseTopicsString(topicsString: string): Topic[] {
           }
 
           if (subsubtopicName) {
-            subsubtopic = [{ name: subsubtopicName, relevance: -1 }];
+            subsubtopic = [{ name: subsubtopicName, keywords: [], relevance: -1 }];
           }
           if (!subtopicUpdated) {
-            topicMapping[topicName].push({ name: subtopicName, relevance: -1, subtopics: subsubtopic });
+            topicMapping[topicName].push({ name: subtopicName, keywords: [], relevance: -1, subtopics: subsubtopic });
           }
         }
 
@@ -281,9 +281,9 @@ export function parseTopicsString(topicsString: string): Topic[] {
   // map key/value pairs from subtopicMappings to Topic objects
   return Object.entries(subtopicMappings).map(([topicName, subtopics]) => {
     if (subtopics.length === 0) {
-      return { name: topicName, relevance: -1 };
+      return { name: topicName, keywords: [], relevance: -1 };
     } else {
-      return { name: topicName, relevance: -1, subtopics: subtopics };
+      return { name: topicName, keywords: [], relevance: -1, subtopics: subtopics };
     }
   });
 }
@@ -337,7 +337,8 @@ export async function getCommentsFromCsv(inputFilePath: string): Promise<Comment
           newComment.topics.push({
             name: row.topic.toString(),
             relevance: -1,
-            subtopics: row.subtopic ? [{ name: row.subtopic.toString(), relevance: -1 }] : [],
+            keywords: [],
+            subtopics: row.subtopic ? [{ name: row.subtopic.toString(), relevance: -1, keywords: [] }] : [],
           });
         }
 
@@ -386,9 +387,9 @@ export function getTopicsFromComments(comments: Comment[]): Topic[] {
   // Convert that map to a Topic array and return
   const returnTopics: Topic[] = [];
   for (const topicName in mapTopicToSubtopicSet) {
-    const topic: Topic = { name: topicName, relevance: -1, subtopics: [] };
+    const topic: Topic = { name: topicName, keywords: [], relevance: -1, subtopics: [] };
     for (const subtopicName of mapTopicToSubtopicSet[topicName]!.keys()) {
-      topic.subtopics.push({ name: subtopicName, relevance: -1 });
+      topic.subtopics.push({ name: subtopicName, keywords: [], relevance: -1 });
     }
     returnTopics.push(topic);
   }

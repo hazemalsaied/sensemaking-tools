@@ -172,7 +172,7 @@ async function writeCsv(csvRows: CommentCsvRow[], outputFile: string) {
 function getTopics(commaSeparatedTopics: string): Topic[] {
   const topics: Topic[] = [];
   for (const topic of commaSeparatedTopics.split(",")) {
-    topics.push({ name: topic, relevance: -1 });
+    topics.push({ name: topic, keywords: [], relevance: -1 });
   }
   return topics;
 }
