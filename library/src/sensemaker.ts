@@ -82,12 +82,12 @@ export class Sensemaker {
     summarizationType: SummarizationType = SummarizationType.AGGREGATE_VOTE,
     topics?: Topic[],
     additionalContext?: string,
-    language?: string
+    language?: string,
   ): Promise<Summary> {
     const startTime = performance.now();
 
     // Categories are required for summarization, this is a no-op if they already have categories.
-    comments = await this.categorizeComments(comments, true, topics, additionalContext, 2, language);
+    comments = await this.categorizeComments(comments, true, topics, additionalContext, 2, true, language);
 
     const summary = await summarizeByType(
       this.getModel("summarizationModel"),
@@ -157,6 +157,7 @@ export class Sensemaker {
     topics?: Topic[],
     additionalContext?: string,
     topicDepth?: 1 | 2 | 3,
+    processd?: boolean,
     language?:string
   ): Promise<Comment[]> {
     const startTime = performance.now();

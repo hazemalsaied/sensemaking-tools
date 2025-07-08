@@ -43,7 +43,8 @@ async function main(): Promise<void> {
   // Parse command line arguments.
   const program = new Command();
   program
-    .option("-i, --inputFile <file>", "The input file name.");
+    .option("-i, --inputFile <file>", "The input file name.")
+    .option("-p, --processd <boolean>", "Contine the achieved categorization!", true);
   program.parse(process.argv);
   const options = program.opts();
 
@@ -70,6 +71,7 @@ async function main(): Promise<void> {
     topics,
     "",
     2,
+    options.processd,
     language
   );
 

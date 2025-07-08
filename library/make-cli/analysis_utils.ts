@@ -151,7 +151,8 @@ export async function getSummary(
   comments: Comment[],
   topics?: Topic[],
   additionalContext?: string,
-  labguage?: string
+  labguage?: string,
+  
 ): Promise<Summary> {
   const sensemaker = new Sensemaker({
     defaultModel: new VertexModel(project, "us-central1"),
