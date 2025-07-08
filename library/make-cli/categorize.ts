@@ -33,50 +33,30 @@ import { parse } from "csv-parse";
 import { createObjectCsvWriter } from "csv-writer";
 import * as fs from "fs";
 import * as path from "path";
-import { concatTopics } from "./analysis_utils";
+import { concatTopics, parseTopicsString } from "./analysis_utils";
 import * as config from "../configs.json";
+import { displayTopicHierarchy, extractExistingTopicsFromCsv, CommentCsvRow } from "./categorization_utils";
 
-type CommentCsvRow = {
-  "comment-id": string;
-  comment_text: string;
-  topics: string;
-};
+
 
 async function main(): Promise<void> {
   // Parse command line arguments.
   const program = new Command();
   program
-    .option("-o, --outputFile <file>", "The output file name.")
-    .option("-i, --inputFile <file>", "The input file name.")
-    .option("-t, --topics <comma separated list>", "Optional list of top-level topics.")
-    .option(
-      "-d, --topicDepth [number]",
-      "If set, will learn only topics (1), topics and subtopics (2), or topics, subtopics, and subsubtopics (3). The default is 2.",
-      "2"
-    )
-    .option(
-      "-a, --additionalContext <instructions>",
-      "A short description of the conversation to add context."
-    )
-    .option(
-      "-f, --forceRerun",
-      "Force rerun of categorization, ignoring existing topics in the input file."
-    );
+    .option("-i, --inputFile <file>", "The input file name.");
   program.parse(process.argv);
   const options = program.opts();
-  options.topicDepth = parseInt(options.topicDepth);
-  if (![1, 2, 3].includes(options.topicDepth)) {
-    throw Error("topicDepth must be one of 1, 2, or 3");
-  }
 
   const csvRows = await readCsv(options.inputFile);
   let comments = convertCsvRowsToComments(csvRows);
-  if (options.forceRerun) {
-    comments = comments.map((comment) => {
-      delete comment.topics;
-      return comment;
-    });
-  }
+
+  // Extract existing topics from CSV if available and not forcing rerun
+  let topics: Topic[] | undefined;
+  topics = extractExistingTopicsFromCsv(csvRows);
+
+  // Afficher la hiérarchie des thèmes de manière élégante
+  displayTopicHierarchy(topics || []);
+
 
   const language = config.default_language;
   console.log(`Analysis language:${language}`)
@@ -84,19 +64,19 @@ async function main(): Promise<void> {
   const sensemaker = new Sensemaker({
     defaultModel: new VertexModel(config.gcloud.project_id, config.gcloud.location),
   });
-  const topics = options.topics ? getTopics(options.topics) : undefined;
   const categorizedComments = await sensemaker.categorizeComments(
     comments,
-    options.topicDepth >= 2 ? true : false,
+    true,
     topics,
-    options.additionalContext,
-    options.topicDepth,
+    "",
+    2,
     language
   );
 
   const csvRowsWithTopics = setTopics(csvRows, categorizedComments);
+  let outputBasename = options.inputFile.replace(".csv", "_categorized_" + new Date().toISOString() + ".csv");
 
-  await writeCsv(csvRowsWithTopics, options.outputFile);
+  await writeCsv(csvRowsWithTopics, outputBasename);
 }
 
 async function readCsv(inputFilePath: string): Promise<CommentCsvRow[]> {
@@ -126,10 +106,21 @@ async function readCsv(inputFilePath: string): Promise<CommentCsvRow[]> {
 function convertCsvRowsToComments(csvRows: CommentCsvRow[]): Comment[] {
   const comments: Comment[] = [];
   for (const row of csvRows) {
-    comments.push({
+    const comment: Comment = {
       text: row["comment_text"],
       id: row["comment-id"],
-    });
+    };
+
+    // If topics exist in the CSV, parse them and add to the comment
+    if (row.topics && row.topics.trim()) {
+      try {
+        comment.topics = parseTopicsString(row.topics);
+      } catch (error) {
+        console.warn(`Failed to parse topics for comment ${row["comment-id"]}: ${error}`);
+      }
+    }
+
+    comments.push(comment);
   }
   return comments;
 }
@@ -169,12 +160,6 @@ async function writeCsv(csvRows: CommentCsvRow[], outputFile: string) {
     .then(() => console.log(`CSV file written successfully to ${outputFile}.`));
 }
 
-function getTopics(commaSeparatedTopics: string): Topic[] {
-  const topics: Topic[] = [];
-  for (const topic of commaSeparatedTopics.split(",")) {
-    topics.push({ name: topic, keywords: [], relevance: -1 });
-  }
-  return topics;
-}
+
 
 main();
