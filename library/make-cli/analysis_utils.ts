@@ -218,16 +218,16 @@ export function concatTopics(comment: Comment): string {
         if ("subtopics" in subtopic && (subtopic.subtopics as Topic[]).length) {
           if ("subtopics" in (subtopic as Topic)) {
             for (const subsubtopic of subtopic.subtopics as Topic[]) {
-              pairsArray.push(`${topic.name}_${topic.relevance}:${subtopic.name}_${topic.relevance}:${subsubtopic.name}_${topic.relevance}`);
+              pairsArray.push(`${topic.name}:${subtopic.name}:${subsubtopic.name}`);
             }
           }
         } else {
-          pairsArray.push(`${topic.name}_${topic.relevance}:${subtopic.name}_${topic.relevance}`);
+          pairsArray.push(`${topic.name}:${subtopic.name}`);
         }
       }
     } else {
       // handle case where no subtopics available
-      pairsArray.push(`${topic.name}_${topic.relevance}`);
+      pairsArray.push(`${topic.name}`);
     }
   }
   return pairsArray.join(";");

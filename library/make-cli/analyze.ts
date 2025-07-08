@@ -87,11 +87,6 @@ async function main(): Promise<void> {
     options.additionalContext
   );
 
-  // const markdownContent = summary.getText("MARKDOWN");
-  // let markdownFilename = outputBasename + "overview_" + timestamp + ".md";
-  // writeFileSync(markdownFilename, markdownContent);
-  // console.log("markdown filename: " + markdownFilename);
-
 
   // Créer le JSON selon le schéma défini
   const reportData = {

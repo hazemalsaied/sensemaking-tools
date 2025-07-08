@@ -71,12 +71,13 @@ async function main(): Promise<void> {
     topics,
     "",
     2,
-    options.processd,
-    language
+    language,
+    'data/categorization_tmp'
   );
 
   const csvRowsWithTopics = setTopics(csvRows, categorizedComments);
-  let outputBasename = options.inputFile.replace(".csv", "_categorized_" + new Date().toISOString() + ".csv");
+  let timestamp = new Date().toISOString().slice(0, 10);
+  let outputBasename = options.inputFile.replace(".csv", "_categorized_" + timestamp + ".csv");
 
   await writeCsv(csvRowsWithTopics, outputBasename);
 }
