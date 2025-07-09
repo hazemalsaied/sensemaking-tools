@@ -102,7 +102,15 @@ async function readCsv(inputFilePath: string): Promise<CommentCsvRow[]> {
       .on("data", (row: CommentCsvRow) => {
         allRows.push(row);
       })
-      .on("end", () => resolve(allRows));
+      .on("end", () => {
+        // Renommer les colonnes françaises vers les noms anglais
+        renameColumns(allRows);
+
+        // Valider que toutes les colonnes requises existent
+        validateRequiredColumns(allRows);
+
+        resolve(allRows);
+      });
   });
 }
 
@@ -163,6 +171,72 @@ async function writeCsv(csvRows: CommentCsvRow[], outputFile: string) {
     .then(() => console.log(`CSV file written successfully to ${outputFile}.`));
 }
 
+
+
+
+function validateRequiredColumns(csvRows: CommentCsvRow[]): void {
+  if (csvRows.length === 0) {
+    throw new Error("Le fichier CSV est vide!");
+  }
+
+  const requiredColumns = [
+    "comment_text",
+    "votes",
+    "agree_rate",
+    "disagree_rate",
+    "pass_rate",
+    "comment-id"
+  ];
+
+  const firstRow = csvRows[0];
+  const existingColumns = Object.keys(firstRow);
+  const missingColumns = requiredColumns.filter(col => !existingColumns.includes(col));
+
+  if (missingColumns.length > 0) {
+    throw new Error(
+      `Colonnes manquantes dans le CSV: ${missingColumns.join(", ")}\n` +
+      `Colonnes trouvées: ${existingColumns.join(", ")}\n` +
+      `Colonnes requises: ${requiredColumns.join(", ")}`
+    );
+  }
+
+  // Créer la colonne group-Id si elle n'existe pas
+  if (!existingColumns.includes("group-id")) {
+    console.log("⚠️  Colonne 'group-id' manquante, création avec la valeur '1' pour tous les commentaires");
+    for (const row of csvRows) {
+      row["group-id"] = "1";
+    }
+  }
+
+  console.log("✅ Toutes les colonnes requises sont présentes dans le CSV");
+}
+
+function renameColumns(csvRows: CommentCsvRow[]): void {
+  if (csvRows.length === 0) return;
+
+  const columnMappings = {
+    "Proposition": "comment_text",
+    "Id": "comment-id",
+    "% pour": "agree_rate",
+    "% contre": "disagree_rate",
+    "% neutral": "pass_rate",
+    "Nb de votes": "votes"
+  };
+
+  const firstRow = csvRows[0];
+  const existingColumns = Object.keys(firstRow);
+
+  for (const row of csvRows) {
+    for (const [frenchName, englishName] of Object.entries(columnMappings)) {
+      if (existingColumns.includes(frenchName) && !existingColumns.includes(englishName)) {
+        // Renommer la colonne
+        (row as any)[englishName] = (row as any)[frenchName];
+        delete (row as any)[frenchName];
+        console.log(`🔄 Colonne renommée: "${frenchName}" → "${englishName}"`);
+      }
+    }
+  }
+}
 
 
 main();

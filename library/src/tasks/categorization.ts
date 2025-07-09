@@ -106,7 +106,7 @@ export async function categorizeWithRetry(
   return categorized;
 }
 
-export function topicCategorizationPrompt(topics: Topic[]): string {
+export function topicCategorizationPrompt(topics: any[]): string {
   return loadCategorizationPrompt(topics);
 }
 
@@ -752,7 +752,8 @@ export async function oneLevelCategorization(
   topics: Topic[],
   additionalContext?: string
 ): Promise<Comment[]> {
-  const instructions = topicCategorizationPrompt(topics);
+  let topic_names = topics.map(topic => topic.name);
+  const instructions = topicCategorizationPrompt(topic_names);
   // TODO: Consider the effects of smaller batch sizes. 1 comment per batch was much faster, but
   // the distribution was significantly different from what we're currently seeing. More testing
   // is needed to determine the ideal size and distribution.

@@ -6,6 +6,7 @@ export type CommentCsvRow = {
     "comment-id": string;
     comment_text: string;
     topics?: string;
+    "group-id"?: string;
 };
 
 
