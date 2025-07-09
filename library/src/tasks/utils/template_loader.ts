@@ -74,9 +74,11 @@ export function loadSubtopicsPrompt(
  * @param topics - Les topics disponibles pour la catégorisation
  * @returns Le prompt rempli
  */
-export function loadCategorizationPrompt(topics: any[]): string {
+export function loadCategorizationPrompt(topics: any[], fewShots: string): string {
+    console.log(fewShots);
     return loadAndFillTemplate('categorization_prompt.txt', {
-        topics: JSON.stringify(topics)
+        topics: JSON.stringify(topics),
+        few_shots: fewShots
     });
 }
 

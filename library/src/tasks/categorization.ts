@@ -52,13 +52,16 @@ export async function categorizeWithRetry(
       JSON.stringify({ id: comment.id, text: comment.text })
     );
     const outputSchema: TSchema = Type.Array(TopicCategorizedComment);
+
+    // Générer les few shots si des commentaires taggés sont fournis
+    
     let prompt = getPrompt(instructions, uncategorizedCommentsForModel, additionalContext);
 
     // Enregistrer le prompt dans un fichier avec timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const promptsDir = path.join(__dirname, '../../data/prompts');
 
-    
+
 
     const newCategorized: CommentRecord[] = (await model.generateData(
       prompt,
@@ -106,8 +109,8 @@ export async function categorizeWithRetry(
   return categorized;
 }
 
-export function topicCategorizationPrompt(topics: any[]): string {
-  return loadCategorizationPrompt(topics);
+export function topicCategorizationPrompt(topics: any[], fewShots: string): string {
+  return loadCategorizationPrompt(topics, fewShots);
 }
 
 /**
@@ -560,36 +563,80 @@ function getUncategorizedComments(comments: Comment[]): Comment[] {
   return comments.filter(comment => !comment.topics || comment.topics.length === 0);
 }
 
+/**
+ * Extrait les commentaires qui ont déjà des topics assignés pour les utiliser comme exemples.
+ * @param allComments L'ensemble des commentaires disponibles
+ * @param topics Les topics disponibles pour la catégorisation
+ * @returns Les commentaires qui ont des topics assignés
+ */
+function extractTaggedComments(allComments: Comment[], topics: Topic[]): Comment[] {
+  const topicNames = topics.map(topic => topic.name);
 
+  return allComments.filter(comment => {
+    if (!comment.topics || comment.topics.length === 0) {
+      return false;
+    }
+
+    // Vérifier si le commentaire a au moins un topic qui correspond à la liste fournie
+    return comment.topics.some(topic => topicNames.includes(topic.name));
+  });
+}
 
 /**
- * Formate les topics d'un commentaire pour l'export CSV.
- * @param topics Les topics du commentaire
- * @returns Une chaîne formatée représentant les topics
+ * Génère des exemples de few shots à partir des commentaires taggés pour améliorer la catégorisation.
+ * Sélectionne jusqu'à 5 topics et jusqu'à 3 exemples par topic.
+ * @param taggedComments Les commentaires déjà catégorisés à utiliser comme exemples
+ * @param topics Les topics disponibles pour la catégorisation
+ * @returns Une chaîne de caractères contenant les exemples de few shots
  */
-function formatTopicsForCSV(topics: Topic[]): string {
-  const pairsArray: string[] = [];
+function generateFewShots(taggedComments: Comment[], topics: Topic[]): string {
+  if (!taggedComments || taggedComments.length === 0) {
+    return "";
+  }
 
-  for (const topic of topics) {
-    if ("subtopics" in topic && topic.subtopics && topic.subtopics.length > 0) {
-      for (const subtopic of topic.subtopics) {
-        if ("subtopics" in subtopic && Array.isArray(subtopic.subtopics) && subtopic.subtopics.length > 0) {
-          // Niveau 3: topic:subtopic:subsubtopic
-          for (const subsubtopic of subtopic.subtopics) {
-            pairsArray.push(`${topic.name}:${subtopic.name}:${subsubtopic.name}`);
+  // Obtenir les noms des topics
+  const topicNames = topics.map(topic => topic.name);
+
+  // Grouper les commentaires par topic
+  const commentsByTopic: { [topicName: string]: Comment[] } = {};
+
+  for (const comment of taggedComments) {
+    if (comment.topics) {
+      for (const topic of comment.topics) {
+        if (topicNames.includes(topic.name)) {
+          if (!commentsByTopic[topic.name]) {
+            commentsByTopic[topic.name] = [];
           }
-        } else {
-          // Niveau 2: topic:subtopic
-          pairsArray.push(`${topic.name}:${subtopic.name}`);
+          commentsByTopic[topic.name].push(comment);
         }
       }
-    } else {
-      // Niveau 1: topic seulement
-      pairsArray.push(topic.name);
     }
   }
 
-  return pairsArray.join(";");
+  // Sélectionner jusqu'à 5 topics avec le plus d'exemples
+  const sortedTopics = Object.entries(commentsByTopic)
+    .sort(([, commentsA], [, commentsB]) => commentsB.length - commentsA.length)
+    .slice(0, 5);
+
+  if (sortedTopics.length === 0) {
+    return "";
+  }
+
+  // Construire la chaîne de few shots
+  let fewShots = "\n\nExemples de catégorisation :\n";
+
+  for (const [topicName, comments] of sortedTopics) {
+    fewShots += `\nTopic: ${topicName}\n`;
+
+    // Prendre jusqu'à 3 exemples pour ce topic
+    const examples = comments.slice(0, 3);
+
+    for (const comment of examples) {
+      fewShots += `- "${comment.text}" → ${topicName}\n`;
+    }
+  }
+
+  return fewShots;
 }
 
 /**
@@ -636,7 +683,9 @@ export async function categorizeCommentsRecursive(
     }
     console.log("Learned topics:", topics);
     console.log("Categorizing statements...");
-    comments = await oneLevelCategorization(comments, model, topics, additionalContext);
+
+    // Extraire les commentaires taggés pour les utiliser comme exemples
+    comments = await oneLevelCategorization(comments, [], model, topics, additionalContext);
     return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, language, outputDir);
   }
 
@@ -650,7 +699,10 @@ export async function categorizeCommentsRecursive(
     const uncategorizedComments = getUncategorizedComments(comments);
     if (uncategorizedComments.length > 0) {
       console.log(`Categorizing ${uncategorizedComments.length} uncategorized statements...`);
-      const newlyCategorized = await oneLevelCategorization(uncategorizedComments, model, topics, additionalContext);
+
+      // Extraire les commentaires taggés pour les utiliser comme exemples
+      const taggedComments = extractTaggedComments(comments, topics);
+      const newlyCategorized = await oneLevelCategorization(uncategorizedComments, taggedComments, model, topics, additionalContext);
 
       // Merge the newly categorized comments back into the original comments array
       const categorizedMap = new Map(newlyCategorized.map(comment => [comment.id, comment]));
@@ -720,8 +772,18 @@ export async function categorizeCommentsRecursive(
     );
 
     // Catégoriser seulement les commentaires sans sous-topics
+    // Extraire les commentaires taggés qui ont déjà des subtopics pour ce topic
+    const taggedCommentsForSubtopic = commentsInTopic.filter(comment => {
+      if (!comment.topics) return false;
+      return comment.topics.some(t =>
+        t.name === topic.name &&
+        ("subtopics" in t) && t.subtopics.length > 0
+      );
+    });
+
     const categorizedComments = await oneLevelCategorization(
       commentsWithoutSubtopics,
+      taggedCommentsForSubtopic,
       model,
       topic.subtopics,
       additionalContext,
@@ -748,15 +810,19 @@ export async function categorizeCommentsRecursive(
 
 export async function oneLevelCategorization(
   comments: Comment[],
+  taggedComments: Comment[],
   model: Model,
   topics: Topic[],
   additionalContext?: string
 ): Promise<Comment[]> {
   let topic_names = topics.map(topic => topic.name);
-  const instructions = topicCategorizationPrompt(topic_names);
+  
+  const fewShots = taggedComments ? generateFewShots(taggedComments, topics) : "";
+  const instructions = topicCategorizationPrompt(topic_names, fewShots);
   // TODO: Consider the effects of smaller batch sizes. 1 comment per batch was much faster, but
   // the distribution was significantly different from what we're currently seeing. More testing
   // is needed to determine the ideal size and distribution.
+  
   const batchesToCategorize: (() => Promise<CommentRecord[]>)[] = []; // callbacks
   for (let i = 0; i < comments.length; i += model.categorizationBatchSize) {
     const uncategorizedBatch = comments.slice(i, i + model.categorizationBatchSize);
