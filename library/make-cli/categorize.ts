@@ -59,8 +59,6 @@ async function main(): Promise<void> {
   displayTopicHierarchy(topics || []);
 
 
-  const language = config.default_language;
-  console.log(`Analysis language:${language}`)
   // Learn topics and categorize comments.
   const sensemaker = new Sensemaker({
     defaultModel: new VertexModel(config.gcloud.project_id, config.gcloud.location),
@@ -70,9 +68,7 @@ async function main(): Promise<void> {
     true,
     topics,
     "",
-    2,
-    language,
-    'data/categorization_tmp'
+    2
   );
 
   const csvRowsWithTopics = setTopics(csvRows, categorizedComments);

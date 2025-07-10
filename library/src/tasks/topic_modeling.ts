@@ -24,8 +24,8 @@ import { loadLearnTopicsPrompt, loadSubtopicsPrompt } from './utils/template_loa
  */
 
 
-export function learnSubtopicsForOneTopicPrompt(parentTopic: Topic, otherTopics?: Topic[], language: string = "french"): string {
-  return loadSubtopicsPrompt(parentTopic, otherTopics, language);
+export function learnSubtopicsForOneTopicPrompt(parentTopic: Topic, otherTopics?: Topic[]): string {
+  return loadSubtopicsPrompt(parentTopic, otherTopics);
 }
 
 /**
@@ -34,11 +34,11 @@ export function learnSubtopicsForOneTopicPrompt(parentTopic: Topic, otherTopics?
  * @param parentTopics - Optional. An array of top-level topics to use.
  * @returns The generated prompt string.
  */
-export function generateTopicModelingPrompt(parentTopic?: Topic, otherTopics?: Topic[], language: string = "french"): string {
+export function generateTopicModelingPrompt(parentTopic?: Topic, otherTopics?: Topic[]): string {
   if (parentTopic) {
-    return learnSubtopicsForOneTopicPrompt(parentTopic, otherTopics, language);
+    return learnSubtopicsForOneTopicPrompt(parentTopic, otherTopics);
   } else {
-    return loadLearnTopicsPrompt(language);
+    return loadLearnTopicsPrompt();
   }
 }
 
@@ -60,7 +60,7 @@ export function learnOneLevelOfTopics(
   additionalContext?: string,
   language?: string
 ): Promise<Topic[]> {
-  const instructions = generateTopicModelingPrompt(topic, otherTopics, language);
+  const instructions = generateTopicModelingPrompt(topic, otherTopics);
   const schema = topic ? Type.Array(NestedTopic) : Type.Array(FlatTopic);
 
   return retryCall(

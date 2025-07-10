@@ -7,6 +7,5 @@ After determining the optimal number of topics, identify those topics.
 Topic names should consist of 3-4 words maximum, as if It were a wiki page title.
 
 Important Considerations:
-- relevance must be -1 for topic modeling.
 - It's mandatory to propose topics names in the same language as the comments.
 The language of the comments is {{language}}.

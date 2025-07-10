@@ -26,9 +26,7 @@ import { filterSummaryContent } from "./sensemaker_utils";
  * TypeBox JSON Schema representation of a single topic record as a name, with no subtopics.
  */
 export const FlatTopic = Type.Object({
-  name: Type.String(),
-  keywords: Type.Array(Type.String()),
-  relevance: Type.Number()
+  name: Type.String()
 });
 
 /**
@@ -41,8 +39,6 @@ export type FlatTopic = Static<typeof FlatTopic>;
  */
 export const NestedTopic = Type.Object({
   name: Type.String(),
-  keywords: Type.Array(Type.String()),
-  relevance: Type.Number(),
   subtopics: Type.Array(FlatTopic),
 });
 

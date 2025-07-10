@@ -36,12 +36,12 @@ export class TopSubtopicsSummary extends RecursiveSummary<SummaryStats> {
     });
   }
 
-  async getSubtopicSummary(st: TopicStats, index: number, language: string = "french"): Promise<SummaryContent> {
+  async getSubtopicSummary(st: TopicStats, index: number): Promise<SummaryContent> {
     const subtopicComments = st.summaryStats.comments;
     console.log(`Generating PROMINENT THEMES for top 5 subtopics: "${st.name}"`);
     const text = await this.model.generateText(
       getPrompt(
-        loadTopSubtopicsPrompt(st.name, language),
+        loadTopSubtopicsPrompt(st.name),
         subtopicComments.map((comment: Comment): string => comment.text),
         this.additionalContext
       )

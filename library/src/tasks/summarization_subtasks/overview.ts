@@ -25,7 +25,7 @@ import {
   retryCall,
 } from "../../sensemaker_utils";
 import { loadOverviewOneShotPrompt, loadOverviewPerTopicPrompt } from "../utils/template_loader";
-
+import * as config from '../../../configs.json';
 /**
  * The interface is the input structure for the OverviewSummary class, and controls
  * which specific method is used to generate this part of the summary.
@@ -41,14 +41,14 @@ export interface OverviewInput {
  * topics.
  */
 export class OverviewSummary extends RecursiveSummary<OverviewInput> {
-  async getSummary(language: string = "french"): Promise<SummaryContent> {
+  async getSummary(): Promise<SummaryContent> {
     const method = this.input.method || "one-shot";
     const result = await (method == "one-shot" ? this.oneShotSummary() : this.perTopicSummary());
 
     const preamble =
       `Below is a high level overview of the topics discussed in the conversation, as well as the percentage of statements categorized under each topic. ` +
       `Note that the percentages may add up to greater than 100% when statements fall under more than one topic.\n\n` +
-      `Do not forget that it is mandatory to use the same language as the comments language in your response. The language of the comments is ${language}.`;
+      `Do not forget that it is mandatory to use the same language as the comments language in your response. The language of the comments is ${config.default_language}.`;
     return { title: "## Overview", text: preamble + result };
   }
 
@@ -60,7 +60,7 @@ export class OverviewSummary extends RecursiveSummary<OverviewInput> {
   async oneShotSummary(): Promise<string> {
     const topicNames = this.topicNames();
     const prompt = getAbstractPrompt(
-      loadOverviewOneShotPrompt(topicNames, this.language),
+      loadOverviewOneShotPrompt(topicNames),
       [filterSectionsForOverview(this.input.topicsSummary)],
       (summary: SummaryContent) =>
         `<topicsSummary>\n` +
@@ -97,7 +97,7 @@ export class OverviewSummary extends RecursiveSummary<OverviewInput> {
     for (const topicStats of this.input.summaryStats.getStatsByTopic()) {
       text += `* __${this.getTopicNameAndCommentPercentage(topicStats)}__: `;
       const prompt = getAbstractPrompt(
-        loadOverviewPerTopicPrompt(topicStats.name, this.language),
+        loadOverviewPerTopicPrompt(topicStats.name),
         [filterSectionsForOverview(this.input.topicsSummary)],
         (summary: SummaryContent) =>
           `<topicsSummary>\n` +

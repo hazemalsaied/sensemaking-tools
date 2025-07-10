@@ -17,10 +17,11 @@
 import { SummaryStats, TopicStats } from "../../stats/summary_stats";
 import { SummaryContent } from "../../types";
 import { RecursiveSummary } from "./recursive_summarization";
+import * as config from '../../../configs.json';
 
 export class IntroSummary extends RecursiveSummary<SummaryStats> {
-  getSummary(language: string= "french"): Promise<SummaryContent> {
-    let text = language === "french" ? `Ce rapport résume les résultats de l'opération:\n` : `This report summarizes the results of public input, encompassing:\n`;
+  getSummary(): Promise<SummaryContent> {
+    let text = config.default_language === "french" ? `Ce rapport résume les résultats de l'opération:\n` : `This report summarizes the results of public input, encompassing:\n`;
     // let text = `This report summarizes the results of public input, encompassing:\n` ;
     const commentCountFormatted = this.input.commentCount.toLocaleString();
     text += ` * __${commentCountFormatted} statements__\n`;
@@ -35,7 +36,7 @@ export class IntroSummary extends RecursiveSummary<SummaryStats> {
       .reduce((a, b) => a + b, 0);
     text += ` * ${subtopicCount} subtopics\n\n`;
     // TODO: Add how many themes there are when it's available.
-    text += language === "french" ? "Tous les votants ont été anonymes." : "All voters were anonymous.";
+    text += config.default_language === "french" ? "Tous les votants ont été anonymes." : "All voters were anonymous.";
 
     return Promise.resolve({ title: "## Introduction", text: text });
   }

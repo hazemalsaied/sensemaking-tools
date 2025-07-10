@@ -8,7 +8,6 @@ After determining the optimal number of subtopics, identify those subtopics.
 Important Considerations:
 - No subtopics should have the same name as the overarching topic.
 - Topic names should consist of 4-5 words maximum, as if It were a wiki page title.
-- relevance must be -1 for topic modeling.
 - There are other overarching topics that are being used on different sets of comments, do not use these overarching topic names as identified subtopics 
 - It's mandatory to propose subtopics names in the same language as the comments. The language of the comments is {{language}}.
 names: {{otherTopicNames}}

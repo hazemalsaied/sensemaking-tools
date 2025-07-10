@@ -97,10 +97,8 @@ async function main(): Promise<void> {
       text: comment.text,
       topics: comment.topics ? comment.topics.map(topic => ({
         name: topic.name,
-        relevance: topic.relevance || 0,
         subtopics: ('subtopics' in topic && topic.subtopics) ? topic.subtopics.map(subtopic => ({
           name: subtopic.name,
-          relevance: subtopic.relevance || 0
         })) : []
       })) : []
     })),

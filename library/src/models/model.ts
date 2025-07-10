@@ -38,6 +38,7 @@ export abstract class Model {
    * @returns the model response
    */
   abstract generateText(prompt: string): Promise<string>;
+  abstract exportPrompt(prompt: string, response: string): void;
 
   /**
    * Abstract method for generating structured data based on the given prompt.

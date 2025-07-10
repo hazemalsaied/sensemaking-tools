@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as config from '../../../configs.json';
 
 /**
  * Interface pour les données de remplacement dans un template
@@ -39,12 +40,11 @@ export function loadAndFillTemplate(templatePath: string, data: TemplateData): s
 
 /**
  * Charge un template de prompt pour les topics principaux
- * @param language - Langue des commentaires
  * @returns Le prompt rempli
  */
-export function loadLearnTopicsPrompt(language: string = "french"): string {
+export function loadLearnTopicsPrompt(): string {
     return loadAndFillTemplate('topics_modeling_prompt.txt', {
-        language: language
+        language: config.default_language
     });
 }
 
@@ -52,20 +52,18 @@ export function loadLearnTopicsPrompt(language: string = "french"): string {
  * Charge un template de prompt pour les subtopics
  * @param parentTopic - Le topic parent
  * @param otherTopics - Autres topics à éviter
- * @param language - Langue des commentaires
  * @returns Le prompt rempli
  */
 export function loadSubtopicsPrompt(
     parentTopic: { name: string },
-    otherTopics?: { name: string }[],
-    language: string = "french"
+    otherTopics?: { name: string }[]
 ): string {
     const otherTopicNames = otherTopics?.map((topic) => topic.name).join(", ") ?? "";
 
     return loadAndFillTemplate('subtopics_modeling_prompt.txt', {
         parentTopicName: parentTopic.name,
         otherTopicNames: otherTopicNames,
-        language: language
+        language: config.default_language
     });
 }
 
@@ -75,7 +73,6 @@ export function loadSubtopicsPrompt(
  * @returns Le prompt rempli
  */
 export function loadCategorizationPrompt(topics: any[], fewShots: string): string {
-    console.log(fewShots);
     return loadAndFillTemplate('categorization_prompt.txt', {
         topics: JSON.stringify(topics),
         few_shots: fewShots
@@ -115,39 +112,36 @@ export function loadGroupDescriptionPrompt(groupName: string): string {
 /**
  * Charge un template de prompt pour la génération d'overview en une seule fois
  * @param topicNames - Les noms des topics avec leurs pourcentages
- * @param language - Langue des commentaires
  * @returns Le prompt rempli
  */
-export function loadOverviewOneShotPrompt(topicNames: string[], language: string = "french"): string {
+export function loadOverviewOneShotPrompt(topicNames: string[]): string {
     return loadAndFillTemplate('overview_one_shot_prompt.txt', {
         topicNames: topicNames.map((s) => "* " + s).join("\n"),
-        language: language
+        language: config.default_language
     });
 }
 
 /**
  * Charge un template de prompt pour la génération d'overview par topic
  * @param topicName - Le nom du topic à traiter
- * @param language - Langue des commentaires
  * @returns Le prompt rempli
  */
-export function loadOverviewPerTopicPrompt(topicName: string, language: string = "french"): string {
+export function loadOverviewPerTopicPrompt(topicName: string): string {
     return loadAndFillTemplate('overview_per_topic_prompt.txt', {
         topicName: topicName,
-        language: language
+        language: config.default_language
     });
 }
 
 /**
  * Charge un template de prompt pour la génération des thèmes des subtopics
  * @param subtopicName - Le nom du subtopic à analyser
- * @param language - Langue des commentaires
  * @returns Le prompt rempli
  */
-export function loadTopSubtopicsPrompt(subtopicName: string, language: string = "french"): string {
+export function loadTopSubtopicsPrompt(subtopicName: string): string {
     return loadAndFillTemplate('top_subtopics_prompt.txt', {
         subtopicName: subtopicName,
-        language: language
+        language: config.default_language
     });
 }
 
@@ -165,10 +159,9 @@ export function loadTopicsThemesPrompt(topicName: string): string {
 /**
  * Charge un template de prompt pour la génération du terrain d'entente
  * @param containsGroups - Si les groupes sont présents
- * @param language - Langue des commentaires
  * @returns Le prompt rempli
  */
-export function loadTopicsCommonGroundPrompt(containsGroups: boolean, language: string = "french"): string {
+export function loadTopicsCommonGroundPrompt(containsGroups: boolean): string {
     const groupSpecificText = containsGroups
         ? "Participants in this conversation have been clustered into opinion groups. These opinion groups mostly approve of these comments. "
         : "";
@@ -176,17 +169,16 @@ export function loadTopicsCommonGroundPrompt(containsGroups: boolean, language: 
     return loadAndFillTemplate('topics_common_ground_prompt.txt', {
         groupSpecificText: groupSpecificText,
         commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
-        language: language
+        language: config.default_language
     });
 }
 
 /**
  * Charge un template de prompt pour la génération du terrain d'entente (commentaire unique)
  * @param containsGroups - Si les groupes sont présents
- * @param language - Langue des commentaires
  * @returns Le prompt rempli
  */
-export function loadTopicsCommonGroundSinglePrompt(containsGroups: boolean, language: string = "french"): string {
+export function loadTopicsCommonGroundSinglePrompt(containsGroups: boolean): string {
     const groupSpecificText = containsGroups
         ? "Participants in this conversation have been clustered into opinion groups. These opinion groups mostly approve of these comments. "
         : "";
@@ -194,29 +186,27 @@ export function loadTopicsCommonGroundSinglePrompt(containsGroups: boolean, lang
     return loadAndFillTemplate('topics_common_ground_single_prompt.txt', {
         groupSpecificText: groupSpecificText,
         commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
-        language: language
+        language: config.default_language
     });
 }
 
 /**
  * Charge un template de prompt pour la génération des différences d'opinion
- * @param language - Langue des commentaires
  * @returns Le prompt rempli
  */
-export function loadTopicsDifferencesOpinionPrompt(language: string = "french"): string {
+export function loadTopicsDifferencesOpinionPrompt(): string {
     return loadAndFillTemplate('topics_differences_opinion_prompt.txt', {
         commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
-        language: language
+        language: config.default_language
     });
 }
 
 /**
  * Charge un template de prompt pour la génération des différences d'opinion (commentaire unique)
  * @param containsGroups - Si les groupes sont présents
- * @param language - Langue des commentaires
  * @returns Le prompt rempli
  */
-export function loadTopicsDifferencesOpinionSinglePrompt(containsGroups: boolean, language: string = "french"): string {
+export function loadTopicsDifferencesOpinionSinglePrompt(containsGroups: boolean): string {
     const groupSpecificText = containsGroups
         ? "Participants in this conversation have been clustered into opinion groups. There were very different levels of agreement between the two opinion groups regarding this comment. "
         : "";
@@ -224,20 +214,19 @@ export function loadTopicsDifferencesOpinionSinglePrompt(containsGroups: boolean
     return loadAndFillTemplate('topics_differences_opinion_single_prompt.txt', {
         groupSpecificText: groupSpecificText,
         commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
-        language: language
+        language: config.default_language
     });
 }
 
 /**
  * Charge un template de prompt pour la génération du résumé récursif des topics
  * @param topicName - Le nom du topic
- * @param language - Langue des commentaires
  * @returns Le prompt rempli
  */
-export function loadTopicsRecursiveSummaryPrompt(topicName: string, language: string = "french"): string {
+export function loadTopicsRecursiveSummaryPrompt(topicName: string): string {
     return loadAndFillTemplate('topics_recursive_summary_prompt.txt', {
         topicName: topicName,
         commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
-        language: language
+        language: config.default_language
     });
 }

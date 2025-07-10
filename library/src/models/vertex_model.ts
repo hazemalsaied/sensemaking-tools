@@ -30,7 +30,8 @@ import { checkDataSchema } from "../types";
 import { Static, TSchema } from "@sinclair/typebox";
 import { retryCall } from "../sensemaker_utils";
 import { RETRY_DELAY_MS, DEFAULT_VERTEX_PARALLELISM, MAX_LLM_RETRIES } from "./model_util";
-
+import * as fs from "fs";
+import * as path from "path";
 /**
  * Class to interact with models available through Google Cloud's Model Garden.
  */
@@ -77,7 +78,9 @@ export class VertexModel extends Model {
    * @returns the model response as a string
    */
   async generateText(prompt: string): Promise<string> {
-    return await this.callLLM(prompt, this.getGenerativeModel());
+    const response = await this.callLLM(prompt, this.getGenerativeModel());
+    this.exportPrompt(prompt, response);
+    return response;
   }
 
   /**
@@ -102,9 +105,30 @@ export class VertexModel extends Model {
 
       return true;
     };
-    return JSON.parse(
-      await this.callLLM(prompt, this.getGenerativeModel(schema), validateResponse)
-    );
+    let response = await this.callLLM(prompt, this.getGenerativeModel(schema), validateResponse)
+    this.exportPrompt(prompt, response);
+    return JSON.parse(response);
+  
+  }
+
+  exportPrompt(prompt: string, response: string): void {
+    // Enregistrer le prompt dans un fichier avec timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    
+    const start_hour = new Date().toISOString().slice(0, 13).replace(/[:]/g, '-');
+    const promptsDir = path.join(__dirname, '../../data/prompts/' + start_hour);
+    // Créer le répertoire s'il n'existe pas
+    if (!fs.existsSync(promptsDir)) {
+      fs.mkdirSync(promptsDir, { recursive: true });
+    }
+    const promptFileName = `prompt_${timestamp}.txt`;
+    const promptFilePath = path.join(promptsDir, promptFileName);
+    try {
+      fs.writeFileSync(promptFilePath, prompt + "\n\n" + "response: " + JSON.stringify(response), 'utf8');
+      console.log(`Prompt enregistré dans: ${promptFilePath}`);
+    } catch (error) {
+      console.error(`Erreur lors de l'enregistrement du prompt: ${error}`);
+    }
   }
 
   // TODO: Switch from a `validator` fn to a `conformer` fn.

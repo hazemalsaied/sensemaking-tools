@@ -4,8 +4,6 @@ Aim for a balanced number of topics that effectively summarizes the key themes w
 
 Important Considerations:
 
-relevance must be -1 for topic modeling.
-- relevance must be -1 for topic modeling.
 -It's mandatory to propose topics names in the same language as the comments. The language of the comments is {{language}}.
 
 Additional instructions:

@@ -99,16 +99,12 @@ export function extractExistingTopicsFromCsv(csvRows: CommentCsvRow[]): Topic[] 
                             // Create a new NestedTopic with merged subtopics
                             topicMap.set(topic.name, {
                                 name: existingTopic.name,
-                                keywords: existingTopic.keywords,
-                                relevance: existingTopic.relevance,
                                 subtopics: mergedSubtopics
                             });
                         } else {
                             // Convert existing FlatTopic to NestedTopic
                             topicMap.set(topic.name, {
                                 name: existingTopic.name,
-                                keywords: existingTopic.keywords,
-                                relevance: existingTopic.relevance,
                                 subtopics: topic.subtopics
                             });
                         }

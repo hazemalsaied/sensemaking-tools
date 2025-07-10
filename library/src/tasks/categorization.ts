@@ -19,9 +19,220 @@ import { TSchema, Type } from "@sinclair/typebox";
 import { learnOneLevelOfTopics } from "./topic_modeling";
 import { MAX_RETRIES, RETRY_DELAY_MS } from "../models/model_util";
 import { loadCategorizationPrompt } from "./utils/template_loader";
-import { createObjectCsvWriter } from "csv-writer";
 import * as fs from "fs";
 import * as path from "path";
+
+
+
+
+/**
+ * Categorize comments one level at a time.
+ *
+ * For comments without topics, first all the topics are learned, then the comments are
+ * categorized into the topics, then for each topic the subset of relevant comments are selected
+ * and this is repeated recursively.
+ *
+ * @param comments the comments to categorize to the given depthLevel
+ * @param topicDepth the depth of categorization and topic learning, 1 is topic only; 2 is topics
+ * and subtopics; 3 is topics, subtopics, and subsubtopics
+ * @param model the model to use for topic learning and categorization
+ * @param topics a given set of topics to categorize the comments into
+ * @param additionalContext information to give the model
+ * @param outputDir directory to save CSV files at each depth level
+ * @returns the comments categorized to the level specified by topicDepth
+ */
+export async function categorizeCommentsRecursive(
+  comments: Comment[],
+  topicDepth: 1 | 2 | 3,
+  model: Model,
+  topics?: Topic[],
+  additionalContext?: string,
+  outputDir?: string
+): Promise<Comment[]> {
+  // The exit condition - if the requested topic depth matches the current depth of topics on the
+  // comments then exit.
+  const currentTopicDepth = getTopicDepth(comments);
+  console.log("Identifying topics and categorizing statements at depth=", currentTopicDepth);
+
+
+  if (currentTopicDepth >= topicDepth) {
+    return comments;
+  }
+  if (!topics) {
+    console.log("Learning topics...");
+    topics = await learnOneLevelOfTopics(comments, model, undefined, undefined, additionalContext);
+    // Sometimes comments are categorized into an "Other" topic if no given topics are a good fit.
+    // This needs included in the list of topics so these are processed downstream.
+    if (!topics.some((topic) => topic.name === "Other")) {
+      topics.push({ name: "Other" });
+    }
+    console.log("Learned topics:", topics);
+    console.log("Categorizing statements...");
+
+    // Extraire les commentaires taggés pour les utiliser comme exemples
+    comments = await oneLevelCategorization(comments, [], model, topics, additionalContext);
+    return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, outputDir);
+  }
+
+  if (topics && currentTopicDepth === 0) {
+    console.log("As we have topics, categorizing starts without learning topics ...");
+    if (!topics.some((topic) => topic.name === "Other")) {
+      topics.push({ name: "Other" });
+    }
+
+    // Only categorize comments that don't have topics yet
+    const blankComments = getUncategorizedComments(comments);
+    if (blankComments.length > 0) {
+      console.log(`Categorizing ${blankComments.length} uncategorized statements...`);
+
+      // Extraire les commentaires taggés pour les utiliser comme exemples
+      const taggedComments = extractTaggedComments(comments, topics);
+      const newlyTagged = await oneLevelCategorization(blankComments, taggedComments, model, topics, additionalContext);
+
+      // Merge the newly categorized comments back into the original comments array
+      const categorizedMap = new Map(newlyTagged.map(comment => [comment.id, comment]));
+      comments = comments.map(comment => {
+        const categorized = categorizedMap.get(comment.id);
+        return categorized || comment;
+      });
+    } else {
+      console.log("All comments are already categorized, skipping categorization step.");
+    }
+
+    return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, outputDir);
+  }
+  console.log("Categorizing comments ... at depth=", currentTopicDepth);
+  let index = 0;
+  const parentTopics = getTopicsAtDepth(topics, currentTopicDepth);
+  for (let topic of parentTopics) {
+
+    const commentsInTopic = structuredClone(
+      getCommentTextsWithTopicsAtDepth(comments, topic.name, currentTopicDepth)
+    );
+
+    if (commentsInTopic.length === 0) {
+      continue;
+    }
+    if (!("subtopics" in topic)) {
+      // The subtopics are added to the existing topic, so a list of length one is returned.
+      console.log("Learning subtopics for", topic.name);
+
+      // Filtrer les commentaires qui n'ont pas encore de subtopics pour ce topic
+      const commentsWithoutSubtopics = commentsInTopic.filter(comment => {
+        if (!comment.topics) return true;
+        return comment.topics.some(t =>
+          t.name === topic.name &&
+          (!("subtopics" in t) || t.subtopics.length === 0)
+        );
+      });
+      console.log(
+        "Categorizing", topic.name, "comments into subtopics",
+        ` (${++index}/${parentTopics.length} topics)`
+      );
+      const newTopicAndSubtopics = (
+        await learnOneLevelOfTopics(commentsWithoutSubtopics, model, topic, parentTopics, additionalContext)
+      )[0];
+
+      console.log("New subtopics for", topic.name, "subtopics" in newTopicAndSubtopics ? newTopicAndSubtopics.subtopics : "none");
+      if (!("subtopics" in newTopicAndSubtopics)) {
+        throw Error("Badly formed LLM response - expected 'subtopics' to be in topics ");
+      }
+      topic = { name: topic.name, subtopics: newTopicAndSubtopics.subtopics };
+    }
+
+    // Use the subtopics as high-level topics and merge them in later.
+    console.log("Categorizing", topic.name, " comments into subtopics", topic.subtopics);
+
+    // Filtrer les commentaires qui n'ont pas encore de subtopics pour ce topic
+    const commentsWithoutSubtopics = commentsInTopic.filter(comment => {
+      if (!comment.topics) return true;
+      return comment.topics.some(t =>
+        t.name === topic.name &&
+        (!("subtopics" in t) || t.subtopics.length === 0)
+      );
+    });
+    console.log(
+      "Categorizing", topic.name, " [", commentsWithoutSubtopics.length, "] comments into subtopics",
+      ` (${++index}/${parentTopics.length} topics)`
+    );
+
+    // Catégoriser seulement les commentaires sans sous-topics
+    // Extraire les commentaires taggés qui ont déjà des subtopics pour ce topic
+    const taggedCommentsForSubtopic = commentsInTopic.filter(comment => {
+      if (!comment.topics) return false;
+      return comment.topics.some(t =>
+        t.name === topic.name &&
+        ("subtopics" in t) && t.subtopics.length > 0
+      );
+    });
+
+    const categorizedComments = await oneLevelCategorization(
+      commentsWithoutSubtopics,
+      taggedCommentsForSubtopic,
+      model,
+      topic.subtopics,
+      additionalContext,
+    );
+
+    // Réintégrer les commentaires catégorisés dans l'ensemble des commentaires du topic
+    const categorizedMap = new Map(categorizedComments.map(comment => [comment.id, comment]));
+    const updatedCommentsInTopic = commentsInTopic.map(comment => {
+      const categorized = categorizedMap.get(comment.id);
+      return categorized || comment;
+    });
+
+    // Mettre à jour les commentaires principaux avec les résultats de la catégorisation
+    comments = mergeCommentTopics(comments, updatedCommentsInTopic, topic, currentTopicDepth);
+
+    // Sometimes comments are categorized into an "Other" subtopic if no given subtopics are a good fit.
+    // This needs included in the list of subtopics so these are processed downstream.
+    const topicWithNewSubtopics = topic;
+    topicWithNewSubtopics.subtopics.push({ name: "Other" });
+    topics = mergeTopics(topics, topicWithNewSubtopics);
+  }
+  return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, outputDir);
+}
+
+export async function oneLevelCategorization(
+  comments: Comment[],
+  taggedComments: Comment[],
+  model: Model,
+  topics: Topic[],
+  additionalContext?: string
+): Promise<Comment[]> {
+  let topic_names = topics.map(topic => topic.name);
+
+  const fewShots = taggedComments ? generateFewShots(taggedComments, topics) : "";
+  const instructions = topicCategorizationPrompt(topic_names, fewShots);
+  // TODO: Consider the effects of smaller batch sizes. 1 comment per batch was much faster, but
+  // the distribution was significantly different from what we're currently seeing. More testing
+  // is needed to determine the ideal size and distribution.
+
+  const batchesToCategorize: (() => Promise<CommentRecord[]>)[] = []; // callbacks
+  for (let i = 0; i < comments.length; i += model.categorizationBatchSize) {
+    const uncategorizedBatch = comments.slice(i, i + model.categorizationBatchSize);
+
+    // Create a callback function for each batch and add it to the list, preparing them for parallel execution.
+    batchesToCategorize.push(() =>
+      categorizeWithRetry(model, instructions, uncategorizedBatch, topics, additionalContext)
+    );
+  }
+
+  // categorize comment batches, potentially in parallel
+  const totalBatches = Math.ceil(comments.length / model.categorizationBatchSize);
+  console.log(
+    `Categorizing ${comments.length} statements in batches (${totalBatches} batches of ${model.categorizationBatchSize} statements)`
+  );
+  const CategorizedBatches: CommentRecord[][] = await executeConcurrently(batchesToCategorize);
+
+  // flatten categorized batches
+  const categorized: CommentRecord[] = [];
+  CategorizedBatches.forEach((batch) => categorized.push(...batch));
+
+  const categorizedComments = hydrateCommentRecord(categorized, comments);
+  return categorizedComments;
+}
+
 
 /**
  * @fileoverview Helper functions for performing comments categorization.
@@ -54,34 +265,13 @@ export async function categorizeWithRetry(
     const outputSchema: TSchema = Type.Array(TopicCategorizedComment);
 
     // Générer les few shots si des commentaires taggés sont fournis
-    
+
     let prompt = getPrompt(instructions, uncategorizedCommentsForModel, additionalContext);
-
-    // Enregistrer le prompt dans un fichier avec timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const promptsDir = path.join(__dirname, '../../data/prompts');
-
-
 
     const newCategorized: CommentRecord[] = (await model.generateData(
       prompt,
       outputSchema
     )) as CommentRecord[];
-
-    // Créer le répertoire s'il n'existe pas
-    if (!fs.existsSync(promptsDir)) {
-      fs.mkdirSync(promptsDir, { recursive: true });
-    }
-
-    const promptFileName = `categorization_${timestamp}.txt`;
-    const promptFilePath = path.join(promptsDir, promptFileName);
-
-    try {
-      fs.writeFileSync(promptFilePath, prompt + "\n\n" + "response: " + JSON.stringify(newCategorized), 'utf8');
-      console.log(`Prompt enregistré dans: ${promptFilePath}`);
-    } catch (error) {
-      console.error(`Erreur lors de l'enregistrement du prompt: ${error}`);
-    }
 
     const newProcessedComments = processCategorizedComments(
       newCategorized,
@@ -463,7 +653,7 @@ function addNewLevelToTopic(topic: Topic, parentSubtopic: Topic, newSubtopics: T
     }
     return topic;
   } else {
-    return { name: topic.name, keywords: topic.keywords, subtopics: newSubtopics, relevance: topic.relevance };
+    return { name: topic.name, subtopics: newSubtopics };
   }
 }
 
@@ -516,8 +706,6 @@ function mergeCommentTopics(
               if ("subtopics" in currentComment.topics[j]) {
                 currentComment.topics[j] = {
                   name: existingTopic.name,
-                  keywords: existingTopic.keywords,
-                  relevance: existingTopic.relevance,
                   subtopics: [
                     ...existingTopic.subtopics.slice(0, k),
                     addNewLevelToTopic(existingSubtopic, topic, matchingCategorized.topics),
@@ -547,7 +735,7 @@ function mergeTopics(topics: Topic[], topicAndNewSubtopics: Topic): Topic[] {
   }
   for (let i = 0; i < topics.length; i++) {
     if (topics[i].name === topicAndNewSubtopics.name) {
-      topics[i] = { name: topics[i].name, keywords: topics[i].keywords, relevance: topics[i].relevance, subtopics: topicAndNewSubtopics.subtopics };
+      topics[i] = { name: topics[i].name, subtopics: topicAndNewSubtopics.subtopics };
       return topics;
     }
   }
@@ -639,211 +827,3 @@ function generateFewShots(taggedComments: Comment[], topics: Topic[]): string {
   return fewShots;
 }
 
-/**
- * Categorize comments one level at a time.
- *
- * For comments without topics, first all the topics are learned, then the comments are
- * categorized into the topics, then for each topic the subset of relevant comments are selected
- * and this is repeated recursively.
- *
- * @param comments the comments to categorize to the given depthLevel
- * @param topicDepth the depth of categorization and topic learning, 1 is topic only; 2 is topics
- * and subtopics; 3 is topics, subtopics, and subsubtopics
- * @param model the model to use for topic learning and categorization
- * @param topics a given set of topics to categorize the comments into
- * @param additionalContext information to give the model
- * @param outputDir directory to save CSV files at each depth level
- * @returns the comments categorized to the level specified by topicDepth
- */
-export async function categorizeCommentsRecursive(
-  comments: Comment[],
-  topicDepth: 1 | 2 | 3,
-  model: Model,
-  topics?: Topic[],
-  additionalContext?: string,
-  language?: string,
-  outputDir?: string
-): Promise<Comment[]> {
-  // The exit condition - if the requested topic depth matches the current depth of topics on the
-  // comments then exit.
-  const currentTopicDepth = getTopicDepth(comments);
-  console.log("Identifying topics and categorizing statements at depth=", currentTopicDepth);
-
-
-  if (currentTopicDepth >= topicDepth) {
-    return comments;
-  }
-  if (!topics) {
-    console.log("Learning topics...");
-    topics = await learnOneLevelOfTopics(comments, model, undefined, undefined, additionalContext, language);
-    // Sometimes comments are categorized into an "Other" topic if no given topics are a good fit.
-    // This needs included in the list of topics so these are processed downstream.
-    if (!topics.some((topic) => topic.name === "Other")) {
-      topics.push({ name: "Other", keywords: [], relevance: -1 });
-    }
-    console.log("Learned topics:", topics);
-    console.log("Categorizing statements...");
-
-    // Extraire les commentaires taggés pour les utiliser comme exemples
-    comments = await oneLevelCategorization(comments, [], model, topics, additionalContext);
-    return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, language, outputDir);
-  }
-
-  if (topics && currentTopicDepth === 0) {
-    console.log("As we have topics, categorizing starting...");
-    if (!topics.some((topic) => topic.name === "Other")) {
-      topics.push({ name: "Other", keywords: [], relevance: -1 });
-    }
-
-    // Only categorize comments that don't have topics yet
-    const uncategorizedComments = getUncategorizedComments(comments);
-    if (uncategorizedComments.length > 0) {
-      console.log(`Categorizing ${uncategorizedComments.length} uncategorized statements...`);
-
-      // Extraire les commentaires taggés pour les utiliser comme exemples
-      const taggedComments = extractTaggedComments(comments, topics);
-      const newlyCategorized = await oneLevelCategorization(uncategorizedComments, taggedComments, model, topics, additionalContext);
-
-      // Merge the newly categorized comments back into the original comments array
-      const categorizedMap = new Map(newlyCategorized.map(comment => [comment.id, comment]));
-      comments = comments.map(comment => {
-        const categorized = categorizedMap.get(comment.id);
-        return categorized || comment;
-      });
-    } else {
-      console.log("All comments are already categorized, skipping categorization step.");
-    }
-
-    return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, language, outputDir);
-  }
-  console.log("Categorizing statements... at depth=", currentTopicDepth);
-  let index = 0;
-  const parentTopics = getTopicsAtDepth(topics, currentTopicDepth);
-  for (let topic of parentTopics) {
-
-    const commentsInTopic = structuredClone(
-      getCommentTextsWithTopicsAtDepth(comments, topic.name, currentTopicDepth)
-    );
-
-    if (commentsInTopic.length === 0) {
-      continue;
-    }
-    if (!("subtopics" in topic)) {
-      // The subtopics are added to the existing topic, so a list of length one is returned.
-      console.log("Learning subtopics for", topic.name);
-
-      // Filtrer les commentaires qui n'ont pas encore de subtopics pour ce topic
-      const commentsWithoutSubtopics = commentsInTopic.filter(comment => {
-        if (!comment.topics) return true;
-        return comment.topics.some(t =>
-          t.name === topic.name &&
-          (!("subtopics" in t) || t.subtopics.length === 0)
-        );
-      });
-      console.log(
-        "Categorizing", topic.name, "comments into subtopics",
-        ` (${++index}/${parentTopics.length} topics)`
-      );
-      const newTopicAndSubtopics = (
-        await learnOneLevelOfTopics(commentsWithoutSubtopics, model, topic, parentTopics, additionalContext, language)
-      )[0];
-
-      console.log("New subtopics for", topic.name, "subtopics" in newTopicAndSubtopics ? newTopicAndSubtopics.subtopics : "none");
-      if (!("subtopics" in newTopicAndSubtopics)) {
-        throw Error("Badly formed LLM response - expected 'subtopics' to be in topics ");
-      }
-      topic = { name: topic.name, keywords: topic.keywords, relevance: topic.relevance, subtopics: newTopicAndSubtopics.subtopics };
-    }
-
-    // Use the subtopics as high-level topics and merge them in later.
-    console.log("Categorizing", topic.name, " comments into subtopics", topic.subtopics);
-
-    // Filtrer les commentaires qui n'ont pas encore de subtopics pour ce topic
-    const commentsWithoutSubtopics = commentsInTopic.filter(comment => {
-      if (!comment.topics) return true;
-      return comment.topics.some(t =>
-        t.name === topic.name &&
-        (!("subtopics" in t) || t.subtopics.length === 0)
-      );
-    });
-    console.log(
-      "Categorizing", topic.name, " [", commentsWithoutSubtopics.length, "] comments into subtopics",
-      ` (${++index}/${parentTopics.length} topics)`
-    );
-
-    // Catégoriser seulement les commentaires sans sous-topics
-    // Extraire les commentaires taggés qui ont déjà des subtopics pour ce topic
-    const taggedCommentsForSubtopic = commentsInTopic.filter(comment => {
-      if (!comment.topics) return false;
-      return comment.topics.some(t =>
-        t.name === topic.name &&
-        ("subtopics" in t) && t.subtopics.length > 0
-      );
-    });
-
-    const categorizedComments = await oneLevelCategorization(
-      commentsWithoutSubtopics,
-      taggedCommentsForSubtopic,
-      model,
-      topic.subtopics,
-      additionalContext,
-    );
-
-    // Réintégrer les commentaires catégorisés dans l'ensemble des commentaires du topic
-    const categorizedMap = new Map(categorizedComments.map(comment => [comment.id, comment]));
-    const updatedCommentsInTopic = commentsInTopic.map(comment => {
-      const categorized = categorizedMap.get(comment.id);
-      return categorized || comment;
-    });
-
-    // Mettre à jour les commentaires principaux avec les résultats de la catégorisation
-    comments = mergeCommentTopics(comments, updatedCommentsInTopic, topic, currentTopicDepth);
-
-    // Sometimes comments are categorized into an "Other" subtopic if no given subtopics are a good fit.
-    // This needs included in the list of subtopics so these are processed downstream.
-    const topicWithNewSubtopics = topic;
-    topicWithNewSubtopics.subtopics.push({ name: "Other", keywords: [], relevance: -1 });
-    topics = mergeTopics(topics, topicWithNewSubtopics);
-  }
-  return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, language, outputDir);
-}
-
-export async function oneLevelCategorization(
-  comments: Comment[],
-  taggedComments: Comment[],
-  model: Model,
-  topics: Topic[],
-  additionalContext?: string
-): Promise<Comment[]> {
-  let topic_names = topics.map(topic => topic.name);
-  
-  const fewShots = taggedComments ? generateFewShots(taggedComments, topics) : "";
-  const instructions = topicCategorizationPrompt(topic_names, fewShots);
-  // TODO: Consider the effects of smaller batch sizes. 1 comment per batch was much faster, but
-  // the distribution was significantly different from what we're currently seeing. More testing
-  // is needed to determine the ideal size and distribution.
-  
-  const batchesToCategorize: (() => Promise<CommentRecord[]>)[] = []; // callbacks
-  for (let i = 0; i < comments.length; i += model.categorizationBatchSize) {
-    const uncategorizedBatch = comments.slice(i, i + model.categorizationBatchSize);
-
-    // Create a callback function for each batch and add it to the list, preparing them for parallel execution.
-    batchesToCategorize.push(() =>
-      categorizeWithRetry(model, instructions, uncategorizedBatch, topics, additionalContext)
-    );
-  }
-
-  // categorize comment batches, potentially in parallel
-  const totalBatches = Math.ceil(comments.length / model.categorizationBatchSize);
-  console.log(
-    `Categorizing ${comments.length} statements in batches (${totalBatches} batches of ${model.categorizationBatchSize} statements)`
-  );
-  const CategorizedBatches: CommentRecord[][] = await executeConcurrently(batchesToCategorize);
-
-  // flatten categorized batches
-  const categorized: CommentRecord[] = [];
-  CategorizedBatches.forEach((batch) => categorized.push(...batch));
-
-  const categorizedComments = hydrateCommentRecord(categorized, comments);
-  return categorizedComments;
-}

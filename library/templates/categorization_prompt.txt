@@ -8,10 +8,9 @@ Important Considerations:
 - A comment can be assigned to multiple topics if necessary but prefer to assign only one topic 
 - Prioritize using the existing topics whenever possible.
 - All comments must be assigned at least one existing topic.
-- For each comment, provide a relevance score between 0 and 1 for each topic.
 - If no existing topic fits a comment well, assign it to the "Other" topic.
 - Do not create any new topics that are not listed in the Input Topics.
-- When generating the JSON output, minimize the size of the response. For example, prefer this compact format: {"id": "5258", "topics": [{"name": "Arts, Culture, And Recreation", "relevance": 0.7}]} instead of adding unnecessary whitespace or newlines. 
+- When generating the JSON output, minimize the size of the response. For example, prefer this compact format: {"id": "5258", "topics": [{"name": "Arts, Culture, And Recreation"}]} instead of adding unnecessary whitespace or newlines. 
 
 Comments are normally categorized like that:
 {{few_shots}}

@@ -20,8 +20,7 @@ describe("learnedTopicsValid", () => {
     const topics: Topic[] = [
       {
         name: "Other",
-        relevance: 0.9,
-        subtopics: [{ name: "Other", relevance: 0.9 }],
+        subtopics: [{ name: "Other" }],
       },
     ];
     expect(learnedTopicsValid(topics)).toBe(true);

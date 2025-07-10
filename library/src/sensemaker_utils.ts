@@ -17,7 +17,8 @@
 import { Comment, CommentRecord, SummaryContent, Topic } from "./types";
 import { RETRY_DELAY_MS } from "./models/model_util";
 import { voteInfoToString } from "./tasks/utils/citation_utils";
-
+import path from "path";
+import fs from "fs";
 /**
  * Rerun a function multiple times.
  * @param func the function to attempt
@@ -226,9 +227,7 @@ export function getUniqueTopics(comments: Comment[]): Topic[] {
           const uniqueSubtopics = new Set([...existingSubtopics, ...newSubtopics]);
           topicNameToTopic.set(topic.name, {
             name: topic.name,
-            keywords: topic.keywords,
-            relevance: topic.relevance,
-            subtopics: Array.from(uniqueSubtopics).map((subtopic) => ({ name: subtopic, keywords: [], relevance: -1 })),
+            subtopics: Array.from(uniqueSubtopics).map((subtopic) => ({ name: subtopic })),
           });
         }
       }
@@ -361,3 +360,5 @@ export function filterSummaryContent(
   };
   return filteredTopicSummary;
 }
+
+

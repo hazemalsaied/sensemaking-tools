@@ -87,7 +87,7 @@ export class Sensemaker {
     const startTime = performance.now();
 
     // Categories are required for summarization, this is a no-op if they already have categories.
-    comments = await this.categorizeComments(comments, true, topics, additionalContext, 2, language);
+    comments = await this.categorizeComments(comments, true, topics, additionalContext, 2);
 
     const summary = await summarizeByType(
       this.getModel("summarizationModel"),
@@ -157,8 +157,7 @@ export class Sensemaker {
     topics?: Topic[],
     additionalContext?: string,
     topicDepth?: 1 | 2 | 3,
-    language?:string,
-    outputDir?: string
+    
   ): Promise<Comment[]> {
     const startTime = performance.now();
     if (!includeSubtopics && topicDepth && topicDepth > 1) {
@@ -172,8 +171,7 @@ export class Sensemaker {
       includeSubtopics ? topicDepth || 2 : 1,
       this.getModel("categorizationModel"),
       topics,
-      additionalContext,
-      language
+      additionalContext
     );
 
     console.log(`Categorization took ${(performance.now() - startTime) / (1000 * 60)} minutes.`);

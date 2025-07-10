@@ -48,7 +48,7 @@ describe("SensemakerTest", () => {
         { id: "1", text: "Comment 1" },
         { id: "2", text: "Comment 2" },
       ];
-      const topics = [{ name: "Topic 1", relevance: -1 }];
+      const topics = [{ name: "Topic 1" }];
       const includeSubtopics = false;
       mockGenerateData
         .mockReturnValueOnce(
@@ -172,7 +172,7 @@ describe("SensemakerTest", () => {
         { id: "2", text: "Another comment about Roads" },
       ];
       const includeSubtopics = true;
-      const topics = [{ name: "Infrastructure", relevance: -1 }];
+      const topics = [{ name: "Infrastructure" }];
 
       const validResponse = [
         {
