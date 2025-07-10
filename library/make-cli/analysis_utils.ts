@@ -152,7 +152,7 @@ export async function getSummary(
   topics?: Topic[],
   additionalContext?: string,
   labguage?: string,
-  
+
 ): Promise<Summary> {
   const sensemaker = new Sensemaker({
     defaultModel: new VertexModel(project, "us-central1"),
@@ -211,26 +211,48 @@ export function writeSummaryToHtml(summary: Summary, outputFile: string) {
 // Returns topics and subtopics concatenated together like
 // "Transportation:PublicTransit;Transportation:Parking;Technology:Internet"
 export function concatTopics(comment: Comment): string {
-  const pairsArray = [];
-  for (const topic of comment.topics || []) {
-    if ("subtopics" in topic) {
-      for (const subtopic of topic.subtopics || []) {
-        if ("subtopics" in subtopic && (subtopic.subtopics as Topic[]).length) {
-          if ("subtopics" in (subtopic as Topic)) {
-            for (const subsubtopic of subtopic.subtopics as Topic[]) {
-              pairsArray.push(`${topic.name}:${subtopic.name}:${subsubtopic.name}`);
-            }
-          }
-        } else {
-          pairsArray.push(`${topic.name}:${subtopic.name}`);
-        }
+  if (!comment.topics || comment.topics.length === 0) {
+    return "";
+  }
+
+  const topicStrings: string[] = [];
+  for (const topic of comment.topics) {
+    if ("subtopics" in topic && topic.subtopics && topic.subtopics.length > 0) {
+      for (const subtopic of topic.subtopics) {
+        topicStrings.push(`${topic.name}:${subtopic.name}`);
       }
     } else {
-      // handle case where no subtopics available
-      pairsArray.push(`${topic.name}`);
+      topicStrings.push(topic.name);
     }
   }
-  return pairsArray.join(";");
+  return topicStrings.join(";");
+}
+
+/**
+ * Concatène les scores de pertinence des topics et subtopics d'un commentaire en une chaîne de caractères.
+ * Format: "topic1:score1;topic2:subtopic1:score2;topic2:subtopic2:score3"
+ * @param comment Le commentaire avec ses topics et scores
+ * @returns Une chaîne de caractères contenant les scores de pertinence
+ */
+export function concatTopicScores(comment: Comment): string {
+  if (!comment.topics || comment.topics.length === 0) {
+    return "";
+  }
+
+  const scoreStrings: string[] = [];
+  for (const topic of comment.topics) {
+    const topicScore = (topic as any).relevanceScore || 0.5;
+
+    if ("subtopics" in topic && topic.subtopics && topic.subtopics.length > 0) {
+      for (const subtopic of topic.subtopics) {
+        const subtopicScore = (subtopic as any).relevanceScore || 0.5;
+        scoreStrings.push(`${topic.name}:${subtopic.name}:${topicScore.toFixed(2)}:${subtopicScore.toFixed(2)}`);
+      }
+    } else {
+      scoreStrings.push(`${topic.name}:${topicScore.toFixed(2)}`);
+    }
+  }
+  return scoreStrings.join(";");
 }
 
 /**
@@ -259,7 +281,7 @@ export function parseTopicsString(topicsString: string): Topic[] {
             if (subtopic.name === subtopicName) {
               subsubtopic = "subtopics" in subtopic ? subtopic.subtopics : [];
               if (subsubtopicName) {
-                subsubtopic.push({ name: subsubtopicName});
+                subsubtopic.push({ name: subsubtopicName });
                 subtopicUpdated = true;
                 break;
               }
@@ -267,7 +289,7 @@ export function parseTopicsString(topicsString: string): Topic[] {
           }
 
           if (subsubtopicName) {
-            subsubtopic = [{ name: subsubtopicName}];
+            subsubtopic = [{ name: subsubtopicName }];
           }
           if (!subtopicUpdated) {
             topicMapping[topicName].push({ name: subtopicName, subtopics: subsubtopic });

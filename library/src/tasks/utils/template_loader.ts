@@ -230,3 +230,12 @@ export function loadTopicsRecursiveSummaryPrompt(topicName: string): string {
         language: config.default_language
     });
 }
+
+/**
+ * Charge un template de prompt pour le scoring de pertinence des topics et subtopics
+ * @returns Le prompt rempli
+ */
+export function loadRelevanceScoringPrompt(): string {
+    return loadAndFillTemplate('relevance_scoring_prompt.txt', {
+    });
+}

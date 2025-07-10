@@ -17,6 +17,7 @@
 import { Comment, SummarizationType, Summary, Topic } from "./types";
 import { categorizeCommentsRecursive } from "./tasks/categorization";
 import { summarizeByType } from "./tasks/summarization";
+import { calculateRelevanceScores } from "./tasks/relevance_scoring";
 import { ModelSettings, Model } from "./models/model";
 import { getUniqueTopics } from "./sensemaker_utils";
 
@@ -157,7 +158,7 @@ export class Sensemaker {
     topics?: Topic[],
     additionalContext?: string,
     topicDepth?: 1 | 2 | 3,
-    
+
   ): Promise<Comment[]> {
     const startTime = performance.now();
     if (!includeSubtopics && topicDepth && topicDepth > 1) {
@@ -176,5 +177,27 @@ export class Sensemaker {
 
     console.log(`Categorization took ${(performance.now() - startTime) / (1000 * 60)} minutes.`);
     return categorizedComments;
+  }
+
+  /**
+   * Calcule les scores de pertinence pour les topics et subtopics des commentaires catégorisés.
+   * @param comments Les commentaires déjà catégorisés avec leurs topics
+   * @param additionalContext Contexte additionnel pour le modèle LLM
+   * @returns Les commentaires avec leurs scores de pertinence ajoutés
+   */
+  public async calculateRelevanceScores(
+    comments: Comment[],
+    additionalContext?: string
+  ): Promise<Comment[]> {
+    const startTime = performance.now();
+
+    const commentsWithScores = await calculateRelevanceScores(
+      comments,
+      this.getModel("categorizationModel"),
+      additionalContext
+    );
+
+    console.log(`Relevance scoring took ${(performance.now() - startTime) / (1000 * 60)} minutes.`);
+    return commentsWithScores;
   }
 }

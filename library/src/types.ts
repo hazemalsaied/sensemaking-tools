@@ -48,6 +48,79 @@ export const NestedTopic = Type.Object({
 export type NestedTopic = Static<typeof NestedTopic>;
 
 /**
+ * TypeBox JSON Schema representation of a topic with relevance score.
+ */
+export const TopicWithScore = Type.Object({
+  name: Type.String(),
+  relevanceScore: Type.Number({ minimum: 0, maximum: 100 })
+});
+
+/**
+ * Type representation of a topic with relevance score.
+ */
+export type TopicWithScore = Static<typeof TopicWithScore>;
+
+/**
+ * TypeBox JSON Schema representation of a nested topic with relevance scores.
+ */
+export const NestedTopicWithScores = Type.Object({
+  name: Type.String(),
+  relevanceScore: Type.Number({ minimum: 0, maximum: 100 }),
+  subtopics: Type.Array(TopicWithScore),
+});
+
+/**
+ * Type representation of a nested topic with relevance scores.
+ */
+export type NestedTopicWithScores = Static<typeof NestedTopicWithScores>;
+
+/**
+ * TypeBox JSON Schema representation of an abstract topic with relevance scores, either with or without subtopics.
+ */
+export const TopicWithRelevance = Type.Union([TopicWithScore, NestedTopicWithScores]);
+
+/**
+ * Type representation of an abstract topic with relevance scores, either with or without subtopics.
+ */
+export type TopicWithRelevance = Static<typeof TopicWithRelevance>;
+
+/**
+ * TypeBox JSON Schema representation of a comment id, together with a list of associated topics and relevance scores.
+ */
+export const TopicCategorizedCommentWithScores = Type.Object({
+  id: Type.String(),
+  topics: Type.Array(TopicWithScore),
+});
+
+/**
+ * Type representation of a comment id, together with a list of associated topics and relevance scores.
+ */
+export type TopicCategorizedCommentWithScores = Static<typeof TopicCategorizedCommentWithScores>;
+
+/**
+ * TypeBox JSON Schema representation of a comment id, together with a list of associated topics, subtopics and relevance scores.
+ */
+export const SubtopicCategorizedCommentWithScores = Type.Object({
+  id: Type.String(),
+  topics: Type.Array(NestedTopicWithScores),
+});
+
+/**
+ * Type representation of a comment id, together with a list of associated topics, subtopics and relevance scores.
+ */
+export type SubtopicCategorizedCommentWithScores = Static<typeof SubtopicCategorizedCommentWithScores>;
+
+/**
+ * TypeBox JSON Schema representation of a comment id, together with a list of associated topics and possibly subtopics with relevance scores.
+ */
+export const CommentRecordWithScores = Type.Union([TopicCategorizedCommentWithScores, SubtopicCategorizedCommentWithScores]);
+
+/**
+ * Type representation of a comment id, together with a list of associated topics and possibly subtopics with relevance scores.
+ */
+export type CommentRecordWithScores = Static<typeof CommentRecordWithScores>;
+
+/**
  * TypeBox JSON Schema representation of an abstract topic, either with or without subtopics.
  */
 export const Topic = Type.Union([FlatTopic, NestedTopic]);

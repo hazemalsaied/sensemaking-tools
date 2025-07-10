@@ -33,7 +33,7 @@ import { parse } from "csv-parse";
 import { createObjectCsvWriter } from "csv-writer";
 import * as fs from "fs";
 import * as path from "path";
-import { concatTopics, parseTopicsString } from "./analysis_utils";
+import { concatTopics, parseTopicsString, concatTopicScores } from "./analysis_utils";
 import * as config from "../configs.json";
 import { displayTopicHierarchy, extractExistingTopicsFromCsv, CommentCsvRow } from "./categorization_utils";
 
@@ -71,7 +71,14 @@ async function main(): Promise<void> {
     2
   );
 
-  const csvRowsWithTopics = setTopics(csvRows, categorizedComments);
+  // Calculer les scores de pertinence pour les topics et subtopics
+  console.log("Calcul des scores de pertinence...");
+  const commentsWithScores = await sensemaker.calculateRelevanceScores(
+    categorizedComments,
+    ""
+  );
+
+  const csvRowsWithTopics = setTopics(csvRows, commentsWithScores);
   let timestamp = new Date().toISOString().slice(0, 10);
   let outputBasename = options.inputFile.replace(".csv", "_categorized_" + timestamp + ".csv");
 
@@ -143,10 +150,12 @@ function setTopics(csvRows: CommentCsvRow[], categorizedComments: Comment[]): Co
   // For each comment in categorizedComments
   //   lookup corresponding original csv row
   //   add a "topics" field that concatenates all topics/subtopics
+  //   add a "topic_scores" field that contains relevance scores
   const csvRowsWithTopics: CommentCsvRow[] = [];
   for (const comment of categorizedComments) {
     const csvRow = mapIdToCsvRow[comment.id];
     csvRow["topics"] = concatTopics(comment);
+    csvRow["topic_scores"] = concatTopicScores(comment);
     csvRowsWithTopics.push(csvRow);
   }
   return csvRowsWithTopics;

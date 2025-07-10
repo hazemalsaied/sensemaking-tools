@@ -51,6 +51,8 @@ import {
 } from "./json_utils";
 
 import * as config from "../configs.json";
+import { Sensemaker } from "../src/sensemaker";
+import { VertexModel } from "../src/models/vertex_model";
 
 
 async function main(): Promise<void> {
@@ -64,7 +66,7 @@ async function main(): Promise<void> {
     )
     .option("-t, --tag <tag>", "Tag to associate with the analysis.")
     .option("--slug <slug>", "slug for the analysis.")
-    .option("--database", "Persister l'analyse dans la base de données PostgreSQL.", true);
+    .option("--database", "Persister l'analyse dans la base de données PostgreSQL.", false);
   program.parse(process.argv);
   const options = program.opts();
   let timestamp = new Date().toISOString().slice(0, 10);
@@ -87,25 +89,37 @@ async function main(): Promise<void> {
     options.additionalContext
   );
 
+  // Calculer les scores de pertinence pour les topics et subtopics
+  console.log("Calcul des scores de pertinence...");
+  const sensemaker = new Sensemaker({
+    defaultModel: new VertexModel(config.gcloud.project_id, config.gcloud.location),
+  });
+  const commentsWithScores = await sensemaker.calculateRelevanceScores(
+    comments,
+    options.additionalContext
+  );
+
 
   // Créer le JSON selon le schéma défini
   const reportData = {
     generated_at: new Date().toISOString().slice(0, 16).replace('T', ' '),
-    topics: extractTopicsFromComments(comments),
-    categorized_comments: comments.map(comment => ({
+    topics: extractTopicsFromComments(commentsWithScores),
+    categorized_comments: commentsWithScores.map(comment => ({
       id: comment.id,
       text: comment.text,
       topics: comment.topics ? comment.topics.map(topic => ({
         name: topic.name,
+        relevanceScore: (topic as any).relevanceScore || 0.5,
         subtopics: ('subtopics' in topic && topic.subtopics) ? topic.subtopics.map(subtopic => ({
           name: subtopic.name,
+          relevanceScore: (subtopic as any).relevanceScore || 0.5,
         })) : []
       })) : []
     })),
-    topic_statistics: generateTopicStatistics(comments),
+    topic_statistics: generateTopicStatistics(commentsWithScores),
     summary: {
       overview: extractOverviewFromSummary(summary),
-      topic_analysis: generateTopicAnalysis(summary, comments)
+      topic_analysis: generateTopicAnalysis(summary, commentsWithScores)
     }
   };
 
