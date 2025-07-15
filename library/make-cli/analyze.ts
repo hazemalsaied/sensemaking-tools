@@ -66,7 +66,7 @@ async function main(): Promise<void> {
     )
     .option("-t, --tag <tag>", "Tag to associate with the analysis.")
     .option("--slug <slug>", "slug for the analysis.")
-    .option("--database", "Persister l'analyse dans la base de données PostgreSQL.", false);
+    .option("--database <database>", "Persister l'analyse dans la base de données PostgreSQL.", false);
   program.parse(process.argv);
   const options = program.opts();
   let timestamp = new Date().toISOString().slice(0, 10);
