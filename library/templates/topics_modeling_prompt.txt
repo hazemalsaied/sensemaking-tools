@@ -1,38 +1,15 @@
-Based on the topic ‘Women and Industry,’ analyze the following comments and identify common topics.
-Generate a list of topics. 
-Aim for a balanced number of topics that effectively summarizes the key themes without excessive detail (between 5 and 7 topics).
+Analyze the following comments and identify common topics.
+Consider the granularity of topics: too few topics may oversimplify the content and miss important nuances, while too many topics may lead to redundancy and make the overall structure less clear. Normally, the number of topics must be between 5 and 7.
+Aim for a balanced number of topics that effectively summarizes the key themes without excessive detail.
+After analysis of the comments, determine the optimal number of topics to represent the content effectively.
+
 
 Important Considerations:
+- It's mandatory to propose topics names in the same language as the comments. The generation language must be: {{language}}.
+- Topic names should consist of 3-4 words maximum, as if It were a wiki page title.
 
--It's mandatory to propose topics names in the same language as the comments. The language of the comments is {{language}}.
-
-Additional instructions:
-
-- Use shorter, broader topic titles,  3 or 4 words, as if It were a wiki page title.
-
-- Do not merge two unrelated ideas (e.g., avoid “Equal pay and visibility”).
+- Do not merge two unrelated ideas (e.g., avoid “Equal pay and visibility”) and Keep concepts separate  
 
 - Each topic should cover a large area, not a very specific case.
 
-- Keep concepts strictly separate  
 - If two notions are distinct (pay vs. visibility), create two different topics.
-
-- Add keywords: For each topic, list 3 to 5 relevant keywords.
-
-
-Example of desired output:
-Topic 1: Awareness and Guidance  
-Keywords: girls, youth, careers, exploration
-
-Topic 2: Training and Career Development  
-Keywords: mentoring, career, training
-
-
-Topic 3: Working Conditions and Flexibility  
-Keywords: leave, maternity, pay, flexibility
-
-Topic 4: Promotion and Visibility  
-Keywords: leadership, networks, communication, visibility
-(Add other broad topics following the same logic.)
-
-

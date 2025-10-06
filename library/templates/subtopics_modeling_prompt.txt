@@ -1,18 +1,20 @@
 Analyze the following comments and identify common subtopics within the following overarching topic: "{{parentTopicName}}".
+
 Consider the granularity of subtopics: too few subtopics may oversimplify the content and miss important nuances, while too many subtopics may lead to redundancy and make the overall structure less clear.
+
 Aim for a balanced number of subtopics that effectively summarizes the key themes without excessive detail.
 After analysis of the comments, determine the optimal number of subtopics to represent the content effectively.
-Justify why having fewer subtopics would be less optimal (potentially oversimplifying and missing key nuances), and why having more subtopics would also be less optimal (potentially leading to redundancy and a less clear overall structure).
-After determining the optimal number of subtopics, identify those subtopics.
 
 Important Considerations:
 - No subtopics should have the same name as the overarching topic.
 - Topic names should consist of 4-5 words maximum, as if It were a wiki page title.
 - There are other overarching topics that are being used on different sets of comments, do not use these overarching topic names as identified subtopics 
-- It's mandatory to propose subtopics names in the same language as the comments. The language of the comments is {{language}}.
-names: {{otherTopicNames}}
+- It's mandatory to propose subtopics names in the same language as the comments. The generation language must be: {{language}}.
 
-Example of Incorrect Output:
+- In order to prevent overlap between topics and subtopics, don't forget that the topic set is composed of the following topics: 
+{{otherTopicNames}}
+
+Example of Output schema:
 
 [
   {
@@ -21,8 +23,8 @@ Example of Incorrect Output:
         { "name": "Job Creation" },
         { "name": "Business Growth" },
         { "name": "Small Business Development" },
-        { "name": "Small Business Marketing" } // Incorrect: Too closely related to the "Small Business Development" subtopic
-        { "name": "Infrastructure & Transportation" } // Incorrect: This is the name of a main topic
+        { "name": "Small Business Marketing" } // formally correct, howerve it is not a good choice: Too closely related to the "Small Business Development" subtopic
+        { "name": "Infrastructure & Transportation" } // formally correct, howerve it is not a good choice: This is the name of a main topic
       ]
   }
 ]

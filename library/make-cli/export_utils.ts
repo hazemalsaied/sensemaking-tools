@@ -3,14 +3,15 @@ import * as config from "../configs.json";
 
 export async function persistJsonToDatabase(jsonContent: string, slug: string, tag?: string): Promise<void> {
     const client = new Client({
-        host: config.database.host,
-        user: config.database.user,
-        password: config.database.password,
-        database: config.database.database,
-        port: config.database.port,
+        host: config.export_db.host,
+        user: config.export_db.user,
+        password: config.export_db.password,
+        database: config.export_db.database,
+        port: config.export_db.port,
     });
 
     try {
+        console.log('Connexion à la base de données PostgreSQL...');
         await client.connect();
         console.log('Connexion à la base de données PostgreSQL établie pour la persistance JSON');
 
@@ -26,6 +27,7 @@ export async function persistJsonToDatabase(jsonContent: string, slug: string, t
             INSERT INTO sensemaking_json (id, slug, tag, json_data)
             VALUES ($1, $2, $3, $4)
         `;
+        console.log(insertQuery);
         const queryParams = [customId, slug, tag, JSON.parse(jsonContent)];
 
         await client.query(insertQuery, queryParams);

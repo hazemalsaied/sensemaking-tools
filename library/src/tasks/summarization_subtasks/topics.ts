@@ -181,43 +181,43 @@ export class TopicSummary extends RecursiveSummary<SummaryStats> {
     const subContents = [await this.getThemesSummary()];
     // check env variable to decide whether to compute common ground and difference of opinion summaries
     if (process.env["SKIP_COMMON_GROUND_AND_DIFFERENCES_OF_OPINION"] !== "true") {
-      const commonGroundSummary = await this.getCommonGroundSummary(this.topicStat.name);
-      const differencesOfOpinionSummary = await this.getDifferencesOfOpinionSummary(
-        commonGroundSummary,
-        this.topicStat.name
-      );
-      subContents.push(commonGroundSummary, differencesOfOpinionSummary);
+      // const commonGroundSummary = await this.getCommonGroundSummary(this.topicStat.name);
+      // const differencesOfOpinionSummary = await this.getDifferencesOfOpinionSummary(
+      //   commonGroundSummary,
+      //   this.topicStat.name
+      // );
+      // subContents.push(commonGroundSummary, differencesOfOpinionSummary);
     }
 
     if (process.env["DEBUG_MODE"] === "true") {
       // Based on the common ground and differences of opinion comments,
       // TODO: Should also include common ground disagree comments (aka what everyone agrees they
       // don't like)
-      const commonGroundComments = this.input.getCommonGroundAgreeComments();
-      const differencesComments = this.input.getDifferenceOfOpinionComments();
+      // const commonGroundComments = this.input.getCommonGroundAgreeComments();
+      // const differencesComments = this.input.getDifferenceOfOpinionComments();
 
       // Figure out what comments aren't currently being summarized
-      const allSummarizedCommentIds = new Set([
-        ...commonGroundComments.map((c) => c.id),
-        ...differencesComments.map((c) => c.id),
-      ]);
-      const otherComments = this.topicStat.summaryStats.comments.filter(
-        (comment) => !allSummarizedCommentIds.has(comment.id)
-      );
+      // const allSummarizedCommentIds = new Set([
+      //   // ...commonGroundComments.map((c) => c.id),
+      //   // ...differencesComments.map((c) => c.id),
+      // ]);
+      // const otherComments = this.topicStat.summaryStats.comments.filter(
+      //   // (comment) => !allSummarizedCommentIds.has(comment.id)
+      // );
 
-      const otherCommentsTable = commentTableMarkdown(otherComments, [
-        { columnName: "minAgreeProb", getValue: getMinAgreeProb } as ColumnDefinition,
-        {
-          columnName: "maxAgreeDiff",
-          getValue: getMaxGroupAgreeProbDifference,
-        } as ColumnDefinition,
-      ]);
+      // const otherCommentsTable = commentTableMarkdown(otherComments, [
+      //   { columnName: "minAgreeProb", getValue: getMinAgreeProb } as ColumnDefinition,
+      //   {
+      //     columnName: "maxAgreeDiff",
+      //     getValue: getMaxGroupAgreeProbDifference,
+      //   } as ColumnDefinition,
+      // ]);
 
-      const otherCommentsSummary = {
-        title: `**Other statements** (${otherComments.length} statements`,
-        text: otherCommentsTable,
-      };
-      subContents.push(otherCommentsSummary);
+      // const otherCommentsSummary = {
+      //   title: `**Other statements** (${otherComments.length} statements`,
+      //   text: otherCommentsTable,
+      // };
+      // subContents.push(otherCommentsSummary);
     }
 
     return {

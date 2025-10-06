@@ -53,6 +53,7 @@ export async function categorizeCommentsRecursive(
   // comments then exit.
   const currentTopicDepth = getTopicDepth(comments);
   console.log("Identifying topics and categorizing statements at depth=", currentTopicDepth);
+  console.log("");
 
 
   if (currentTopicDepth >= topicDepth) {
@@ -66,7 +67,11 @@ export async function categorizeCommentsRecursive(
     if (!topics.some((topic) => topic.name === "Other")) {
       topics.push({ name: "Other" });
     }
+    console.log("");
     console.log("Learned topics:", topics);
+    console.log("");
+    console.log("================================================");
+    console.log("");
     console.log("Categorizing statements...");
 
     // Extraire les commentaires taggés pour les utiliser comme exemples
@@ -101,11 +106,11 @@ export async function categorizeCommentsRecursive(
 
     return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, outputDir);
   }
-  console.log("Categorizing comments ... at depth=", currentTopicDepth);
+  console.log("Depth=", currentTopicDepth);
   let index = 0;
   const parentTopics = getTopicsAtDepth(topics, currentTopicDepth);
   for (let topic of parentTopics) {
-
+    
     const commentsInTopic = structuredClone(
       getCommentTextsWithTopicsAtDepth(comments, topic.name, currentTopicDepth)
     );
@@ -115,8 +120,10 @@ export async function categorizeCommentsRecursive(
     }
     if (!("subtopics" in topic)) {
       // The subtopics are added to the existing topic, so a list of length one is returned.
-      console.log("Learning subtopics for", topic.name);
-
+      console.log("");
+      console.log("** Learning subtopics for: $", topic.name);
+      console.log("================================================");
+      console.log("");
       // Filtrer les commentaires qui n'ont pas encore de subtopics pour ce topic
       const commentsWithoutSubtopics = commentsInTopic.filter(comment => {
         if (!comment.topics) return true;
@@ -125,10 +132,13 @@ export async function categorizeCommentsRecursive(
           (!("subtopics" in t) || t.subtopics.length === 0)
         );
       });
+      console.log("");
       console.log(
-        "Categorizing", topic.name, "comments into subtopics",
-        ` (${++index}/${parentTopics.length} topics)`
+        `(${++index}/${parentTopics.length}): ${topic.name} -> into subtopics`
+
       );
+      console.log("================================================");
+      console.log("");
       const newTopicAndSubtopics = (
         await learnOneLevelOfTopics(commentsWithoutSubtopics, model, topic, parentTopics, additionalContext)
       )[0];
@@ -152,8 +162,7 @@ export async function categorizeCommentsRecursive(
       );
     });
     console.log(
-      "Categorizing", topic.name, " [", commentsWithoutSubtopics.length, "] comments into subtopics",
-      ` (${++index}/${parentTopics.length} topics)`
+      "Categorizing", topic.name, " [", commentsWithoutSubtopics.length, "] comments into subtopics"
     );
 
     // Catégoriser seulement les commentaires sans sous-topics

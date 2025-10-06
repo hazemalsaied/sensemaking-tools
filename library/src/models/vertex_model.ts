@@ -32,6 +32,7 @@ import { retryCall } from "../sensemaker_utils";
 import { RETRY_DELAY_MS, DEFAULT_VERTEX_PARALLELISM, MAX_LLM_RETRIES } from "./model_util";
 import * as fs from "fs";
 import * as path from "path";
+
 /**
  * Class to interact with models available through Google Cloud's Model Garden.
  */
@@ -50,16 +51,18 @@ export class VertexModel extends Model {
   constructor(
     project: string,
     location: string,
-    // modelName: string = "gemini-2.5-pro-preview-03-25"
-    modelName: string = "gemini-2.0-flash-001"
+    modelName: string
   ) {
     super();
     this.vertexAI = new VertexAI({
       project: project,
-      location: location,
+      location: location
     });
-    this.modelName = modelName;
 
+    this.modelName = modelName;
+    console.log("************************************************");
+    console.log("LLM Model: ", this.modelName);
+    console.log("************************************************");
     console.log("Creating VertexModel with ", DEFAULT_VERTEX_PARALLELISM, " parallel workers...");
     this.limit = pLimit(DEFAULT_VERTEX_PARALLELISM);
   }
@@ -106,15 +109,17 @@ export class VertexModel extends Model {
       return true;
     };
     let response = await this.callLLM(prompt, this.getGenerativeModel(schema), validateResponse)
+
     this.exportPrompt(prompt, response);
+
     return JSON.parse(response);
-  
+
   }
 
   exportPrompt(prompt: string, response: string): void {
     // Enregistrer le prompt dans un fichier avec timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    
+
     const start_hour = new Date().toISOString().slice(0, 13).replace(/[:]/g, '-');
     const promptsDir = path.join(__dirname, '../../data/prompts/' + start_hour);
     // Créer le répertoire s'il n'existe pas
@@ -125,9 +130,9 @@ export class VertexModel extends Model {
     const promptFilePath = path.join(promptsDir, promptFileName);
     try {
       fs.writeFileSync(promptFilePath, prompt + "\n\n" + "response: " + JSON.stringify(response), 'utf8');
-      console.log(`Prompt enregistré dans: ${promptFilePath}`);
+      // console.log(`Prompt enregistré dans: ${promptFilePath}`);
     } catch (error) {
-      console.error(`Erreur lors de l'enregistrement du prompt: ${error}`);
+      // console.error(`Erreur lors de l'enregistrement du prompt: ${error}`);
     }
   }
 

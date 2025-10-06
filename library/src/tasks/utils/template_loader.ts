@@ -17,6 +17,8 @@ export interface TemplateData {
  */
 export function loadAndFillTemplate(templatePath: string, data: TemplateData): string {
     try {
+
+        console.log("Prompt: ", templatePath);
         // Construire le chemin absolu vers le template
         const absolutePath = path.resolve(__dirname, '..', '..', '..', 'templates', templatePath);
 
@@ -152,7 +154,8 @@ export function loadTopSubtopicsPrompt(subtopicName: string): string {
  */
 export function loadTopicsThemesPrompt(topicName: string): string {
     return loadAndFillTemplate('topics_themes_prompt.txt', {
-        topicName: topicName
+        topicName: topicName,
+        language: config.default_language
     });
 }
 
@@ -168,7 +171,7 @@ export function loadTopicsCommonGroundPrompt(containsGroups: boolean): string {
 
     return loadAndFillTemplate('topics_common_ground_prompt.txt', {
         groupSpecificText: groupSpecificText,
-        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
+        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap.",
         language: config.default_language
     });
 }
@@ -185,7 +188,7 @@ export function loadTopicsCommonGroundSinglePrompt(containsGroups: boolean): str
 
     return loadAndFillTemplate('topics_common_ground_single_prompt.txt', {
         groupSpecificText: groupSpecificText,
-        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
+        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap.",
         language: config.default_language
     });
 }
@@ -196,7 +199,7 @@ export function loadTopicsCommonGroundSinglePrompt(containsGroups: boolean): str
  */
 export function loadTopicsDifferencesOpinionPrompt(): string {
     return loadAndFillTemplate('topics_differences_opinion_prompt.txt', {
-        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
+        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap.",
         language: config.default_language
     });
 }
@@ -213,7 +216,7 @@ export function loadTopicsDifferencesOpinionSinglePrompt(containsGroups: boolean
 
     return loadAndFillTemplate('topics_differences_opinion_single_prompt.txt', {
         groupSpecificText: groupSpecificText,
-        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
+        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap.",
         language: config.default_language
     });
 }
@@ -226,7 +229,7 @@ export function loadTopicsDifferencesOpinionSinglePrompt(containsGroups: boolean
 export function loadTopicsRecursiveSummaryPrompt(topicName: string): string {
     return loadAndFillTemplate('topics_recursive_summary_prompt.txt', {
         topicName: topicName,
-        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap. Do not forget that it is mandatory to use the same language as the comments language in your response",
+        commonInstructions: "Do not use the passive voice. Do not use ambiguous pronouns. Be clear. Do not generate bullet points or special formatting. Do not yap.",
         language: config.default_language
     });
 }

@@ -32,7 +32,7 @@
 // --inputFile "data.csv"
 
 import { Command } from "commander";
-import { writeFileSync } from "fs";
+import { writeFileSync, readFileSync } from "fs";
 
 import {
   getCommentsFromCsv,
@@ -51,22 +51,24 @@ import {
 } from "./json_utils";
 
 import * as config from "../configs.json";
-import { Sensemaker } from "../src/sensemaker";
-import { VertexModel } from "../src/models/vertex_model";
+// import { Sensemaker } from "../src/sensemaker";
+// import { VertexModel } from "../src/models/vertex_model";
 
+// Fonction pour vérifier si la colonne topic_scores existe dans le CSV
+function hasTopicScoresColumn(inputFilePath: string): boolean {
+  const header = readFileSync(inputFilePath, { encoding: "utf-8" }).split("\n")[0];
+  const columns = header.split(",").map(col => col.trim());
+  return columns.includes("topic_scores");
+}
 
 async function main(): Promise<void> {
   // Parse command line arguments.
   const program = new Command();
   program
     .option("-i, --inputFile <file>", "The input file name.")
-    .option(
-      "-a, --additionalContext <context>",
-      "A short description of the conversation to add context."
-    )
     .option("-t, --tag <tag>", "Tag to associate with the analysis.")
-    .option("--slug <slug>", "slug for the analysis.")
-    .option("--database <database>", "Persister l'analyse dans la base de données PostgreSQL.", false);
+    .option("-s, --slug <slug>", "slug for the analysis.")
+    .option("-d, --database <database>", "Persister le json dans PostgreSQL.", true);
   program.parse(process.argv);
   const options = program.opts();
   let timestamp = new Date().toISOString().slice(0, 10);
@@ -75,8 +77,7 @@ async function main(): Promise<void> {
     console.log("Aucun slug spécifié. Sortie du programme.");
     process.exit();
   }
-
-
+  console.log("Slug: ", options.slug);
 
   let outputBasename = options.inputFile.replace(".csv", "_");
   console.log(outputBasename);
@@ -86,19 +87,26 @@ async function main(): Promise<void> {
     config.gcloud.project_id,
     comments,
     undefined,
-    options.additionalContext
+    ""
   );
 
-  // Calculer les scores de pertinence pour les topics et subtopics
-  console.log("Calcul des scores de pertinence...");
-  const sensemaker = new Sensemaker({
-    defaultModel: new VertexModel(config.gcloud.project_id, config.gcloud.location),
-  });
-  const commentsWithScores = await sensemaker.calculateRelevanceScores(
-    comments,
-    options.additionalContext
-  );
+  // Vérifier si la colonne topic_scores existe dans le CSV
+  // const hasTopicScores = hasTopicScoresColumn(options.inputFile);
+  let commentsWithScores = comments;
 
+  // if (!hasTopicScores) {
+  //   // Calculer les scores de pertinence pour les topics et subtopics seulement si la colonne n'existe pas
+  //   console.log("Colonne topic_scores non trouvée. Calcul des scores de pertinence...");
+  //   const sensemaker = new Sensemaker({
+  //     defaultModel: new VertexModel(config.gcloud.project_id, config.gcloud.location, config.gcloud.summarization_model),
+  //   });
+  // commentsWithScores = await sensemaker.calculateRelevanceScores(
+  //   comments,
+  //   options.additionalContext
+  // );
+  // } else {
+  //   console.log("Colonne topic_scores trouvée. Utilisation des scores existants.");
+  // }
 
   // Créer le JSON selon le schéma défini
   const reportData = {
@@ -116,7 +124,7 @@ async function main(): Promise<void> {
         })) : []
       })) : []
     })),
-    topic_statistics: generateTopicStatistics(commentsWithScores),
+    // topic_statistics: generateTopicStatistics(commentsWithScores),
     summary: {
       overview: extractOverviewFromSummary(summary),
       topic_analysis: generateTopicAnalysis(summary, commentsWithScores)

@@ -33,6 +33,8 @@ import * as fs from "fs";
 import { parse } from "csv-parse";
 import { marked } from "marked";
 import { createObjectCsvWriter } from "csv-writer";
+import * as config from "../configs.json";
+
 
 /**
  * Core comment columns, sans any vote tally rows
@@ -133,7 +135,7 @@ export async function getTopicsAndSubtopics(
   comments: Comment[]
 ): Promise<Topic[]> {
   const sensemaker = new Sensemaker({
-    defaultModel: new VertexModel(project, "us-central1"),
+    defaultModel: new VertexModel(project, "us-central1", config.gcloud.summarization_model),
   });
   return await sensemaker.learnTopics(comments, true);
 }
@@ -155,7 +157,7 @@ export async function getSummary(
 
 ): Promise<Summary> {
   const sensemaker = new Sensemaker({
-    defaultModel: new VertexModel(project, "us-central1"),
+    defaultModel: new VertexModel(project, "us-central1", config.gcloud.summarization_model),
   });
   // TODO: Make the summariation type an argument and add it as a flag in runner.ts. The data
   // requirements (like requiring votes) would also need updated.

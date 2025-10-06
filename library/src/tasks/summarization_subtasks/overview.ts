@@ -48,7 +48,7 @@ export class OverviewSummary extends RecursiveSummary<OverviewInput> {
     const preamble =
       `Below is a high level overview of the topics discussed in the conversation, as well as the percentage of statements categorized under each topic. ` +
       `Note that the percentages may add up to greater than 100% when statements fall under more than one topic.\n\n` +
-      `Do not forget that it is mandatory to use the same language as the comments language in your response. The language of the comments is ${config.default_language}.`;
+      `Do not forget that it is mandatory to use the same language as the comments language in your response. The generation language  must be in ${config.default_language}.`;
     return { title: "## Overview", text: preamble + result };
   }
 

@@ -26,6 +26,7 @@
 //    --inputFile ~/input.csv \
 
 import { VertexModel } from "../src/models/vertex_model";
+import { OpenAIModel } from "../src/models/openai_model";
 import { Sensemaker } from "../src/sensemaker";
 import { Comment, Topic } from "../src/types";
 import { Command } from "commander";
@@ -36,6 +37,7 @@ import * as path from "path";
 import { concatTopics, parseTopicsString, concatTopicScores } from "./analysis_utils";
 import * as config from "../configs.json";
 import { displayTopicHierarchy, extractExistingTopicsFromCsv, CommentCsvRow } from "./categorization_utils";
+import { getProposalsForJigsaw, JigsawRow } from "./import_utils";
 
 
 
@@ -44,11 +46,27 @@ async function main(): Promise<void> {
   const program = new Command();
   program
     .option("-i, --inputFile <file>", "The input file name.")
+    .option("-s, --slug <slug>", "The slug for database reading.")
+    .option("-d, --database", "Read from database instead of CSV file.")
     .option("-p, --processd <boolean>", "Contine the achieved categorization!", true);
   program.parse(process.argv);
   const options = program.opts();
 
-  const csvRows = await readCsv(options.inputFile);
+  let csvRows: CommentCsvRow[];
+
+  // Choisir la source de données : CSV ou base de données
+  if (options.database && options.slug) {
+    console.log(`📊 Lecture depuis la base de données pour le slug: ${options.slug}`);
+    const jigsawData = await getProposalsForJigsaw(options.slug);
+    csvRows = convertJigsawToCsvRows(jigsawData.data);
+    console.log(`✅ ${csvRows.length} propositions récupérées depuis la base de données`);
+  } else if (options.inputFile) {
+    console.log(`📄 Lecture depuis le fichier CSV: ${options.inputFile}`);
+    csvRows = await readCsv(options.inputFile);
+  } else {
+    throw new Error("Vous devez spécifier soit --inputFile pour un CSV, soit --database --slug pour la base de données");
+  }
+
   let comments = convertCsvRowsToComments(csvRows);
 
   // Extract existing topics from CSV if available and not forcing rerun
@@ -60,9 +78,33 @@ async function main(): Promise<void> {
 
 
   // Learn topics and categorize comments.
+  let defaultModel;
+  let generationProvider;
+
+  if (config.provider === "openai") {
+    defaultModel = new OpenAIModel(
+      config.openai.api_key,
+      config.openai.model,
+      config.openai.max_tokens,
+      config.openai.temperature,
+      config.openai.parallelism
+    );
+    generationProvider = "OpenAI";
+  } else if (config.provider === "vertex") {
+    defaultModel = new VertexModel(
+      config.gcloud.project_id,
+      config.gcloud.location,
+      config.gcloud.categorization_model
+    );
+    generationProvider = "VertexAI";
+  } else {
+    throw new Error(`Provider non supporté: ${config.provider}. Valeurs supportées: 'openai', 'vertex'`);
+  }
+
   const sensemaker = new Sensemaker({
-    defaultModel: new VertexModel(config.gcloud.project_id, config.gcloud.location),
+    defaultModel: defaultModel,
   });
+  console.log("Generation provider: ", generationProvider);
   const categorizedComments = await sensemaker.categorizeComments(
     comments,
     true,
@@ -72,15 +114,26 @@ async function main(): Promise<void> {
   );
 
   // Calculer les scores de pertinence pour les topics et subtopics
-  console.log("Calcul des scores de pertinence...");
-  const commentsWithScores = await sensemaker.calculateRelevanceScores(
-    categorizedComments,
-    ""
-  );
+  // console.log("Calcul des scores de pertinence...");
+  // const commentsWithScores = await sensemaker.calculateRelevanceScores(
+  //   categorizedComments,
+  //   ""
+  // );
 
-  const csvRowsWithTopics = setTopics(csvRows, commentsWithScores);
+  const csvRowsWithTopics = setTopics(csvRows, categorizedComments);
   let timestamp = new Date().toISOString().slice(0, 10);
-  let outputBasename = options.inputFile.replace(".csv", "_categorized_" + timestamp + ".csv");
+
+  let outputBasename: string;
+  if (options.database && options.slug) {
+    // Créer le dossier data/{slug} s'il n'existe pas
+    const outputDir = `data/${options.slug}`;
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    outputBasename = `data/${options.slug}/${options.slug}_categorized_${timestamp}.csv`;
+  } else {
+    outputBasename = options.inputFile.replace(".csv", "_categorized_" + timestamp + ".csv");
+  }
 
   await writeCsv(csvRowsWithTopics, outputBasename);
 }
@@ -115,6 +168,22 @@ async function readCsv(inputFilePath: string): Promise<CommentCsvRow[]> {
         resolve(allRows);
       });
   });
+}
+
+function convertJigsawToCsvRows(jigsawData: JigsawRow[]): CommentCsvRow[] {
+  return jigsawData.map(jigsawRow => ({
+    "comment_text": jigsawRow.comment_text,
+    "comment-id": jigsawRow["comment-id"].toString(),
+    "votes": jigsawRow.votes.toString(),
+    "agree_rate": jigsawRow.agree_rate.toString(),
+    "disagree_rate": jigsawRow.disagree_rate.toString(),
+    "pass_rate": jigsawRow.pass_rate.toString(),
+    "group-id": jigsawRow["group-id"].toString(),
+    "author-id": jigsawRow["author-id"].toString(),
+    "1-agree-count": jigsawRow["1-agree-count"].toString(),
+    "1-disagree-count": jigsawRow["1-disagree-count"].toString(),
+    "1-pass-count": jigsawRow["1-pass-count"].toString()
+  }));
 }
 
 function convertCsvRowsToComments(csvRows: CommentCsvRow[]): Comment[] {
@@ -155,7 +224,7 @@ function setTopics(csvRows: CommentCsvRow[], categorizedComments: Comment[]): Co
   for (const comment of categorizedComments) {
     const csvRow = mapIdToCsvRow[comment.id];
     csvRow["topics"] = concatTopics(comment);
-    csvRow["topic_scores"] = concatTopicScores(comment);
+    // csvRow["topic_scores"] = concatTopicScores(comment);
     csvRowsWithTopics.push(csvRow);
   }
   return csvRowsWithTopics;

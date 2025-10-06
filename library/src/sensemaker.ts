@@ -94,8 +94,8 @@ export class Sensemaker {
       this.getModel("summarizationModel"),
       comments,
       summarizationType,
-      additionalContext,
-      language
+      additionalContext
+      // language
     );
 
     console.log(`Summarization took ${(performance.now() - startTime) / (1000 * 60)} minutes.`);
