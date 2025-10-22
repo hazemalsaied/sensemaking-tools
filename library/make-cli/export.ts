@@ -35,8 +35,7 @@ async function main(): Promise<void> {
     program
         .option("-i, --analysisFile <file>", "Le fichier JSON à lire et persister.")
         .option("-t, --tag <tag>", "Tag à associer à l'analyse.")
-        .option("--slug <slug>", "Slug pour l'analyse.")
-        .option("--database", "Persister l'analyse dans la base de données PostgreSQL.", true);
+        .option("-s, --slug <slug>", "Slug pour l'analyse.");
     program.parse(process.argv);
     const options = program.opts();
 

@@ -22,17 +22,23 @@ export async function persistJsonToDatabase(jsonContent: string, slug: string, t
 
         console.log(`ID maximum actuel: ${maxId}, nouvel ID généré: ${customId}`);
 
-        // Insérer avec l'ID personnalisé généré automatiquement
+        // Valeurs par défaut pour les nouvelles colonnes
+        const language = config.default_language || 'french';
+        const active = true;
+        const whiteUtm = 'facebook,twitter,snabchat,crm,mail';
+
+        // Insérer avec l'ID personnalisé généré automatiquement et les nouvelles colonnes
         const insertQuery = `
-            INSERT INTO sensemaking_json (id, slug, tag, json_data)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO sensemaking_json (id, slug, tag, json_data, language, active, white_utms)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
         `;
         console.log(insertQuery);
-        const queryParams = [customId, slug, tag, JSON.parse(jsonContent)];
+        const queryParams = [customId, slug, tag, JSON.parse(jsonContent), language, active, whiteUtm];
 
         await client.query(insertQuery, queryParams);
 
         console.log(`Contenu JSON persisté avec succès dans la table sensemaking_json avec l'ID: ${customId}`);
+        console.log(`Langue: ${language}, Actif: ${active}, White utms: ${whiteUtm}`);
     } catch (error) {
         console.error('Erreur lors de la persistance JSON en base de données:', error);
         throw error;
