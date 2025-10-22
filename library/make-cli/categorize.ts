@@ -37,7 +37,7 @@ import * as path from "path";
 import { concatTopics, parseTopicsString, concatTopicScores } from "./analysis_utils";
 import * as config from "../configs.json";
 import { displayTopicHierarchy, extractExistingTopicsFromCsv, CommentCsvRow } from "./categorization_utils";
-import { getProposalsForJigsaw, JigsawRow } from "./import_utils";
+import { getProposalsForJigsaw, JigsawRow, fetchPreviousAnalysis, extractTopicsFromPreviousAnalysis, extractCategorizedCommentsFromPreviousAnalysis, createDatabaseConnection } from "./import_utils";
 
 
 
@@ -55,23 +55,55 @@ async function main(): Promise<void> {
   let csvRows: CommentCsvRow[];
 
   // Choisir la source de données : CSV ou base de données
+  let topics: Topic[] | undefined;
+  let previousCategorizedComments: { [commentId: string]: Topic[] } = {};
   if (options.inputFile) {
     console.log(`📄 Lecture depuis le fichier CSV: ${options.inputFile}`);
     csvRows = await readCsv(options.inputFile);
+    topics = extractExistingTopicsFromCsv(csvRows);
   } else if (options.slug) {
     console.log(`📊 Lecture depuis la base de données pour le slug: ${options.slug}`);
     const jigsawData = await getProposalsForJigsaw(options.slug);
     csvRows = convertJigsawToCsvRows(jigsawData.data);
     console.log(`✅ ${csvRows.length} propositions récupérées depuis la base de données`);
+    // Vérifier s'il y a une analyse précédente dans la base de données d'export
+    console.log(`🔍 Vérification des analyses précédentes pour le slug: ${options.slug}`);
+    const exportClient = createDatabaseConnection(config.export_db);
+
+    try {
+      await exportClient.connect();
+      const previousAnalysis = await fetchPreviousAnalysis(exportClient, options.slug);
+
+      if (previousAnalysis) {
+        // Extraire les topics de l'analyse précédente
+        const previousTopics = extractTopicsFromPreviousAnalysis(previousAnalysis);
+        if (previousTopics.length > 0) {
+          topics = previousTopics;
+          console.log(`📊 ${topics.length} topics récupérés de l'analyse précédente`);
+        }
+
+        // Extraire les commentaires déjà catégorisés
+        previousCategorizedComments = extractCategorizedCommentsFromPreviousAnalysis(previousAnalysis);
+        console.log(`📊 ${Object.keys(previousCategorizedComments).length} commentaires déjà catégorisés trouvés`);
+      }
+    } catch (error) {
+      console.warn(`⚠️ Erreur lors de la récupération de l'analyse précédente: ${error}`);
+    } finally {
+      await exportClient.end();
+    }
   } else {
     throw new Error("Où sont les données ?");
   }
 
-  let comments = convertCsvRowsToComments(csvRows);
 
-  // Extract existing topics from CSV if available and not forcing rerun
-  let topics: Topic[] | undefined;
-  topics = extractExistingTopicsFromCsv(csvRows);
+
+
+  // Si pas d'analyse précédente, essayer d'extraire depuis le CSV
+  if (!topics) {
+    topics = extractExistingTopicsFromCsv(csvRows);
+  }
+
+  let comments = convertCsvRowsToComments(csvRows, previousCategorizedComments);
 
   // Afficher la hiérarchie des thèmes de manière élégante
   displayTopicHierarchy(topics || []);
@@ -134,14 +166,15 @@ async function main(): Promise<void> {
   let timestamp = new Date().toISOString().slice(0, 10);
 
   let outputBasename: string;
-  if (options.database && options.slug) {
-    // Créer le dossier data/{slug} s'il n'existe pas
-    const outputDir = `data/${options.slug}`;
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
+  const outputDir = `data/${options.slug}`;
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+  
+  if (!options.inputFile) {
     outputBasename = `data/${options.slug}/${options.slug}_categorized_${timestamp}.csv`;
-  } else {
+  }
+  else {
     outputBasename = options.inputFile.replace(".csv", "_categorized_" + timestamp + ".csv");
   }
 
@@ -196,7 +229,7 @@ function convertJigsawToCsvRows(jigsawData: JigsawRow[]): CommentCsvRow[] {
   }));
 }
 
-function convertCsvRowsToComments(csvRows: CommentCsvRow[]): Comment[] {
+function convertCsvRowsToComments(csvRows: CommentCsvRow[], previousCategorizedComments?: { [commentId: string]: Topic[] }): Comment[] {
   const comments: Comment[] = [];
   for (const row of csvRows) {
     const comment: Comment = {
@@ -204,8 +237,13 @@ function convertCsvRowsToComments(csvRows: CommentCsvRow[]): Comment[] {
       id: row["comment-id"],
     };
 
-    // If topics exist in the CSV, parse them and add to the comment
-    if (row.topics && row.topics.trim()) {
+    // Si des topics existent dans l'analyse précédente, les utiliser en priorité
+    if (previousCategorizedComments && previousCategorizedComments[row["comment-id"]]) {
+      comment.topics = previousCategorizedComments[row["comment-id"]];
+      // console.log(`🔄 Topics récupérés de l'analyse précédente pour le commentaire ${row["comment-id"]}`);
+    }
+    // Sinon, si des topics existent dans le CSV, les parser
+    else if (row.topics && row.topics.trim()) {
       try {
         comment.topics = parseTopicsString(row.topics);
       } catch (error) {

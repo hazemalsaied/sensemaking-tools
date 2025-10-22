@@ -20,6 +20,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createObjectCsvWriter } from 'csv-writer';
 import * as config from '../configs.json';
+import { Topic } from '../src/types';
 
 export interface ProposalRow {
     id: number;
@@ -167,6 +168,87 @@ export async function saveJigsawDataToCsv(
 /**
  * Fonction principale pour récupérer les propositions et les transformer au format Jigsaw
  */
+/**
+ * Récupère les analyses précédentes depuis la table sensemaking_json
+ */
+export async function fetchPreviousAnalysis(
+    client: Client,
+    slug: string
+): Promise<any | null> {
+    try {
+        const query = `
+            SELECT json_data, creation_date 
+            FROM sensemaking_json 
+            WHERE slug = $1 
+            ORDER BY creation_date DESC 
+            LIMIT 1
+        `;
+
+        const result = await client.query(query, [slug]);
+
+        if (result.rows.length === 0) {
+            console.log(`📋 Aucune analyse précédente trouvée pour le slug: ${slug}`);
+            return null;
+        }
+
+        console.log(`📋 Analyse précédente trouvée pour le slug: ${slug} (${result.rows[0].creation_date})`);
+        return result.rows[0].json_data;
+    } catch (error) {
+        console.error('Erreur lors de la récupération de l\'analyse précédente:', error);
+        throw error;
+    }
+}
+
+/**
+ * Extrait les topics et subtopics d'une analyse précédente
+ */
+export function extractTopicsFromPreviousAnalysis(previousAnalysis: any): Topic[] {
+    if (!previousAnalysis || !previousAnalysis.topics) {
+        return [];
+    }
+
+    const topics: Topic[] = [];
+
+    for (const topicData of previousAnalysis.topics) {
+        const topic: Topic = {
+            name: topicData.name,
+            subtopics: topicData.subtopics ? topicData.subtopics.map((sub: any) => ({
+                name: sub.name
+            })) : []
+        };
+        topics.push(topic);
+    }
+
+    console.log(`📊 ${topics.length} topics extraits de l'analyse précédente`);
+    return topics;
+}
+
+/**
+ * Extrait les commentaires avec leurs topics d'une analyse précédente
+ */
+export function extractCategorizedCommentsFromPreviousAnalysis(previousAnalysis: any): { [commentId: string]: Topic[] } {
+    if (!previousAnalysis || !previousAnalysis.categorized_comments) {
+        return {};
+    }
+
+    const categorizedComments: { [commentId: string]: Topic[] } = {};
+
+    for (const comment of previousAnalysis.categorized_comments) {
+        if (comment.topics && comment.topics.length > 0) {
+            const topics: Topic[] = comment.topics.map((topicData: any) => ({
+                name: topicData.name,
+                subtopics: topicData.subtopics ? topicData.subtopics.map((sub: any) => ({
+                    name: sub.name
+                })) : []
+            }));
+            categorizedComments[comment.id] = topics;
+        }
+    }
+
+    console.log(`📊 ${Object.keys(categorizedComments).length} commentaires avec topics extraits de l'analyse précédente`);
+    return categorizedComments;
+}
+
 export async function getProposalsForJigsaw(
     slug: string,
     outputDir?: string
