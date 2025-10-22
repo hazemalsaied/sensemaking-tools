@@ -88,7 +88,7 @@ export class Sensemaker {
     const startTime = performance.now();
 
     // Categories are required for summarization, this is a no-op if they already have categories.
-    comments = await this.categorizeComments(comments, true, topics, additionalContext, 2);
+    comments = await this.categorizeComments(comments, true, topics, 2);
 
     const summary = await summarizeByType(
       this.getModel("summarizationModel"),
@@ -131,7 +131,6 @@ export class Sensemaker {
       comments,
       includeSubtopics,
       topics,
-      additionalContext,
       topicDepth
     );
     const learnedTopics = getUniqueTopics(categorizedComments);
@@ -146,9 +145,6 @@ export class Sensemaker {
    * @param comments The data to summarize
    * @param includeSubtopics Whether to include subtopics in the categorization.
    * @param topics The user provided topics (and optionally subtopics).
-   * @param additionalContext Optional additional context to provide to the LLM for
-   * categorization. The context will be appended verbatim to the prompt. This
-   * should be 1-2 sentences on what the conversation is about and where it takes place.
    * @param topicDepth how many levels of topics to learn, from topic to sub-sub-topic
    * @returns: The LLM's categorization.
    */
@@ -156,7 +152,6 @@ export class Sensemaker {
     comments: Comment[],
     includeSubtopics: boolean,
     topics?: Topic[],
-    additionalContext?: string,
     topicDepth?: 1 | 2 | 3,
 
   ): Promise<Comment[]> {
@@ -171,8 +166,7 @@ export class Sensemaker {
       comments,
       includeSubtopics ? topicDepth || 2 : 1,
       this.getModel("categorizationModel"),
-      topics,
-      additionalContext
+      topics
     );
 
     console.log(`Categorization took ${(performance.now() - startTime) / (1000 * 60)} minutes.`);
@@ -182,19 +176,16 @@ export class Sensemaker {
   /**
    * Calcule les scores de pertinence pour les topics et subtopics des commentaires catégorisés.
    * @param comments Les commentaires déjà catégorisés avec leurs topics
-   * @param additionalContext Contexte additionnel pour le modèle LLM
    * @returns Les commentaires avec leurs scores de pertinence ajoutés
    */
   public async calculateRelevanceScores(
-    comments: Comment[],
-    additionalContext?: string
+    comments: Comment[]
   ): Promise<Comment[]> {
     const startTime = performance.now();
 
     const commentsWithScores = await calculateRelevanceScores(
       comments,
-      this.getModel("categorizationModel"),
-      additionalContext
+      this.getModel("categorizationModel")
     );
 
     console.log(`Relevance scoring took ${(performance.now() - startTime) / (1000 * 60)} minutes.`);

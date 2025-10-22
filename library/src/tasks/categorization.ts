@@ -37,7 +37,6 @@ import * as path from "path";
  * and subtopics; 3 is topics, subtopics, and subsubtopics
  * @param model the model to use for topic learning and categorization
  * @param topics a given set of topics to categorize the comments into
- * @param additionalContext information to give the model
  * @param outputDir directory to save CSV files at each depth level
  * @returns the comments categorized to the level specified by topicDepth
  */
@@ -46,7 +45,6 @@ export async function categorizeCommentsRecursive(
   topicDepth: 1 | 2 | 3,
   model: Model,
   topics?: Topic[],
-  additionalContext?: string,
   outputDir?: string
 ): Promise<Comment[]> {
   // The exit condition - if the requested topic depth matches the current depth of topics on the
@@ -61,7 +59,7 @@ export async function categorizeCommentsRecursive(
   }
   if (!topics) {
     console.log("Learning topics...");
-    topics = await learnOneLevelOfTopics(comments, model, undefined, undefined, additionalContext);
+    topics = await learnOneLevelOfTopics(comments, model, undefined, undefined);
     // Sometimes comments are categorized into an "Other" topic if no given topics are a good fit.
     // This needs included in the list of topics so these are processed downstream.
     if (!topics.some((topic) => topic.name === "Other")) {
@@ -75,8 +73,8 @@ export async function categorizeCommentsRecursive(
     console.log("Categorizing statements...");
 
     // Extraire les commentaires taggés pour les utiliser comme exemples
-    comments = await oneLevelCategorization(comments, [], model, topics, additionalContext);
-    return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, outputDir);
+    comments = await oneLevelCategorization(comments, [], model, topics);
+    return categorizeCommentsRecursive(comments, topicDepth, model, topics, outputDir);
   }
 
   if (topics && currentTopicDepth === 0) {
@@ -92,7 +90,7 @@ export async function categorizeCommentsRecursive(
 
       // Extraire les commentaires taggés pour les utiliser comme exemples
       const taggedComments = extractTaggedComments(comments, topics);
-      const newlyTagged = await oneLevelCategorization(blankComments, taggedComments, model, topics, additionalContext);
+      const newlyTagged = await oneLevelCategorization(blankComments, taggedComments, model, topics);
 
       // Merge the newly categorized comments back into the original comments array
       const categorizedMap = new Map(newlyTagged.map(comment => [comment.id, comment]));
@@ -104,13 +102,13 @@ export async function categorizeCommentsRecursive(
       console.log("All comments are already categorized, skipping categorization step.");
     }
 
-    return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, outputDir);
+    return categorizeCommentsRecursive(comments, topicDepth, model, topics, outputDir);
   }
   console.log("Depth=", currentTopicDepth);
   let index = 0;
   const parentTopics = getTopicsAtDepth(topics, currentTopicDepth);
   for (let topic of parentTopics) {
-    
+
     const commentsInTopic = structuredClone(
       getCommentTextsWithTopicsAtDepth(comments, topic.name, currentTopicDepth)
     );
@@ -140,7 +138,7 @@ export async function categorizeCommentsRecursive(
       console.log("================================================");
       console.log("");
       const newTopicAndSubtopics = (
-        await learnOneLevelOfTopics(commentsWithoutSubtopics, model, topic, parentTopics, additionalContext)
+        await learnOneLevelOfTopics(commentsWithoutSubtopics, model, topic, parentTopics)
       )[0];
 
       console.log("New subtopics for", topic.name, "subtopics" in newTopicAndSubtopics ? newTopicAndSubtopics.subtopics : "none");
@@ -180,7 +178,6 @@ export async function categorizeCommentsRecursive(
       taggedCommentsForSubtopic,
       model,
       topic.subtopics,
-      additionalContext,
     );
 
     // Réintégrer les commentaires catégorisés dans l'ensemble des commentaires du topic
@@ -199,15 +196,14 @@ export async function categorizeCommentsRecursive(
     topicWithNewSubtopics.subtopics.push({ name: "Other" });
     topics = mergeTopics(topics, topicWithNewSubtopics);
   }
-  return categorizeCommentsRecursive(comments, topicDepth, model, topics, additionalContext, outputDir);
+  return categorizeCommentsRecursive(comments, topicDepth, model, topics, outputDir);
 }
 
 export async function oneLevelCategorization(
   comments: Comment[],
   taggedComments: Comment[],
   model: Model,
-  topics: Topic[],
-  additionalContext?: string
+  topics: Topic[]
 ): Promise<Comment[]> {
   let topic_names = topics.map(topic => topic.name);
 
@@ -223,7 +219,7 @@ export async function oneLevelCategorization(
 
     // Create a callback function for each batch and add it to the list, preparing them for parallel execution.
     batchesToCategorize.push(() =>
-      categorizeWithRetry(model, instructions, uncategorizedBatch, topics, additionalContext)
+      categorizeWithRetry(model, instructions, uncategorizedBatch, topics)
     );
   }
 
@@ -252,15 +248,13 @@ export async function oneLevelCategorization(
  * @param instructions Instructions for the LLM on how to categorize the comments.
  * @param inputComments The comments to categorize.
  * @param topics The topics and subtopics provided to the LLM for categorization.
- * @param additionalContext - extra context to be included to the LLM prompt
  * @returns The categorized comments.
  */
 export async function categorizeWithRetry(
   model: Model,
   instructions: string,
   inputComments: Comment[],
-  topics: Topic[],
-  additionalContext?: string
+  topics: Topic[]
 ): Promise<CommentRecord[]> {
   // a holder for uncategorized comments: first - input comments, later - any failed ones that need to be retried
   let uncategorized: Comment[] = [...inputComments];
@@ -275,7 +269,7 @@ export async function categorizeWithRetry(
 
     // Générer les few shots si des commentaires taggés sont fournis
 
-    let prompt = getPrompt(instructions, uncategorizedCommentsForModel, additionalContext);
+    let prompt = getPrompt(instructions, uncategorizedCommentsForModel);
 
     const newCategorized: CommentRecord[] = (await model.generateData(
       prompt,

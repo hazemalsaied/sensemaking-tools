@@ -23,13 +23,11 @@ import { loadRelevanceScoringPrompt } from "./utils/template_loader";
  * Calcule les scores de pertinence pour les topics et subtopics d'un ensemble de commentaires.
  * @param comments Les commentaires déjà catégorisés avec leurs topics
  * @param model Le modèle LLM à utiliser pour le scoring
- * @param additionalContext Contexte additionnel pour le modèle
  * @returns Les commentaires avec leurs scores de pertinence ajoutés
  */
 export async function calculateRelevanceScores(
     comments: Comment[],
-    model: Model,
-    additionalContext?: string
+    model: Model
 ): Promise<Comment[]> {
     console.log("Calcul des scores de pertinence pour", comments.length, "commentaires...");
 
@@ -46,7 +44,7 @@ export async function calculateRelevanceScores(
     for (let i = 0; i < categorizedComments.length; i += model.categorizationBatchSize) {
         const batch = categorizedComments.slice(i, i + model.categorizationBatchSize);
         batchesToScore.push(() =>
-            scoreRelevanceWithRetry(model, batch, additionalContext)
+            scoreRelevanceWithRetry(model, batch)
         );
     }
 
@@ -70,13 +68,11 @@ export async function calculateRelevanceScores(
  * Calcule les scores de pertinence avec retry en cas d'échec.
  * @param model Le modèle LLM à utiliser
  * @param inputComments Les commentaires à scorer
- * @param additionalContext Contexte additionnel
  * @returns Les commentaires avec leurs scores de pertinence
  */
 export async function scoreRelevanceWithRetry(
     model: Model,
-    inputComments: Comment[],
-    additionalContext?: string
+    inputComments: Comment[]
 ): Promise<CommentRecordWithScores[]> {
     let uncategorized: Comment[] = [...inputComments];
     let scored: CommentRecordWithScores[] = [];
@@ -112,7 +108,7 @@ export async function scoreRelevanceWithRetry(
         ]));
 
         const instructions = relevanceScoringPrompt();
-        let prompt = getPrompt(instructions, commentsForModel, additionalContext);
+        let prompt = getPrompt(instructions, commentsForModel);
 
         const newScored: CommentRecordWithScores[] = (await model.generateData(
             prompt,

@@ -47,24 +47,24 @@ async function main(): Promise<void> {
   program
     .option("-i, --inputFile <file>", "The input file name.")
     .option("-s, --slug <slug>", "The slug for database reading.")
-    .option("-d, --database", "Read from database instead of CSV file.")
-    .option("-p, --processd <boolean>", "Contine the achieved categorization!", true);
+    .option("-l, --level <number>", "The categorization level (depth of topics/subtopics)", "2")
+    .option("--scores", "Calculate relevance scores for topics and subtopics", false);
   program.parse(process.argv);
   const options = program.opts();
 
   let csvRows: CommentCsvRow[];
 
   // Choisir la source de données : CSV ou base de données
-  if (options.database && options.slug) {
+  if (options.inputFile) {
+    console.log(`📄 Lecture depuis le fichier CSV: ${options.inputFile}`);
+    csvRows = await readCsv(options.inputFile);
+  } else if (options.slug) {
     console.log(`📊 Lecture depuis la base de données pour le slug: ${options.slug}`);
     const jigsawData = await getProposalsForJigsaw(options.slug);
     csvRows = convertJigsawToCsvRows(jigsawData.data);
     console.log(`✅ ${csvRows.length} propositions récupérées depuis la base de données`);
-  } else if (options.inputFile) {
-    console.log(`📄 Lecture depuis le fichier CSV: ${options.inputFile}`);
-    csvRows = await readCsv(options.inputFile);
   } else {
-    throw new Error("Vous devez spécifier soit --inputFile pour un CSV, soit --database --slug pour la base de données");
+    throw new Error("Où sont les données ?");
   }
 
   let comments = convertCsvRowsToComments(csvRows);
@@ -105,22 +105,32 @@ async function main(): Promise<void> {
     defaultModel: defaultModel,
   });
   console.log("Generation provider: ", generationProvider);
+  // Valider et convertir le niveau de catégorisation
+  const categorizationLevel = parseInt(options.level);
+  if (categorizationLevel < 1 || categorizationLevel > 3) {
+    throw new Error("Le niveau de catégorisation doit être entre 1 et 3");
+  }
+  console.log(`Niveau de catégorisation: ${categorizationLevel}`);
+
   const categorizedComments = await sensemaker.categorizeComments(
     comments,
     true,
     topics,
-    "",
-    2
+    categorizationLevel as 1 | 2 | 3
   );
 
-  // Calculer les scores de pertinence pour les topics et subtopics
-  // console.log("Calcul des scores de pertinence...");
-  // const commentsWithScores = await sensemaker.calculateRelevanceScores(
-  //   categorizedComments,
-  //   ""
-  // );
+  // Calculer les scores de pertinence pour les topics et subtopics (optionnel)
+  let finalComments = categorizedComments;
+  if (options.scores) {
+    console.log("Calcul des scores de pertinence...");
+    finalComments = await sensemaker.calculateRelevanceScores(
+      categorizedComments
+    );
+  } else {
+    console.log("Skipping relevance scores calculation (use --scores to enable)");
+  }
 
-  const csvRowsWithTopics = setTopics(csvRows, categorizedComments);
+  const csvRowsWithTopics = setTopics(csvRows, finalComments);
   let timestamp = new Date().toISOString().slice(0, 10);
 
   let outputBasename: string;

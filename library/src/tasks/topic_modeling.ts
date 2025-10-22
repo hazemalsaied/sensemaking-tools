@@ -49,7 +49,6 @@ export function generateTopicModelingPrompt(parentTopic?: Topic, otherTopics?: T
  * @param topic given or learned topic that subtopics will fit under
  * @param otherTopics other topics that are being used, this is used
  * to avoid duplicate topic/subtopic names
- * @param additionalContext more info to give the model
  * @returns the topics that are present in the comments.
  */
 export function learnOneLevelOfTopics(
@@ -57,7 +56,6 @@ export function learnOneLevelOfTopics(
   model: Model,
   topic?: Topic,
   otherTopics?: Topic[],
-  additionalContext?: string,
   language?: string
 ): Promise<Topic[]> {
   const instructions = generateTopicModelingPrompt(topic, otherTopics);
@@ -69,8 +67,7 @@ export function learnOneLevelOfTopics(
       return (await model.generateData(
         getPrompt(
           instructions,
-          comments.map((comment) => comment.text),
-          additionalContext
+          comments.map((comment) => comment.text)
         ),
         schema
       )) as Topic[];
