@@ -42,11 +42,15 @@ export function loadAndFillTemplate(templatePath: string, data: TemplateData): s
 
 /**
  * Charge un template de prompt pour les topics principaux
+ * @param minTopics - Nombre minimum de topics à générer
+ * @param maxTopics - Nombre maximum de topics à générer
  * @returns Le prompt rempli
  */
-export function loadLearnTopicsPrompt(): string {
+export function loadLearnTopicsPrompt(minTopics: number = 10, maxTopics: number = 17): string {
     return loadAndFillTemplate('topics_modeling_prompt.txt', {
-        language: config.default_language
+        language: config.default_language,
+        minTopics: minTopics,
+        maxTopics: maxTopics
     });
 }
 

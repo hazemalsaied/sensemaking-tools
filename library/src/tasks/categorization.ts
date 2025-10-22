@@ -45,7 +45,9 @@ export async function categorizeCommentsRecursive(
   topicDepth: 1 | 2 | 3,
   model: Model,
   topics?: Topic[],
-  outputDir?: string
+  outputDir?: string,
+  minTopics?: number,
+  maxTopics?: number
 ): Promise<Comment[]> {
   // The exit condition - if the requested topic depth matches the current depth of topics on the
   // comments then exit.
@@ -59,7 +61,7 @@ export async function categorizeCommentsRecursive(
   }
   if (!topics) {
     console.log("Learning topics...");
-    topics = await learnOneLevelOfTopics(comments, model, undefined, undefined);
+    topics = await learnOneLevelOfTopics(comments, model, undefined, undefined, minTopics, maxTopics);
     // Sometimes comments are categorized into an "Other" topic if no given topics are a good fit.
     // This needs included in the list of topics so these are processed downstream.
     if (!topics.some((topic) => topic.name === "Other")) {

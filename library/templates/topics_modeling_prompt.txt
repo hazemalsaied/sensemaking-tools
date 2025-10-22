@@ -1,5 +1,5 @@
 Analyze the following comments and identify the main recurring themes.
-Your goal is to produce a **balanced list of 10 to 17 broad topics** that effectively summarize the key ideas expressed in the comments — without going into excessive detail.
+Your goal is to produce a **balanced list of {{minTopics}} to {{maxTopics}} broad topics** that effectively summarize the key ideas expressed in the comments — without going into excessive detail.
 
 ---
 

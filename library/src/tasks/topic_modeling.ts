@@ -34,11 +34,11 @@ export function learnSubtopicsForOneTopicPrompt(parentTopic: Topic, otherTopics?
  * @param parentTopics - Optional. An array of top-level topics to use.
  * @returns The generated prompt string.
  */
-export function generateTopicModelingPrompt(parentTopic?: Topic, otherTopics?: Topic[]): string {
+export function generateTopicModelingPrompt(parentTopic?: Topic, otherTopics?: Topic[], minTopics?: number, maxTopics?: number): string {
   if (parentTopic) {
     return learnSubtopicsForOneTopicPrompt(parentTopic, otherTopics);
   } else {
-    return loadLearnTopicsPrompt();
+    return loadLearnTopicsPrompt(minTopics, maxTopics);
   }
 }
 
@@ -56,11 +56,12 @@ export function learnOneLevelOfTopics(
   model: Model,
   topic?: Topic,
   otherTopics?: Topic[],
-  language?: string
+  minTopics?: number,
+  maxTopics?: number
 ): Promise<Topic[]> {
-  const instructions = generateTopicModelingPrompt(topic, otherTopics);
+  const instructions = generateTopicModelingPrompt(topic, otherTopics, minTopics, maxTopics);
   const schema = topic ? Type.Array(NestedTopic) : Type.Array(FlatTopic);
-
+  learnOneLevelOfTopics
   return retryCall(
     async function (model: Model): Promise<Topic[]> {
       console.log(`Identifying topics for ${comments.length} statements`);

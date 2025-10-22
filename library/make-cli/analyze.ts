@@ -48,7 +48,9 @@ async function main(): Promise<void> {
     .option("-i, --inputFile <file>", "The input file name.")
     .option("-s, --slug <slug>", "The slug for database reading.")
     .option("-l, --level <number>", "The categorization level (depth of topics/subtopics)", "2")
-    .option("--scores", "Calculate relevance scores for topics and subtopics", false);
+    .option("--scores", "Calculate relevance scores for topics and subtopics", false)
+    .option("--minTopics <number>", "Minimum number of topics to generate", "10")
+    .option("--maxTopics <number>", "Maximum number of topics to generate", "17");
   program.parse(process.argv);
   const options = program.opts();
 
@@ -144,11 +146,15 @@ async function main(): Promise<void> {
   }
   console.log(`Niveau de catégorisation: ${categorizationLevel}`);
 
+  const minTopics = parseInt(options.minTopics || "10");
+  const maxTopics = parseInt(options.maxTopics || "17");
   const categorizedComments = await sensemaker.categorizeComments(
     comments,
     true,
     topics,
-    categorizationLevel as 1 | 2 | 3
+    categorizationLevel as 1 | 2 | 3,
+    minTopics,
+    maxTopics
   );
 
   // Calculer les scores de pertinence pour les topics et subtopics (optionnel)
