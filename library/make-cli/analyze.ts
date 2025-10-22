@@ -34,9 +34,9 @@ import { parse } from "csv-parse";
 import { createObjectCsvWriter } from "csv-writer";
 import * as fs from "fs";
 import * as path from "path";
-import { concatTopics, parseTopicsString, concatTopicScores } from "./analysis_utils";
+import { concatTopics, parseTopicsString, concatTopicScores } from "./summarization_utils";
 import * as config from "../configs.json";
-import { displayTopicHierarchy, extractExistingTopicsFromCsv, CommentCsvRow } from "./categorization_utils";
+import { displayTopicHierarchy, extractExistingTopicsFromCsv, CommentCsvRow } from "./analyzation_utils";
 import { getProposalsForJigsaw, JigsawRow, fetchPreviousAnalysis, extractTopicsFromPreviousAnalysis, extractCategorizedCommentsFromPreviousAnalysis, createDatabaseConnection } from "./import_utils";
 
 
@@ -170,7 +170,7 @@ async function main(): Promise<void> {
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
-  
+
   if (!options.inputFile) {
     outputBasename = `data/${options.slug}/${options.slug}_categorized_${timestamp}.csv`;
   }

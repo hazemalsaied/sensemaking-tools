@@ -37,7 +37,7 @@ import { writeFileSync, readFileSync } from "fs";
 import {
   getCommentsFromCsv,
   getSummary
-} from "./analysis_utils";
+} from "./summarization_utils";
 
 import {
   persistJsonToDatabase

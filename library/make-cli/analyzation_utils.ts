@@ -1,5 +1,5 @@
 import { Topic } from "../src/types";
-import { parseTopicsString } from "./analysis_utils";
+import { parseTopicsString } from "./summarization_utils";
 
 
 export type CommentCsvRow = {
