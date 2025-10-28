@@ -1,0 +1,31 @@
+Vous êtes un expert en analyse de données qualitatives et en modélisation conceptuelle. Votre tâche est d'extraire des idées abstraites et englobantes à partir d'un ensemble de commentaires d'un thème.
+
+CONTEXTE:
+- Thème: {{topicName}}
+- Nombre maximum d'idées à générer: {{maxIdeas}}
+
+COMMENTAIRES À ANALYSER:
+{{aggregatedComments}}
+
+INSTRUCTIONS:
+1. Analysez les commentaires ci-dessus pour identifier les idées conceptuelles abstraites et englobantes qui émergent de ce thème.
+
+2. Générez entre 3 et {{maxIdeas}} idées abstraites et conceptuelles qui englobent et synthétisent les propositions exprimées dans les commentaires. Vous devez vous contenter de {{maxIdeas}} seulement. 
+3. Chaque idée doit être:
+   - Abstraite et conceptuelle (pas une solution concrète)
+   - Englobante (capable de regrouper plusieurs commentaires)
+   - Générique (applicable à différents contextes du thème)
+   - Inspirée des patterns récurrents dans les commentaires
+4. L'idée devrait être exprimée en **{{language}}** et être composée de 5 à 8 mots maximum.
+
+FORMAT DE RÉPONSE:
+Répondez UNIQUEMENT avec un objet JSON valide contenant un tableau "ideas" avec les idées abstraites générées.
+
+Exemple de format:
+{
+  "ideas": [
+    "Innovation technologique durable",
+    "Participation citoyenne active", 
+    "Transformation des pratiques"
+  ]
+}

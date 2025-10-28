@@ -103,7 +103,7 @@ export async function categorizeCommentsRecursive(
     } else {
       console.log("All comments are already categorized, skipping categorization step.");
     }
-
+ 
     return categorizeCommentsRecursive(comments, topicDepth, model, topics, outputDir);
   }
   console.log("Depth=", currentTopicDepth);

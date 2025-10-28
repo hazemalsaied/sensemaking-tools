@@ -246,3 +246,47 @@ export function loadRelevanceScoringPrompt(): string {
     return loadAndFillTemplate('relevance_scoring_prompt.txt', {
     });
 }
+
+/**
+ * Charge un template de prompt pour la génération d'idées par thème (Phase 1)
+ * @param topicName - Le nom du thème
+ * @param aggregatedComments - Les commentaires agrégés du thème
+ * @param maxIdeas - Le nombre maximum d'idées à générer
+ * @returns Le prompt rempli
+ */
+export function loadIdeaGenerationPrompt(
+    topicName: string,
+    aggregatedComments: string,
+    maxIdeas: number
+): string {
+    return loadAndFillTemplate('idea_generation_prompt.txt', {
+        topicName: topicName,
+        aggregatedComments: aggregatedComments,
+        maxIdeas: maxIdeas,
+        language: config.default_language
+    });
+}
+
+/**
+ * Charge un template de prompt pour la catégorisation des commentaires par idées (Phase 2)
+ * @param topicName - Le nom du thème
+ * @param ideas - Les idées abstraites générées en phase 1
+ * @param comments - Les commentaires du lot à catégoriser
+ * @returns Le prompt rempli
+ */
+export function loadCommentCategorizationPrompt(
+    topicName: string,
+    ideas: string[],
+    comments: { id: string; text: string }[]
+): string {
+    const commentsText = comments.map(comment =>
+        `ID: ${comment.id}\nTexte: ${comment.text}`
+    ).join('\n\n');
+
+    return loadAndFillTemplate('comment_categorization_prompt.txt', {
+        topicName: topicName,
+        ideas: ideas.join('; '),
+        comments: commentsText,
+        language: config.default_language
+    });
+}

@@ -38,7 +38,7 @@ import { concatTopics, parseTopicsString, concatTopicScores } from "./summarizat
 import * as config from "../configs.json";
 import { displayTopicHierarchy, extractExistingTopicsFromCsv, CommentCsvRow } from "./analyzation_utils";
 import { getProposalsForJigsaw, JigsawRow, fetchPreviousAnalysis, extractTopicsFromPreviousAnalysis, extractCategorizedCommentsFromPreviousAnalysis, createDatabaseConnection } from "./import_utils";
-
+ 
 
 
 async function main(): Promise<void> {
