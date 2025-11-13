@@ -53,6 +53,7 @@ type CoreCommentCsvRow = {
   topics: string; // can contain both topics and subtopics
   topic: string;
   subtopic: string;
+  ideas?: string; // idées associées au commentaire
 };
 
 // Make this interface require that key names look like `group-N-VOTE-count`
@@ -320,7 +321,7 @@ export function parseTopicsString(topicsString: string): Topic[] {
  * @param inputFilePath
  * @returns
  */
-export async function getCommentsFromCsv(inputFilePath: string): Promise<Comment[]> {
+export async function getCommentsFromCsv(inputFilePath: string): Promise<(Comment & { idea?: string })[]> {
   // Determine the groups names from the header row
   const header = fs.readFileSync(inputFilePath, { encoding: "utf-8" }).split("\n")[0];
   const groupNames = header
@@ -343,12 +344,12 @@ export async function getCommentsFromCsv(inputFilePath: string): Promise<Comment
   });
 
   return new Promise((resolve, reject) => {
-    const data: Comment[] = [];
+    const data: (Comment & { idea?: string })[] = [];
     fs.createReadStream(filePath)
       .pipe(parser)
       .on("error", reject)
       .on("data", (row: CommentCsvRow) => {
-        const newComment: Comment = {
+        const newComment: Comment & { idea?: string } = {
           text: row.comment_text,
           id: row["comment-id"].toString(),
           voteInfo: getVoteInfoFromCsvRow(row, usesGroups, groupNames),
@@ -363,6 +364,10 @@ export async function getCommentsFromCsv(inputFilePath: string): Promise<Comment
             name: row.topic.toString(),
             subtopics: row.subtopic ? [{ name: row.subtopic.toString() }] : [],
           });
+        }
+        // Ajouter l'idée si elle existe dans le CSV
+        if (row.ideas) {
+          newComment.idea = row.ideas;
         }
 
         data.push(newComment);

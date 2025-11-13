@@ -74,40 +74,8 @@ export class MultiStepSummary {
       this.summaryStats,
       this.model,
       this.additionalContext,
-      // this.language
     ).getSummary();
     const summarySections: SummaryContent[] = [];
-    // summarySections.push(
-    //   await new IntroSummary(this.summaryStats, this.model, 
-    //     this.additionalContext,
-    //     this.language).getSummary()
-    // );
-    // summarySections.push(
-    //   await new OverviewSummary(
-    //     { summaryStats: this.summaryStats, topicsSummary: topicsSummary, method: "one-shot" },
-    //     this.model,
-    //     this.additionalContext,
-    //     this.language
-    //   ).getSummary()
-    // );
-    // summarySections.push(
-    //   await new TopSubtopicsSummary(
-    //     this.summaryStats,
-    //     this.model,
-    //     this.additionalContext,
-    //     this.language
-    //   ).getSummary()
-    // );
-    // if (this.summaryStats.groupBasedSummarization) {
-    //   summarySections.push(
-    //     await new GroupsSummary(
-    //       this.summaryStats as GroupedSummaryStats,
-    //       this.model,
-    //       this.additionalContext,
-    //       this.language
-    //     ).getSummary()
-    //   );
-    // }
     summarySections.push(topicsSummary);
     return new Summary(summarySections, this.summaryStats.comments);
   }

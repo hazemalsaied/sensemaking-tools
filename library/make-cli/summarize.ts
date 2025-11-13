@@ -47,7 +47,8 @@ import {
   extractTopicsFromComments,
   generateTopicStatistics,
   extractOverviewFromSummary,
-  generateTopicAnalysis
+  generateTopicAnalysis,
+  generateIdeasStructure
 } from "./json_utils";
 
 import * as config from "../configs.json";
@@ -94,19 +95,6 @@ async function main(): Promise<void> {
   // const hasTopicScores = hasTopicScoresColumn(options.inputFile);
   let commentsWithScores = comments;
 
-  // if (!hasTopicScores) {
-  //   // Calculer les scores de pertinence pour les topics et subtopics seulement si la colonne n'existe pas
-  //   console.log("Colonne topic_scores non trouvée. Calcul des scores de pertinence...");
-  //   const sensemaker = new Sensemaker({
-  //     defaultModel: new VertexModel(config.gcloud.project_id, config.gcloud.location, config.gcloud.summarization_model),
-  //   });
-  // commentsWithScores = await sensemaker.calculateRelevanceScores(
-  //   comments,
-  //   options.additionalContext
-  // );
-  // } else {
-  //   console.log("Colonne topic_scores trouvée. Utilisation des scores existants.");
-  // }
 
   // Créer le JSON selon le schéma défini
   const reportData = {
@@ -128,7 +116,8 @@ async function main(): Promise<void> {
     summary: {
       overview: extractOverviewFromSummary(summary),
       topic_analysis: generateTopicAnalysis(summary, commentsWithScores)
-    }
+    },
+    ideas: generateIdeasStructure(commentsWithScores)
   };
 
   const jsonContent = JSON.stringify(reportData, null, 2);

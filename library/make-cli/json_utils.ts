@@ -274,3 +274,95 @@ export function extractOverviewFromSummary(summary: Summary): string {
 
     return "";
 }
+
+/**
+ * Génère la structure des idées organisées par topic.
+ * Structure: topic -> idées -> commentaires associés
+ * Le topic d'une idée est déterminé par le topic qui apparaît le plus souvent
+ * parmi les commentaires associés à cette idée.
+ * @param comments Les commentaires avec leurs idées et topics
+ * @returns Structure JSON des idées organisées par topic
+ */
+export function generateIdeasStructure(comments: (Comment & { idea?: string })[]): any[] {
+    // D'abord, grouper les commentaires par idée
+    // Structure: Map<ideaName, Comment[]>
+    const ideaToCommentsMap = new Map<string, (Comment & { idea?: string })[]>();
+
+    // Parcourir tous les commentaires et les grouper par idée
+    comments.forEach(comment => {
+        // Ignorer les commentaires sans idée
+        if (!comment.idea || comment.idea.trim() === '') {
+            return;
+        }
+
+        const ideaName = comment.idea.trim();
+        if (!ideaToCommentsMap.has(ideaName)) {
+            ideaToCommentsMap.set(ideaName, []);
+        }
+        ideaToCommentsMap.get(ideaName)!.push(comment);
+    });
+
+    // Pour chaque idée, déterminer le topic le plus fréquent
+    // Structure finale: Map<topicName, Map<ideaName, Comment[]>>
+    const topicToIdeasMap = new Map<string, Map<string, (Comment & { idea?: string })[]>>();
+
+    ideaToCommentsMap.forEach((commentList, ideaName) => {
+        // Compter les occurrences de chaque topic parmi les commentaires de cette idée
+        const topicCounts = new Map<string, number>();
+
+        commentList.forEach(comment => {
+            // Parcourir tous les topics du commentaire
+            comment.topics?.forEach(topic => {
+                const topicName = topic.name;
+                topicCounts.set(topicName, (topicCounts.get(topicName) || 0) + 1);
+            });
+        });
+
+        // Trouver le topic le plus fréquent
+        let mostFrequentTopic = '';
+        let maxCount = 0;
+        topicCounts.forEach((count, topicName) => {
+            if (count > maxCount) {
+                maxCount = count;
+                mostFrequentTopic = topicName;
+            }
+        });
+
+        // Si aucun topic n'a été trouvé, ignorer cette idée
+        if (!mostFrequentTopic) {
+            return;
+        }
+
+        // Ajouter l'idée au topic le plus fréquent
+        if (!topicToIdeasMap.has(mostFrequentTopic)) {
+            topicToIdeasMap.set(mostFrequentTopic, new Map());
+        }
+
+        const ideasMap = topicToIdeasMap.get(mostFrequentTopic)!;
+        ideasMap.set(ideaName, commentList);
+    });
+
+    // Convertir en structure JSON
+    const result: any[] = [];
+    topicToIdeasMap.forEach((ideasMap, topicName) => {
+        const ideas: any[] = [];
+        ideasMap.forEach((commentList, ideaName) => {
+            ideas.push({
+                name: ideaName,
+                comments: commentList.map(comment => ({
+                    id: comment.id,
+                    text: comment.text
+                }))
+            });
+        });
+
+        if (ideas.length > 0) {
+            result.push({
+                topic: topicName,
+                ideas: ideas
+            });
+        }
+    });
+
+    return result;
+}
