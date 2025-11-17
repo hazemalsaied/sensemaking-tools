@@ -295,11 +295,15 @@ export function generateIdeasStructure(comments: (Comment & { idea?: string })[]
             return;
         }
 
-        const ideaName = comment.idea.trim();
-        if (!ideaToCommentsMap.has(ideaName)) {
-            ideaToCommentsMap.set(ideaName, []);
-        }
-        ideaToCommentsMap.get(ideaName)!.push(comment);
+        // Séparer les idées par point-virgule et traiter chacune individuellement
+        const ideas = comment.idea.split(';').map(idea => idea.trim()).filter(idea => idea !== '');
+
+        ideas.forEach(ideaName => {
+            if (!ideaToCommentsMap.has(ideaName)) {
+                ideaToCommentsMap.set(ideaName, []);
+            }
+            ideaToCommentsMap.get(ideaName)!.push(comment);
+        });
     });
 
     // Pour chaque idée, déterminer le topic le plus fréquent

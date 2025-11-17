@@ -112,7 +112,6 @@ async function main(): Promise<void> {
         })) : []
       })) : []
     })),
-    // topic_statistics: generateTopicStatistics(commentsWithScores),
     summary: {
       overview: extractOverviewFromSummary(summary),
       topic_analysis: generateTopicAnalysis(summary, commentsWithScores)
