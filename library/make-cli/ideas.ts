@@ -56,7 +56,7 @@ async function main(): Promise<void> {
     const program = new Command();
     program
         .option("-i, --inputFile <file>", "Le fichier CSV d'entrée contenant les commentaires catégorisés.")
-        .option("--minComments <number>", "Nombre minimum de commentaires par thème pour générer des idées", "10")
+        .option("--minCommentsByTopic <number>", "Nombre minimum de commentaires par thème pour générer des idées", "10")
         .option("--maxIdeas <number>", "Nombre maximum d'idées à générer par thème", "5")
         .option("--minProposals <number>", "Nombre minimum de propositions par idée pour la conserver", "7");
     program.parse(process.argv);
@@ -66,7 +66,7 @@ async function main(): Promise<void> {
         throw new Error("Le fichier d'entrée est requis (--inputFile)");
     }
 
-  
+
     console.log(`📄 Lecture du fichier CSV: ${options.inputFile}`);
     const csvRows = await readCsv(options.inputFile);
     console.log(`✅ ${csvRows.length} commentaires chargés`);
@@ -80,7 +80,7 @@ async function main(): Promise<void> {
     console.log(`🔍 ${topicsWithComments.length} thèmes trouvés`);
 
     // Filtrer les thèmes avec suffisamment de commentaires
-    const minComments = parseInt(options.minComments);
+    const minComments = parseInt(options.minCommentsByTopic);
     const validTopics = topicsWithComments.filter(
         topic => topic.comments.length >= minComments
     );
@@ -238,30 +238,49 @@ function convertCsvRowsToComments(csvRows: CommentCsvRow[]): Comment[] {
 }
 
 function parseTopicsString(topicsString: string): Topic[] {
-    // Format attendu: "Transportation:PublicTransit;Transportation:Parking;Technology:Internet"
+    // Format attendu le plus courant: "Transportation:PublicTransit;Transportation:Parking;Technology:Internet"
+    // Peut également gérer les formats sans sous-topics: "Transportation;Technology"
     const topicPairs = topicsString.split(';');
-    const topics: Topic[] = [];
+    const topicsByName = new Map<string, Topic>();
 
-    for (const pair of topicPairs) {
-        if (pair.trim()) {
-            const [topicName, subtopicName] = pair.split(':');
-            if (topicName && subtopicName) {
-                // Chercher si le topic existe déjà
-                let existingTopic = topics.find(t => t.name === topicName);
-                if (!existingTopic) {
-                    existingTopic = { name: topicName, subtopics: [] };
-                    topics.push(existingTopic);
-                }
+    for (const rawPair of topicPairs) {
+        const pair = rawPair.trim();
+        if (!pair) continue;
 
-                // Ajouter le subtopic
-                if ("subtopics" in existingTopic) {
-                    existingTopic.subtopics.push({ name: subtopicName });
-                }
+        const [rawTopicName, rawSubtopicName] = pair.split(':', 2);
+        const topicName = rawTopicName?.trim();
+        const subtopicName = rawSubtopicName?.trim();
+
+        if (!topicName) {
+            continue;
+        }
+
+        // Cas sans sous-topic: on stocke un topic simple
+        if (!subtopicName) {
+            if (!topicsByName.has(topicName)) {
+                topicsByName.set(topicName, { name: topicName });
             }
+            continue;
+        }
+
+        const existingTopic = topicsByName.get(topicName);
+
+        if (!existingTopic) {
+            topicsByName.set(topicName, { name: topicName, subtopics: [{ name: subtopicName }] });
+            continue;
+        }
+
+        if ("subtopics" in existingTopic) {
+            // Éviter les doublons éventuels
+            if (!existingTopic.subtopics.some(st => st.name === subtopicName)) {
+                existingTopic.subtopics.push({ name: subtopicName });
+            }
+        } else {
+            topicsByName.set(topicName, { name: topicName, subtopics: [{ name: subtopicName }] });
         }
     }
 
-    return topics;
+    return Array.from(topicsByName.values());
 }
 
 function groupCommentsByTopic(comments: Comment[]): TopicWithComments[] {
