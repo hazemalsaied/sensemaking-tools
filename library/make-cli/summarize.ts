@@ -32,7 +32,9 @@
 // --inputFile "data.csv"
 
 import { Command } from "commander";
-import { writeFileSync, readFileSync } from "fs";
+import { writeFileSync, readFileSync, createReadStream } from "fs";
+import { parse } from "csv-parse";
+import * as path from "path";
 
 import {
   getCommentsFromCsv,
@@ -48,7 +50,8 @@ import {
   generateTopicStatistics,
   extractOverviewFromSummary,
   generateTopicAnalysis,
-  generateIdeasStructure
+  generateIdeasStructure,
+  ExtendedCsvRow
 } from "./json_utils";
 
 import * as config from "../configs.json";
@@ -60,6 +63,43 @@ function hasTopicScoresColumn(inputFilePath: string): boolean {
   const header = readFileSync(inputFilePath, { encoding: "utf-8" }).split("\n")[0];
   const columns = header.split(",").map(col => col.trim());
   return columns.includes("topic_scores");
+}
+
+/**
+ * Lit le CSV et extrait les données nécessaires pour calculer les statistiques des idées
+ * @param inputFilePath Chemin vers le fichier CSV
+ * @returns Promise résolue avec un tableau de ExtendedCsvRow
+ */
+async function readCsvForStats(inputFilePath: string): Promise<ExtendedCsvRow[]> {
+  const filePath = path.resolve(inputFilePath);
+  const fileContent = readFileSync(filePath, { encoding: "utf-8" });
+
+  const parser = parse(fileContent, {
+    delimiter: ",",
+    columns: true,
+  });
+
+  return new Promise((resolve, reject) => {
+    const data: ExtendedCsvRow[] = [];
+    createReadStream(filePath)
+      .pipe(parser)
+      .on("error", reject)
+      .on("data", (row: any) => {
+        // Extraire uniquement les champs nécessaires
+        const extendedRow: ExtendedCsvRow = {
+          "comment-id": row["comment-id"]?.toString() || "",
+          zone_name: row.zone_name,
+          score_v2_agree: row.score_v2_agree,
+          score_v2_disagree: row.score_v2_disagree,
+          score_v2_agree_like: row.score_v2_agree_like,
+          score_v2_agree_doable: row.score_v2_agree_doable,
+          score_v2_top: row.score_v2_top,
+          score_v2_controversy: row.score_v2_controversy
+        };
+        data.push(extendedRow);
+      })
+      .on("end", () => resolve(data));
+  });
 }
 
 async function main(): Promise<void> {
@@ -95,6 +135,15 @@ async function main(): Promise<void> {
   // const hasTopicScores = hasTopicScoresColumn(options.inputFile);
   let commentsWithScores = comments;
 
+  // Lire les données CSV pour calculer les statistiques des idées
+  let csvDataForStats: ExtendedCsvRow[] = [];
+  try {
+    csvDataForStats = await readCsvForStats(options.inputFile);
+    console.log(`📊 ${csvDataForStats.length} lignes CSV chargées pour les statistiques des idées`);
+  } catch (error) {
+    console.warn(`⚠️ Impossible de charger les données CSV pour les statistiques: ${error}`);
+    console.warn(`Les statistiques des idées seront définies à 0`);
+  }
 
   // Créer le JSON selon le schéma défini
   const reportData = {
@@ -116,7 +165,7 @@ async function main(): Promise<void> {
       overview: extractOverviewFromSummary(summary),
       topic_analysis: generateTopicAnalysis(summary, commentsWithScores)
     },
-    ideas: generateIdeasStructure(commentsWithScores)
+    ideas: generateIdeasStructure(commentsWithScores, csvDataForStats)
   };
 
   const jsonContent = JSON.stringify(reportData, null, 2);

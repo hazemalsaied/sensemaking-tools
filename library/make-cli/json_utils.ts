@@ -1,5 +1,17 @@
 import { Comment, VoteTally, GroupVoteTallies, Summary, SummaryContent } from "../src/types";
 
+// Interface pour les données CSV étendues avec les champs nécessaires pour les statistiques
+export interface ExtendedCsvRow {
+    "comment-id": string;
+    zone_name?: string;
+    score_v2_agree?: number | string;
+    score_v2_disagree?: number | string;
+    score_v2_agree_like?: number | string;
+    score_v2_agree_doable?: number | string;
+    score_v2_top?: number | string;
+    score_v2_controversy?: number | string;
+}
+
 
 
 // Fonctions utilitaires pour générer le JSON selon le schéma
@@ -276,14 +288,140 @@ export function extractOverviewFromSummary(summary: Summary): string {
 }
 
 /**
+ * Calcule les statistiques pour une idée donnée à partir des commentaires associés
+ * @param commentIds Les IDs des commentaires associés à l'idée
+ * @param csvDataMap Map des données CSV indexées par comment-id
+ * @returns Objet contenant les statistiques calculées
+ */
+function calculateIdeaStatistics(
+    commentIds: string[],
+    csvDataMap: Map<string, ExtendedCsvRow>
+): {
+    consensus_proposals: number;
+    controversy_proposals: number;
+    top_3_mean_agree: number;
+    top_3_mean_disagree: number;
+    mean_agree: number;
+    mean_disagree: number;
+    top_3_mean_agree_like: number;
+    top_3_mean_agree_doable: number;
+    mean_agree_like: number;
+    mean_agree_doable: number;
+} {
+    // Filtrer les propositions (commentaires) qui ont les données nécessaires
+    const proposals = commentIds
+        .map(id => csvDataMap.get(id))
+        .filter((row): row is ExtendedCsvRow => row !== undefined);
+
+    // Compter les propositions de consensus et de controverse
+    const consensus_proposals = proposals.filter(
+        p => p.zone_name === 'consensus'
+    ).length;
+    const controversy_proposals = proposals.filter(
+        p => p.zone_name === 'controversy'
+    ).length;
+
+    // Fonction helper pour convertir en nombre
+    const toNumber = (value: number | string | undefined): number => {
+        if (value === undefined || value === null || value === '') return 0;
+        if (typeof value === 'string') {
+            const parsed = parseFloat(value);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+        return value;
+    };
+
+    // Trier les propositions par score_v2_top (descendant) pour mean_agree
+    const proposalsSortedByTop = [...proposals].sort((a, b) => {
+        const scoreA = toNumber(a.score_v2_top);
+        const scoreB = toNumber(b.score_v2_top);
+        return scoreB - scoreA;
+    });
+
+    // Trier les propositions par score_v2_controversy (descendant) pour mean_disagree
+    const proposalsSortedByControversy = [...proposals].sort((a, b) => {
+        const scoreA = toNumber(a.score_v2_controversy);
+        const scoreB = toNumber(b.score_v2_controversy);
+        return scoreB - scoreA;
+    });
+
+    // Calculer top_3_mean_agree (moyenne des top 3 triés par score_v2_top)
+    const top3ByTop = proposalsSortedByTop.slice(0, 3);
+    const top3AgreeScores = top3ByTop.map(p => toNumber(p.score_v2_agree)).filter(s => s > 0);
+    const top_3_mean_agree = top3AgreeScores.length > 0
+        ? top3AgreeScores.reduce((sum, score) => sum + score, 0) / top3AgreeScores.length
+        : 0;
+
+    // Calculer top_3_mean_disagree (moyenne des top 3 triés par score_v2_controversy)
+    const top3ByControversy = proposalsSortedByControversy.slice(0, 3);
+    const top3DisagreeScores = top3ByControversy.map(p => toNumber(p.score_v2_disagree)).filter(s => s > 0);
+    const top_3_mean_disagree = top3DisagreeScores.length > 0
+        ? top3DisagreeScores.reduce((sum, score) => sum + score, 0) / top3DisagreeScores.length
+        : 0;
+
+    // Calculer mean_agree (moyenne de tous triés par score_v2_top)
+    const allAgreeScores = proposalsSortedByTop.map(p => toNumber(p.score_v2_agree)).filter(s => s > 0);
+    const mean_agree = allAgreeScores.length > 0
+        ? allAgreeScores.reduce((sum, score) => sum + score, 0) / allAgreeScores.length
+        : 0;
+
+    // Calculer mean_disagree (moyenne de tous triés par score_v2_controversy)
+    const allDisagreeScores = proposalsSortedByControversy.map(p => toNumber(p.score_v2_disagree)).filter(s => s > 0);
+    const mean_disagree = allDisagreeScores.length > 0
+        ? allDisagreeScores.reduce((sum, score) => sum + score, 0) / allDisagreeScores.length
+        : 0;
+
+    // Calculer top_3_mean_agree_like (moyenne des top 3 triés par score_v2_top)
+    const top3AgreeLikeScores = top3ByTop.map(p => toNumber(p.score_v2_agree_like)).filter(s => s > 0);
+    const top_3_mean_agree_like = top3AgreeLikeScores.length > 0
+        ? top3AgreeLikeScores.reduce((sum, score) => sum + score, 0) / top3AgreeLikeScores.length
+        : 0;
+
+    // Calculer top_3_mean_agree_doable (moyenne des top 3 triés par score_v2_top)
+    const top3AgreeDoableScores = top3ByTop.map(p => toNumber(p.score_v2_agree_doable)).filter(s => s > 0);
+    const top_3_mean_agree_doable = top3AgreeDoableScores.length > 0
+        ? top3AgreeDoableScores.reduce((sum, score) => sum + score, 0) / top3AgreeDoableScores.length
+        : 0;
+
+    // Calculer mean_agree_like (moyenne de tous triés par score_v2_top)
+    const allAgreeLikeScores = proposalsSortedByTop.map(p => toNumber(p.score_v2_agree_like)).filter(s => s > 0);
+    const mean_agree_like = allAgreeLikeScores.length > 0
+        ? allAgreeLikeScores.reduce((sum, score) => sum + score, 0) / allAgreeLikeScores.length
+        : 0;
+
+    // Calculer mean_agree_doable (moyenne de tous triés par score_v2_top)
+    const allAgreeDoableScores = proposalsSortedByTop.map(p => toNumber(p.score_v2_agree_doable)).filter(s => s > 0);
+    const mean_agree_doable = allAgreeDoableScores.length > 0
+        ? allAgreeDoableScores.reduce((sum, score) => sum + score, 0) / allAgreeDoableScores.length
+        : 0;
+
+    return {
+        consensus_proposals,
+        controversy_proposals,
+        top_3_mean_agree: Math.round(top_3_mean_agree * 100) / 100, // Arrondir à 2 décimales
+        top_3_mean_disagree: Math.round(top_3_mean_disagree * 100) / 100,
+        mean_agree: Math.round(mean_agree * 100) / 100,
+        mean_disagree: Math.round(mean_disagree * 100) / 100,
+        top_3_mean_agree_like: Math.round(top_3_mean_agree_like * 100) / 100,
+        top_3_mean_agree_doable: Math.round(top_3_mean_agree_doable * 100) / 100,
+        mean_agree_like: Math.round(mean_agree_like * 100) / 100,
+        mean_agree_doable: Math.round(mean_agree_doable * 100) / 100
+    };
+}
+
+/**
  * Génère la structure des idées organisées par topic.
  * Structure: topic -> idées -> commentaires associés
  * Le topic d'une idée est déterminé par le topic qui apparaît le plus souvent
  * parmi les commentaires associés à cette idée.
  * @param comments Les commentaires avec leurs idées et topics
+ * @param csvData Les données CSV optionnelles avec zone_name et scores pour calculer les statistiques
  * @returns Structure JSON des idées organisées par topic
  */
-export function generateIdeasStructure(comments: (Comment & { idea?: string })[]): any[] {
+export function generateIdeasStructure(
+    comments: (Comment & { idea?: string })[],
+    csvData?: ExtendedCsvRow[]
+): any[] {
     // D'abord, grouper les commentaires par idée
     // Structure: Map<ideaName, Comment[]>
     const ideaToCommentsMap = new Map<string, (Comment & { idea?: string })[]>();
@@ -346,13 +484,40 @@ export function generateIdeasStructure(comments: (Comment & { idea?: string })[]
         ideasMap.set(ideaName, commentList);
     });
 
+    // Créer un map des données CSV indexées par comment-id si disponibles
+    const csvDataMap = new Map<string, ExtendedCsvRow>();
+    if (csvData) {
+        csvData.forEach(row => {
+            csvDataMap.set(row["comment-id"], row);
+        });
+    }
+
     // Convertir en structure JSON
     const result: any[] = [];
     topicToIdeasMap.forEach((ideasMap, topicName) => {
         const ideas: any[] = [];
         ideasMap.forEach((commentList, ideaName) => {
+            const commentIds = commentList.map(comment => comment.id);
+
+            // Calculer les statistiques si les données CSV sont disponibles
+            const stats = csvData && csvData.length > 0
+                ? calculateIdeaStatistics(commentIds, csvDataMap)
+                : {
+                    consensus_proposals: 0,
+                    controversy_proposals: 0,
+                    top_3_mean_agree: 0,
+                    top_3_mean_disagree: 0,
+                    mean_agree: 0,
+                    mean_disagree: 0,
+                    top_3_mean_agree_like: 0,
+                    top_3_mean_agree_doable: 0,
+                    mean_agree_like: 0,
+                    mean_agree_doable: 0
+                };
+
             ideas.push({
                 name: ideaName,
+                stats: stats,
                 comments: commentList.map(comment => ({
                     id: comment.id,
                     text: comment.text
