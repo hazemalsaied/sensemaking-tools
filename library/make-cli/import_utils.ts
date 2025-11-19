@@ -25,9 +25,12 @@ import { Topic } from '../src/types';
 export interface ProposalRow {
     id: number;
     content: string;
+    zone_name: string;
     score_v2_agree: number;
     score_v2_disagree: number;
     score_v2_neutral: number;
+    score_v2_top: number;
+    score_v2_controversy: number;
     vote_avg: number;
     user_id: number;
     slug: string;
@@ -46,6 +49,9 @@ export interface JigsawRow {
     'group-id': number;
     'comment-id': number;
     'author-id': number;
+    zone_name: string;
+    score_v2_top: number;
+    score_v2_controversy: number;
 }
 
 export interface DatabaseConfig {
@@ -80,8 +86,7 @@ export async function fetchProposalsFromDatabase(
 ): Promise<ProposalRow[]> {
     try {
         const query = `
-      SELECT id, content, score_v2_agree, score_v2_disagree, score_v2_neutral, 
-             vote_avg, user_id, slug, status
+      SELECT id, content,zone_name, score_v2_agree, score_v2_disagree, score_v2_neutral, score_v2_top, score_v2_controversy, vote_avg, user_id, slug, status
       FROM proposals 
       WHERE status = 'Accepted' AND slug = $1
     `;
@@ -115,7 +120,10 @@ export function transformProposalsToJigsaw(proposals: ProposalRow[]): JigsawRow[
             '1-pass-count': passCount,
             'group-id': 1,
             'comment-id': proposal.id,
-            'author-id': proposal.user_id
+            'author-id': proposal.user_id,
+            zone_name: proposal.zone_name,
+            score_v2_top: proposal.score_v2_top,
+            score_v2_controversy: proposal.score_v2_controversy
         };
     });
 }
@@ -151,7 +159,10 @@ export async function saveJigsawDataToCsv(
         { id: '1-pass-count', title: '1-pass-count' },
         { id: 'group-id', title: 'group-id' },
         { id: 'comment-id', title: 'comment-id' },
-        { id: 'author-id', title: 'author-id' }
+        { id: 'author-id', title: 'author-id' },
+        { id: 'zone_name', title: 'zone_name' },
+        { id: 'score_v2_top', title: 'score_v2_top' },
+        { id: 'score_v2_controversy', title: 'score_v2_controversy' }
     ];
 
     const csvWriter = createObjectCsvWriter({

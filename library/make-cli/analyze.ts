@@ -38,7 +38,7 @@ import { concatTopics, parseTopicsString, concatTopicScores } from "./summarizat
 import * as config from "../configs.json";
 import { displayTopicHierarchy, extractExistingTopicsFromCsv, CommentCsvRow } from "./analyzation_utils";
 import { getProposalsForJigsaw, JigsawRow, fetchPreviousAnalysis, extractTopicsFromPreviousAnalysis, extractCategorizedCommentsFromPreviousAnalysis, createDatabaseConnection } from "./import_utils";
- 
+
 
 
 async function main(): Promise<void> {
@@ -231,7 +231,10 @@ function convertJigsawToCsvRows(jigsawData: JigsawRow[]): CommentCsvRow[] {
     "author-id": jigsawRow["author-id"].toString(),
     "1-agree-count": jigsawRow["1-agree-count"].toString(),
     "1-disagree-count": jigsawRow["1-disagree-count"].toString(),
-    "1-pass-count": jigsawRow["1-pass-count"].toString()
+    "1-pass-count": jigsawRow["1-pass-count"].toString(),
+    "zone_name": jigsawRow.zone_name,
+    "score_v2_top": jigsawRow.score_v2_top.toString(),
+    "score_v2_controversy": jigsawRow.score_v2_controversy.toString()
   }));
 }
 
