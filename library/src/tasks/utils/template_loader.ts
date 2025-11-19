@@ -290,3 +290,65 @@ export function loadCommentCategorizationPrompt(
         language: config.default_language
     });
 }
+
+/**
+ * Charge un template de prompt pour la génération de résumé d'idée consensuelle
+ * @param topicName - Le nom du thème auquel appartient l'idée
+ * @param ideaName - Le nom de l'idée
+ * @param totalProposals - Le nombre total de propositions
+ * @param consensusProposals - Le nombre de propositions consensuelles
+ * @param controversyProposals - Le nombre de propositions controversées
+ * @param proposals - Les propositions associées à l'idée
+ * @param language - La langue de génération
+ * @returns Le prompt rempli
+ */
+export function loadIdeaConsensusSummaryPrompt(
+    topicName: string,
+    ideaName: string,
+    totalProposals: number,
+    consensusProposals: number,
+    controversyProposals: number,
+    proposals: string,
+    language: string = config.default_language
+): string {
+    return loadAndFillTemplate('idea_consensus_summary_prompt.txt', {
+        topicName: topicName,
+        ideaName: ideaName,
+        totalProposals: totalProposals,
+        consensusProposals: consensusProposals,
+        controversyProposals: controversyProposals,
+        proposals: proposals,
+        language: language
+    });
+}
+
+/**
+ * Charge un template de prompt pour la génération de résumé d'idée controversée
+ * @param topicName - Le nom du thème auquel appartient l'idée
+ * @param ideaName - Le nom de l'idée
+ * @param totalProposals - Le nombre total de propositions
+ * @param consensusProposals - Le nombre de propositions consensuelles
+ * @param controversyProposals - Le nombre de propositions controversées
+ * @param proposals - Les propositions associées à l'idée
+ * @param language - La langue de génération
+ * @returns Le prompt rempli
+ */
+export function loadIdeaControversySummaryPrompt(
+    topicName: string,
+    ideaName: string,
+    totalProposals: number,
+    consensusProposals: number,
+    controversyProposals: number,
+    proposals: string,
+    language: string = config.default_language
+): string {
+    return loadAndFillTemplate('idea_controversy_summary_prompt.txt', {
+        topicName: topicName,
+        ideaName: ideaName,
+        totalProposals: totalProposals,
+        consensusProposals: consensusProposals,
+        controversyProposals: controversyProposals,
+        proposals: proposals,
+        language: language
+    });
+}

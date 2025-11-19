@@ -54,9 +54,11 @@ import {
   ExtendedCsvRow
 } from "./json_utils";
 
+import { Sensemaker } from "../src/sensemaker";
+import { VertexModel } from "../src/models/vertex_model";
+import { generateAllIdeaSummaries, IdeasData } from "../src/tasks/idea_summaries";
+
 import * as config from "../configs.json";
-// import { Sensemaker } from "../src/sensemaker";
-// import { VertexModel } from "../src/models/vertex_model";
 
 // Fonction pour vérifier si la colonne topic_scores existe dans le CSV
 function hasTopicScoresColumn(inputFilePath: string): boolean {
@@ -146,7 +148,7 @@ async function main(): Promise<void> {
   }
 
   // Créer le JSON selon le schéma défini
-  const reportData = {
+  const reportData: IdeasData = {
     generated_at: new Date().toISOString().slice(0, 16).replace('T', ' '),
     topics: extractTopicsFromComments(commentsWithScores),
     categorized_comments: commentsWithScores.map(comment => ({
@@ -168,7 +170,21 @@ async function main(): Promise<void> {
     ideas: generateIdeasStructure(commentsWithScores, csvDataForStats)
   };
 
-  const jsonContent = JSON.stringify(reportData, null, 2);
+  // Générer les résumés pour toutes les idées
+  console.log("✨ Génération des résumés pour toutes les idées...");
+  const model = new VertexModel(
+    config.gcloud.project_id,
+    "us-central1",
+    config.gcloud.summarization_model
+  );
+  const reportDataWithSummaries = await generateAllIdeaSummaries(
+    reportData,
+    model,
+    config.default_language
+  );
+  console.log("✓ Résumés générés pour toutes les idées");
+
+  const jsonContent = JSON.stringify(reportDataWithSummaries, null, 2);
   const json_filename = outputBasename + "analysis_" + timestamp + ".json";
   writeFileSync(json_filename, jsonContent);
   console.log("json filename: " + json_filename);

@@ -1,0 +1,19 @@
+Vous devez générer un résumé de 100 mots pour une idée consensuelle. Le résumé doit commencer par "Les citoyens sont massivement d'accord pour :" et mettre l'accent sur les points les plus importants et les plus consensuels qui se trouvent dans les propositions associées à l'idée.
+
+Thème: {{topicName}}
+Nom de l'idée: {{ideaName}}
+Nombre total de propositions: {{totalProposals}}
+Nombre de propositions consensuelles: {{consensusProposals}}
+Nombre de propositions controversées: {{controversyProposals}}
+
+Propositions associées à l'idée:
+{{proposals}}
+
+Instructions:
+- Le résumé doit faire exactement 100 mots
+- Il doit commencer par "Les citoyens sont massivement d'accord pour :"
+- Mettez l'accent sur les points les plus importants et les plus consensuels
+- Utilisez un langage clair et direct
+- Ne pas utiliser de points de liste ou de formatage spécial
+- Le résumé doit être en {{language}}
+
