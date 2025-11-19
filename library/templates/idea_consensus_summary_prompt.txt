@@ -16,4 +16,4 @@ Instructions:
 - Utilisez un langage clair et direct
 - Ne pas utiliser de points de liste ou de formatage spécial
 - Le résumé doit être en {{language}}
-
+- les mots clés et les expressions emblématiques devraient être affichés en bold.
