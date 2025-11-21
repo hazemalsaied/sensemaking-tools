@@ -189,7 +189,7 @@ export async function fetchPreviousAnalysis(
     try {
         const query = `
             SELECT json_data, creation_date 
-            FROM sensemaking_json 
+            FROM sensemaking_json
             WHERE slug = $1 
             ORDER BY creation_date DESC 
             LIMIT 1

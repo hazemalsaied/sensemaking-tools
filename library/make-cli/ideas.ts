@@ -56,9 +56,9 @@ async function main(): Promise<void> {
     const program = new Command();
     program
         .option("-i, --inputFile <file>", "Le fichier CSV d'entrée contenant les commentaires catégorisés.")
-        .option("--minCommentsByTopic <number>", "Nombre minimum de commentaires par thème pour générer des idées", "10")
-        .option("--maxIdeas <number>", "Nombre maximum d'idées à générer par thème", "5")
-        .option("--minProposals <number>", "Nombre minimum de propositions par idée pour la conserver", "7");
+        .option("--minCommentsByTopic <number>", "Nombre minimum de commentaires par thème pour générer des idées", "7")
+        .option("--maxIdeas <number>", "Nombre maximum d'idées à générer par thème", "10")
+        .option("--minProposals <number>", "Nombre minimum de propositions par idée pour la conserver", "3");
     program.parse(process.argv);
     const options = program.opts();
 
