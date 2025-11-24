@@ -9,6 +9,10 @@ Nombre de propositions controversées: {{controversyProposals}}
 Propositions associées à l'idée:
 {{proposals}}
 
+Commentaires favorables ou pistes communes à intégrer:
+- Identifiez les éléments consensuels qui subsistent malgré les désaccords.
+- Résumez-les brièvement pour montrer les terrains d'entente ou les compromis possibles.
+
 Instructions:
 - Le résumé doit faire exactement 100 mots
 - Il doit commencer par "Les citoyens se divisent sur :"

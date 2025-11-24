@@ -26,6 +26,7 @@ import {
 export interface IdeaComment {
     id: string;
     text: string;
+    zone_name?: string | null;
 }
 
 /**
@@ -91,9 +92,12 @@ export async function generateIdeaSummary(
     const consensusProposals = idea.stats.consensus_proposals || 0;
     const controversyProposals = idea.stats.controversy_proposals || 0;
 
-    // Formater les propositions pour le prompt
+    // Formater les propositions pour le prompt (avec zone_name si disponible)
     const proposalsText = idea.comments
-        .map((comment, index) => `${index + 1}. ${comment.text}`)
+        .map((comment, index) => {
+            const zoneInfo = comment.zone_name ? ` [Zone: ${comment.zone_name}]` : '';
+            return `${index + 1}. ${comment.text}${zoneInfo}`;
+        })
         .join("\n");
 
     // Déterminer si l'idée est consensuelle ou controversée

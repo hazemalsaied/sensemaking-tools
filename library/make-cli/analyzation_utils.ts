@@ -3,6 +3,7 @@ import { parseTopicsString } from "./summarization_utils";
 
 
 export type CommentCsvRow = {
+    [key: string]: string | undefined;
     "comment-id": string;
     comment_text: string;
     topics?: string;

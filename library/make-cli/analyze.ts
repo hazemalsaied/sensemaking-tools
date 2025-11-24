@@ -51,7 +51,8 @@ async function main(): Promise<void> {
     .option("--scores", "Calculate relevance scores for topics and subtopics", false)
     .option("--minTopics <number>", "Minimum number of topics to generate", "10")
     .option("--maxTopics <number>", "Maximum number of topics to generate", "17")
-    .option("--limit <number>", "Nombre maximum de propositions à récupérer depuis la base", "700");
+    .option("--limit <number>", "Nombre maximum de propositions à récupérer depuis la base", "700")
+    .option("--minSubtopicCount <number>", "Seuil minimum d'occurrences avant de regrouper un sous-thème sous 'Other'", "5");
   program.parse(process.argv);
   const options = program.opts();
 
@@ -153,6 +154,10 @@ async function main(): Promise<void> {
 
   const minTopics = parseInt(options.minTopics || "10");
   const maxTopics = parseInt(options.maxTopics || "17");
+  const minSubtopicCount = parseInt(options.minSubtopicCount || "5", 10);
+  if (isNaN(minSubtopicCount) || minSubtopicCount < 1) {
+    throw new Error("La valeur de --minSubtopicCount doit être un entier positif");
+  }
   const categorizedComments = await sensemaker.categorizeComments(
     comments,
     true,
@@ -171,6 +176,11 @@ async function main(): Promise<void> {
     );
   } else {
     console.log("Skipping relevance scores calculation (use --scores to enable)");
+  }
+
+  if (minSubtopicCount > 1) {
+    console.log(`Filtrage des sous-thèmes apparaissant moins de ${minSubtopicCount} fois...`);
+    filterNanoSubtopics(finalComments, minSubtopicCount);
   }
 
   const csvRowsWithTopics = setTopics(csvRows, finalComments);
@@ -238,6 +248,10 @@ function convertJigsawToCsvRows(jigsawData: JigsawRow[]): CommentCsvRow[] {
     "1-disagree-count": jigsawRow["1-disagree-count"].toString(),
     "1-pass-count": jigsawRow["1-pass-count"].toString(),
     "zone_name": jigsawRow.zone_name,
+    "score_v2_agree": jigsawRow.score_v2_agree.toString(),
+    "score_v2_disagree": jigsawRow.score_v2_disagree.toString(),
+    "score_v2_agree_like": jigsawRow.score_v2_agree_like.toString(),
+    "score_v2_agree_doable": jigsawRow.score_v2_agree_doable.toString(),
     "score_v2_top": jigsawRow.score_v2_top.toString(),
     "score_v2_controversy": jigsawRow.score_v2_controversy.toString()
   }));
@@ -286,10 +300,77 @@ function setTopics(csvRows: CommentCsvRow[], categorizedComments: Comment[]): Co
   for (const comment of categorizedComments) {
     const csvRow = mapIdToCsvRow[comment.id];
     csvRow["topics"] = concatTopics(comment);
+    const topicNames = new Set<string>();
+    const subtopicNames = new Set<string>();
+    if (comment.topics && comment.topics.length > 0) {
+      for (const topic of comment.topics) {
+        if (topic.name) {
+          topicNames.add(topic.name);
+        }
+        if ("subtopics" in topic && topic.subtopics) {
+          for (const subtopic of topic.subtopics) {
+            if (subtopic.name) {
+              subtopicNames.add(subtopic.name);
+            }
+          }
+        }
+      }
+    }
+    csvRow["topic"] = Array.from(topicNames).join(";");
+    csvRow["subtopic"] = Array.from(subtopicNames).join(";");
     // csvRow["topic_scores"] = concatTopicScores(comment);
     csvRowsWithTopics.push(csvRow);
   }
   return csvRowsWithTopics;
+}
+
+function filterNanoSubtopics(comments: Comment[], minCount: number): void {
+  const subtopicCounts: Map<string, number> = new Map();
+  const buildKey = (topicName: string | undefined, subtopicName: string) =>
+    `${topicName || "__no_topic__"}::${subtopicName}`;
+
+  for (const comment of comments) {
+    if (!comment.topics) continue;
+    for (const topic of comment.topics) {
+      if (!("subtopics" in topic) || !topic.subtopics) continue;
+      for (const subtopic of topic.subtopics) {
+        if (!subtopic.name) continue;
+        const key = buildKey(topic.name, subtopic.name);
+        subtopicCounts.set(key, (subtopicCounts.get(key) || 0) + 1);
+      }
+    }
+  }
+
+  for (const comment of comments) {
+    if (!comment.topics) continue;
+    for (const topic of comment.topics) {
+      if (!("subtopics" in topic) || !topic.subtopics || topic.subtopics.length === 0) continue;
+
+      const filteredSubtopics: typeof topic.subtopics = [];
+      const seenNames = new Set<string>();
+      let needsOther = false;
+
+      for (const subtopic of topic.subtopics) {
+        if (!subtopic.name) continue;
+        const key = buildKey(topic.name, subtopic.name);
+        const count = subtopicCounts.get(key) || 0;
+        if (count < minCount) {
+          needsOther = true;
+          continue;
+        }
+        if (!seenNames.has(subtopic.name)) {
+          filteredSubtopics.push(subtopic);
+          seenNames.add(subtopic.name);
+        }
+      }
+
+      if (needsOther && !seenNames.has("Other")) {
+        filteredSubtopics.push({ name: "Other" });
+      }
+
+      topic.subtopics = filteredSubtopics;
+    }
+  }
 }
 
 async function writeCsv(csvRows: CommentCsvRow[], outputFile: string) {

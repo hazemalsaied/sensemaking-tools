@@ -28,6 +28,8 @@ export interface ProposalRow {
     zone_name: string;
     score_v2_agree: number;
     score_v2_disagree: number;
+    score_v2_agree_like: number;
+    score_v2_agree_doable: number;
     score_v2_neutral: number;
     score_v2_top: number;
     score_v2_controversy: number;
@@ -50,6 +52,10 @@ export interface JigsawRow {
     'comment-id': number;
     'author-id': number;
     zone_name: string;
+    score_v2_agree: number;
+    score_v2_disagree: number;
+    score_v2_agree_like: number;
+    score_v2_agree_doable: number;
     score_v2_top: number;
     score_v2_controversy: number;
 }
@@ -87,7 +93,7 @@ export async function fetchProposalsFromDatabase(
 ): Promise<ProposalRow[]> {
     try {
         let query = `
-      SELECT id, content,zone_name, score_v2_agree, score_v2_disagree, score_v2_neutral, score_v2_top, score_v2_controversy, vote_avg, user_id, slug, status
+      SELECT id, content, zone_name, score_v2_agree, score_v2_disagree, score_v2_agree_like, score_v2_agree_doable, score_v2_neutral, score_v2_top, score_v2_controversy, vote_avg, user_id, slug, status
       FROM proposals 
       WHERE status = 'Accepted' AND slug = $1
       ORDER BY date_created
@@ -129,6 +135,10 @@ export function transformProposalsToJigsaw(proposals: ProposalRow[]): JigsawRow[
             'comment-id': proposal.id,
             'author-id': proposal.user_id,
             zone_name: proposal.zone_name,
+            score_v2_agree: proposal.score_v2_agree,
+            score_v2_disagree: proposal.score_v2_disagree,
+            score_v2_agree_like: proposal.score_v2_agree_like,
+            score_v2_agree_doable: proposal.score_v2_agree_doable,
             score_v2_top: proposal.score_v2_top,
             score_v2_controversy: proposal.score_v2_controversy
         };
@@ -168,6 +178,10 @@ export async function saveJigsawDataToCsv(
         { id: 'comment-id', title: 'comment-id' },
         { id: 'author-id', title: 'author-id' },
         { id: 'zone_name', title: 'zone_name' },
+        { id: 'score_v2_agree', title: 'score_v2_agree' },
+        { id: 'score_v2_disagree', title: 'score_v2_disagree' },
+        { id: 'score_v2_agree_like', title: 'score_v2_agree_like' },
+        { id: 'score_v2_agree_doable', title: 'score_v2_agree_doable' },
         { id: 'score_v2_top', title: 'score_v2_top' },
         { id: 'score_v2_controversy', title: 'score_v2_controversy' }
     ];

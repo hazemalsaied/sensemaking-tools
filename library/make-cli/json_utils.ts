@@ -518,10 +518,14 @@ export function generateIdeasStructure(
             ideas.push({
                 name: ideaName,
                 stats: stats,
-                comments: commentList.map(comment => ({
-                    id: comment.id,
-                    text: comment.text
-                }))
+                comments: commentList.map(comment => {
+                    const csvRow = csvDataMap.get(comment.id);
+                    return {
+                        id: comment.id,
+                        text: comment.text,
+                        zone_name: csvRow?.zone_name || null
+                    };
+                })
             });
         });
 

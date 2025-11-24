@@ -147,22 +147,37 @@ async function main(): Promise<void> {
     console.warn(`Les statistiques des idées seront définies à 0`);
   }
 
+  const statsByCommentId = new Map<string, ExtendedCsvRow>();
+  for (const row of csvDataForStats) {
+    if (row["comment-id"]) {
+      statsByCommentId.set(row["comment-id"], row);
+    }
+  }
+
   // Créer le JSON selon le schéma défini
   const reportData: IdeasData = {
     generated_at: new Date().toISOString().slice(0, 16).replace('T', ' '),
     topics: extractTopicsFromComments(commentsWithScores),
-    categorized_comments: commentsWithScores.map(comment => ({
-      id: comment.id,
-      text: comment.text,
-      topics: comment.topics ? comment.topics.map(topic => ({
-        name: topic.name,
-        relevanceScore: (topic as any).relevanceScore || 0.5,
-        subtopics: ('subtopics' in topic && topic.subtopics) ? topic.subtopics.map(subtopic => ({
-          name: subtopic.name,
-          relevanceScore: (subtopic as any).relevanceScore || 0.5,
+    categorized_comments: commentsWithScores.map(comment => {
+      const stats = statsByCommentId.get(comment.id);
+      return {
+        id: comment.id,
+        text: comment.text,
+        zone_name: stats?.zone_name || null,
+        score_v2_agree: stats?.score_v2_agree ?? null,
+        score_v2_disagree: stats?.score_v2_disagree ?? null,
+        score_v2_agree_like: stats?.score_v2_agree_like ?? null,
+        score_v2_agree_doable: stats?.score_v2_agree_doable ?? null,
+        topics: comment.topics ? comment.topics.map(topic => ({
+          name: topic.name,
+          relevanceScore: (topic as any).relevanceScore || 0.5,
+          subtopics: ('subtopics' in topic && topic.subtopics) ? topic.subtopics.map(subtopic => ({
+            name: subtopic.name,
+            relevanceScore: (subtopic as any).relevanceScore || 0.5,
+          })) : []
         })) : []
-      })) : []
-    })),
+      };
+    }),
     summary: {
       overview: extractOverviewFromSummary(summary),
       topic_analysis: generateTopicAnalysis(summary, commentsWithScores)

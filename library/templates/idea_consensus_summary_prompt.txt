@@ -9,6 +9,10 @@ Nombre de propositions controversées: {{controversyProposals}}
 Propositions associées à l'idée:
 {{proposals}}
 
+Commentaires opposés ou nuances à intégrer:
+- Identifiez les objections clés issues des propositions controversées.
+- Résumez-les brièvement pour éclairer les réserves, même si elles sont minoritaires.
+
 Instructions:
 - Le résumé doit faire exactement 100 mots
 - Il doit commencer par "Les citoyens sont massivement d'accord pour :"
@@ -17,3 +21,4 @@ Instructions:
 - Ne pas utiliser de points de liste ou de formatage spécial
 - Le résumé doit être en {{language}}
 - les mots clés et les expressions emblématiques devraient être affichés en bold.
+- Terminez par un court passage rappelant les objections ou nuances majeures évoquées par les propositions controversées, afin de montrer que ces voix ont été prises en compte.
