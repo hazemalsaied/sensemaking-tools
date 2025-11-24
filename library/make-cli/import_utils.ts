@@ -82,16 +82,23 @@ export function createDatabaseConnection(config: DatabaseConfig): Client {
  */
 export async function fetchProposalsFromDatabase(
     client: Client,
-    slug: string
+    slug: string,
+    limit?: number
 ): Promise<ProposalRow[]> {
     try {
-        const query = `
+        let query = `
       SELECT id, content,zone_name, score_v2_agree, score_v2_disagree, score_v2_neutral, score_v2_top, score_v2_controversy, vote_avg, user_id, slug, status
       FROM proposals 
       WHERE status = 'Accepted' AND slug = $1
+      ORDER BY date_created
     `;
+        const params: (string | number)[] = [slug];
+        if (limit && limit > 0) {
+            params.push(limit);
+            query += ` LIMIT $${params.length}`;
+        }
 
-        const result = await client.query(query, [slug]);
+        const result = await client.query(query, params);
         return result.rows;
     } catch (error) {
         console.error('Erreur lors de la récupération des propositions:', error);
@@ -180,7 +187,7 @@ export async function saveJigsawDataToCsv(
  * Fonction principale pour récupérer les propositions et les transformer au format Jigsaw
  */
 /**
- * Récupère les analyses précédentes depuis la table sensemaking_json
+ * Récupère les analyses précédentes depuis la table sensemaking_front.sensemaking_json
  */
 export async function fetchPreviousAnalysis(
     client: Client,
@@ -189,7 +196,7 @@ export async function fetchPreviousAnalysis(
     try {
         const query = `
             SELECT json_data, creation_date 
-            FROM sensemaking_json
+            FROM sensemaking_front.sensemaking_json
             WHERE slug = $1 
             ORDER BY creation_date DESC 
             LIMIT 1
@@ -262,7 +269,8 @@ export function extractCategorizedCommentsFromPreviousAnalysis(previousAnalysis:
 
 export async function getProposalsForJigsaw(
     slug: string,
-    outputDir?: string
+    outputDir?: string,
+    limit?: number
 ): Promise<{ data: JigsawRow[], csvPath: string }> {
     const client = createDatabaseConnection(config.import_db);
 
@@ -271,8 +279,8 @@ export async function getProposalsForJigsaw(
         console.log('🔗 Connexion à la base de données établie');
 
         // Récupérer les propositions
-        const proposals = await fetchProposalsFromDatabase(client, slug);
-        console.log(`📊 ${proposals.length} propositions trouvées pour le slug: ${slug}`);
+        const proposals = await fetchProposalsFromDatabase(client, slug, limit);
+        console.log(`📊 ${proposals.length} propositions trouvées pour le slug: ${slug}${limit ? ` (limité à ${limit})` : ""}`);
 
         if (proposals.length === 0) {
             throw new Error(`Aucune proposition trouvée pour le slug: ${slug}`);

@@ -16,7 +16,7 @@ export async function persistJsonToDatabase(jsonContent: string, slug: string, t
         console.log('Connexion à la base de données PostgreSQL établie pour la persistance JSON');
 
         // Récupérer le maximum ID actuel de la table
-        const maxIdResult = await client.query('SELECT COALESCE(MAX(id), 0) as max_id FROM sensemaking_json');
+        const maxIdResult = await client.query('SELECT COALESCE(MAX(id), 0) as max_id FROM sensemaking_front.sensemaking_json');
         const maxId = parseInt(maxIdResult.rows[0].max_id);
         const customId = maxId + 1;
 
@@ -29,7 +29,7 @@ export async function persistJsonToDatabase(jsonContent: string, slug: string, t
 
         // Insérer avec l'ID personnalisé généré automatiquement et les nouvelles colonnes
         const insertQuery = `
-            INSERT INTO sensemaking_json (id, slug, tag, json_data, language, active, white_utms)
+            INSERT INTO sensemaking_front.sensemaking_json (id, slug, tag, json_data, language, active, white_utms)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
         `;
         console.log(insertQuery);
@@ -37,7 +37,7 @@ export async function persistJsonToDatabase(jsonContent: string, slug: string, t
 
         await client.query(insertQuery, queryParams);
 
-        console.log(`Contenu JSON persisté avec succès dans la table sensemaking_json avec l'ID: ${customId}`);
+        console.log(`Contenu JSON persisté avec succès dans la table sensemaking_front.sensemaking_json avec l'ID: ${customId}`);
         console.log(`Langue: ${language}, Actif: ${active}, White utms: ${whiteUtm}`);
     } catch (error) {
         console.error('Erreur lors de la persistance JSON en base de données:', error);

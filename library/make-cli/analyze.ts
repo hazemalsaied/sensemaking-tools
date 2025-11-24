@@ -50,7 +50,8 @@ async function main(): Promise<void> {
     .option("-l, --level <number>", "The categorization level (depth of topics/subtopics)", "2")
     .option("--scores", "Calculate relevance scores for topics and subtopics", false)
     .option("--minTopics <number>", "Minimum number of topics to generate", "10")
-    .option("--maxTopics <number>", "Maximum number of topics to generate", "17");
+    .option("--maxTopics <number>", "Maximum number of topics to generate", "17")
+    .option("--limit <number>", "Nombre maximum de propositions à récupérer depuis la base", "700");
   program.parse(process.argv);
   const options = program.opts();
 
@@ -65,7 +66,11 @@ async function main(): Promise<void> {
     topics = extractExistingTopicsFromCsv(csvRows);
   } else if (options.slug) {
     console.log(`📊 Lecture depuis la base de données pour le slug: ${options.slug}`);
-    const jigsawData = await getProposalsForJigsaw(options.slug);
+    const dbLimit = options.limit ? parseInt(options.limit, 10) : undefined;
+    if (dbLimit !== undefined && (isNaN(dbLimit) || dbLimit <= 0)) {
+      throw new Error("La valeur de --limit doit être un entier strictement positif");
+    }
+    const jigsawData = await getProposalsForJigsaw(options.slug, undefined, dbLimit);
     csvRows = convertJigsawToCsvRows(jigsawData.data);
     console.log(`✅ ${csvRows.length} propositions récupérées depuis la base de données`);
     // Vérifier s'il y a une analyse précédente dans la base de données d'export
