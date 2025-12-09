@@ -11,7 +11,7 @@ Ce document décrit les commandes CLI disponibles dans `make-cli` pour analyser,
 
 ---
 
-## Mais avant: Configurer!
+## Mais avant: Configurez!
 
 Assurez-vous que les variables d'environnement suivantes sont configurées dans un fichier `.env` :
 - Variables de connexion à la base de données PostgreSQL (voir `export_utils.ts` pour les détails)
@@ -26,14 +26,14 @@ Le fichier `configs.json` est essentiel pour le fonctionnement des commandes CLI
 
 ```json
 {
-  "import_db": {
+  "import_db": { // nexus.dial
     "user": "nom_utilisateur",
     "password": "mot_de_passe",
     "host": "adresse_serveur",
     "database": "nom_base_de_donnees",
     "port": 5432
   },
-  "export_db": {
+  "export_db": { // scaleway.dial
     "provider": "postgresql",
     "host": "adresse_serveur",
     "user": "nom_utilisateur",
