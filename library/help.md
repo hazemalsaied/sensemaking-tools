@@ -11,6 +11,56 @@ Ce document décrit les commandes CLI disponibles dans `make-cli` pour analyser,
 
 ---
 
+## Mais avant: Configurer!
+
+Assurez-vous que les variables d'environnement suivantes sont configurées dans un fichier `.env` :
+- Variables de connexion à la base de données PostgreSQL (voir `export_utils.ts` pour les détails)
+
+---
+
+## Configuration du fichier configs.json
+
+Le fichier `configs.json` est essentiel pour le fonctionnement des commandes CLI. Il contient toutes les configurations nécessaires pour se connecter aux services externes (bases de données, Google Cloud, OpenAI, etc.).
+
+### Structure du fichier
+
+```json
+{
+  "import_db": {
+    "user": "nom_utilisateur",
+    "password": "mot_de_passe",
+    "host": "adresse_serveur",
+    "database": "nom_base_de_donnees",
+    "port": 5432
+  },
+  "export_db": {
+    "provider": "postgresql",
+    "host": "adresse_serveur",
+    "user": "nom_utilisateur",
+    "password": "mot_de_passe",
+    "database": "nom_base_de_donnees",
+    "port": 1113
+  },
+  "gcloud": {
+    "project_id": "votre-projet-gcp",
+    "location": "us-central1",
+    "summarization_model": "gemini-2.0-flash",
+    "categorization_model": "gemini-2.5-pro"
+  },
+  "openai": {
+    "api_key": "votre-cle-api",
+    "model": "gpt-4o",
+    "max_tokens": 8000,
+    "temperature": 0,
+    "parallelism": 2
+  },
+  "provider": "vertex",
+  "default_language": "french"
+}
+```
+
+
+
 ## (1.) Analyze
 
 Le module `analyze` apprend et assigne des thèmes et sous-thèmes à un CSV de propositions.
@@ -220,111 +270,6 @@ npx ts-node make-cli/export.ts \
   --slug mon-analyse \
   --tag v1
 ```
-
-### Configuration requise
-
-Assurez-vous que les variables d'environnement suivantes sont configurées dans un fichier `.env` :
-- Variables de connexion à la base de données PostgreSQL (voir `export_utils.ts` pour les détails)
-
----
-
-## Configuration du fichier configs.json
-
-Le fichier `configs.json` est essentiel pour le fonctionnement des commandes CLI. Il contient toutes les configurations nécessaires pour se connecter aux services externes (bases de données, Google Cloud, OpenAI, etc.).
-
-### Structure du fichier
-
-```json
-{
-  "import_db": {
-    "user": "nom_utilisateur",
-    "password": "mot_de_passe",
-    "host": "adresse_serveur",
-    "database": "nom_base_de_donnees",
-    "port": 5432
-  },
-  "export_db": {
-    "provider": "postgresql",
-    "host": "adresse_serveur",
-    "user": "nom_utilisateur",
-    "password": "mot_de_passe",
-    "database": "nom_base_de_donnees",
-    "port": 1113
-  },
-  "gcloud": {
-    "project_id": "votre-projet-gcp",
-    "location": "us-central1",
-    "summarization_model": "gemini-2.0-flash",
-    "categorization_model": "gemini-2.5-pro"
-  },
-  "openai": {
-    "api_key": "votre-cle-api",
-    "model": "gpt-4o",
-    "max_tokens": 8000,
-    "temperature": 0,
-    "parallelism": 2
-  },
-  "provider": "vertex",
-  "default_language": "french"
-}
-```
-
-### Description des sections
-
-#### Bases de données
-
-- **`import_db`** : Configuration de la base de données source (nexus.DIAL) pour récupérer les propositions (utilisée avec `--slug` dans `analyze`)
-  - `user` : Nom d'utilisateur PostgreSQL
-  - `password` : Mot de passe PostgreSQL
-  - `host` : Adresse du serveur de base de données
-  - `database` : Nom de la base de données (généralement `dial`)
-  - `port` : Port de connexion (généralement `5432`)
-
-- **`export_db`** : Configuration de la base de données de destination (Scaleway.DIAL) pour sauvegarder les analyses (utilisée par `summarize --database` et `export`)
-  - `provider` : Type de base de données (`postgresql`)
-  - `host` : Adresse du serveur de base de données
-  - `user` : Nom d'utilisateur PostgreSQL
-  - `password` : Mot de passe PostgreSQL
-  - `database` : Nom de la base de données (généralement `sensemaking`)
-  - `port` : Port de connexion
-
-#### Google Cloud (Vertex AI)
-
-- **`gcloud`** : Configuration pour utiliser les modèles Google Cloud Vertex AI
-  - `project_id` : ID de votre projet Google Cloud Platform
-  - `location` : Région où sont déployés vos modèles (ex: `us-central1`)
-  - `summarization_model` : Modèle utilisé pour la génération de résumés (ex: `gemini-2.0-flash`)
-  - `categorization_model` : Modèle utilisé pour la catégorisation (ex: `gemini-2.5-pro`)
-
-#### OpenAI
-
-- **`openai`** : Configuration pour utiliser les modèles OpenAI (alternative à Vertex AI)
-  - `api_key` : Clé API OpenAI
-  - `model` : Modèle à utiliser (ex: `gpt-4o`)
-  - `max_tokens` : Nombre maximum de tokens par requête
-  - `temperature` : Température pour la génération (0 = déterministe)
-  - `parallelism` : Nombre de requêtes parallèles autorisées
-
-#### Configuration globale
-
-- **`provider`** : Fournisseur de modèle à utiliser
-  - `"vertex"` : Utilise Google Cloud Vertex AI (recommandé)
-  - `"openai"` : Utilise OpenAI
-
-- **`default_language`** : Langue par défaut pour les résumés et analyses
-  - Valeurs possibles : `"french"`, `"english"`, `"german"`, etc.
-
-### Exemple de configuration minimale
-
-Pour commencer rapidement, vous pouvez utiliser le fichier template `configs template.json` comme point de départ :
-
-```bash
-cp "configs template.json" configs.json
-```
-
-Puis remplissez les valeurs selon votre environnement :
-- Si vous utilisez Vertex AI : configurez uniquement la section `gcloud` et définissez `provider` à `"vertex"`
-- Si vous utilisez OpenAI : configurez uniquement la section `openai` et définissez `provider` à `"openai"`
 
 ### Notes importantes
 
