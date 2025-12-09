@@ -111,7 +111,7 @@ async function main(): Promise<void> {
     .option("-i, --inputFile <file>", "The input file name.")
     .option("-t, --tag <tag>", "Tag to associate with the analysis.")
     .option("-s, --slug <slug>", "slug for the analysis.")
-    .option("-d, --database <database>", "Persister le json dans PostgreSQL.", true);
+    .option("-d, --database <database>", "Persister le json dans PostgreSQL.", false);
   program.parse(process.argv);
   const options = program.opts();
   let timestamp = new Date().toISOString().slice(0, 10);

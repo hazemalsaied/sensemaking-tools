@@ -1,0 +1,32 @@
+{
+    "import_db": {
+        "user": "",
+        "password": "",
+        "host": "",
+        "database": "",
+        "port": 0
+    },
+    "export_db": {
+        "provider": "postgresql",
+        "host": "",
+        "user": "",
+        "password": "",
+        "database": "",
+        "port": 0
+    },
+    "gcloud": {
+        "project_id": "",
+        "location": "",
+        "summarization_model": "",
+        "categorization_model": ""
+    },
+    "openai": {
+        "api_key": "",
+        "model": "",
+        "max_tokens": 0,
+        "temperature": 0,
+        "parallelism": 0
+    },
+    "provider": "vertex",
+    "default_language": "french"
+}
